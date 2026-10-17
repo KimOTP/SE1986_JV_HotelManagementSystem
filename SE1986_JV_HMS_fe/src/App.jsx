@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import MainLayout from './app/layouts/MainLayout';
 import PublicLayout from './app/layouts/PublicLayout';
 import RoomRouteGuard from './app/provider/RoomRouteGuard';
+import FrontDeskRouteGuard from './app/provider/FrontDeskRouteGuard';
 import HousekeepingTaskBoard from './modules/operations/pages/HousekeepingTaskBoard';
 import MyTasks from './modules/operations/pages/MyTasks';
 import HousekeepingDashboard from './modules/operations/pages/HousekeepingDashboard';
@@ -15,6 +16,12 @@ import RoomMapPage from './modules/rooms/pages/RoomMapPage';
 import RoomSearchPage from './modules/rooms/pages/RoomSearchPage';
 import RoomDetailPage from './modules/rooms/pages/RoomDetailPage';
 import BookingHandoffPage from './modules/rooms/pages/BookingHandoffPage';
+import CheckInPage from './modules/frontdesk/pages/CheckInPage';
+import CheckOutPage from './modules/frontdesk/pages/CheckOutPage';
+import InvoiceListPage from './modules/frontdesk/pages/InvoiceListPage';
+import InvoiceDetailPage from './modules/frontdesk/pages/InvoiceDetailPage';
+import InvoiceEditPage from './modules/frontdesk/pages/InvoiceEditPage';
+import InvoiceCreatePage from './modules/frontdesk/pages/InvoiceCreatePage';
 const Internal = ({ children }) => <MainLayout>{children}</MainLayout>;
 const Guard = ({ children, mapOnly = false }) => (
   <RoomRouteGuard mapOnly={mapOnly}>{children}</RoomRouteGuard>
@@ -132,6 +139,25 @@ export default function App() {
             </Internal>
           }
         />
+        {[
+          // permission: 'manage' = Receptionist/Manager, 'view' = + Customer (read-only)
+          ['/frontdesk/check-in', <CheckInPage />, 'manage'],
+          ['/frontdesk/check-out', <CheckOutPage />, 'manage'],
+          ['/frontdesk/invoices', <InvoiceListPage />, 'view'],
+          ['/frontdesk/invoices/new', <InvoiceCreatePage />, 'manage'],
+          ['/frontdesk/invoices/:id', <InvoiceDetailPage />, 'view'],
+          ['/frontdesk/invoices/:id/edit', <InvoiceEditPage />, 'manage'],
+        ].map(([path, page, permission]) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <Internal>
+                <FrontDeskRouteGuard permission={permission}>{page}</FrontDeskRouteGuard>
+              </Internal>
+            }
+          />
+        ))}
         <Route
           path="*"
           element={

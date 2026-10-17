@@ -29,6 +29,8 @@ export default function Header({ onMenu }) {
               <option value="GUEST">Guest</option>
               <option value="ADMIN">Admin</option>
               <option value="MANAGER">Manager</option>
+              <option value="RECEPTIONIST">Receptionist</option>
+              <option value="CUSTOMER">Customer</option>
             </select>
           )}
           <Button as={Link} to="/rooms" variant="outline-light" size="sm">
