@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Môi trường (Environment) - Rất quan trọng, tránh lộ API Key / Password
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS (Hệ điều hành) - Tránh bị conflict khi làm việc nhóm trên Mac/Windows
+Thumbs.db
+.DS_Store
+
+# Cache của Vite / Node
+.vite
+.cache
