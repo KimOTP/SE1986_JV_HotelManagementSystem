@@ -1,45 +1,31 @@
-import { Nav, Col } from 'react-bootstrap';
+import { Nav } from 'react-bootstrap';
 import { NavLink } from 'react-router';
 import { sidebarMenu } from '../sidebarMenu';
-
-const Sidebar = () => {
+export default function Sidebar() {
   return (
-    <Col md={2} className="bg-light border-end p-3 min-vh-100">
+    <aside className="app-sidebar bg-light border-end p-3">
       <Nav className="flex-column gap-1">
-        {sidebarMenu.map((group, index) => {
-          // Ẩn nhóm nếu không có item nào
-          if (group.items.length === 0) return null;
-
-          return (
-            <div key={index} className="mb-4">
-              <h6 className="text-muted text-uppercase fw-bold small px-2 mb-2" style={{ letterSpacing: '0.5px' }}>
+        {sidebarMenu
+          .filter((g) => g.items.length)
+          .map((group) => (
+            <div key={group.groupLabel} className="mb-4">
+              <h6 className="text-muted text-uppercase fw-bold small px-2 mb-2">
                 {group.groupLabel}
               </h6>
-              {group.items.map((item, idx) => (
-                <Nav.Link 
-                  key={idx} 
-                  as={NavLink} 
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
                   to={item.to}
-                  className={({ isActive }) => 
-                    `px-3 py-2 rounded mb-1 fw-medium ${
-                      isActive ? 'bg-primary text-white shadow-sm' : 'text-secondary'
-                    }`
+                  className={({ isActive }) =>
+                    `nav-link px-3 py-2 rounded mb-1 fw-medium ${isActive ? 'bg-primary text-white shadow-sm' : 'text-secondary'}`
                   }
-                  // Thêm hiệu ứng hover (nếu chưa có sẵn)
-                  style={({ isActive }) => ({
-                    transition: 'all 0.2s',
-                    backgroundColor: isActive ? '' : 'transparent'
-                  })}
                 >
                   {item.label}
-                </Nav.Link>
+                </NavLink>
               ))}
             </div>
-          );
-        })}
+          ))}
       </Nav>
-    </Col>
+    </aside>
   );
-};
-
-export default Sidebar;
+}

@@ -1,48 +1,51 @@
 export const sidebarMenu = [
   {
-    groupLabel: "DASHBOARD", 
+    groupLabel: 'DASHBOARD',
     items: [
-      // { label: "Overview", to: "/dashboard" }, 
-    ]
+      // { label: "Overview", to: "/dashboard" },
+    ],
   },
   {
-    groupLabel: "HOUSEKEEPING",
+    groupLabel: 'HOUSEKEEPING',
     items: [
-      { label: "Operations Dashboard", to: "/operations/dashboard" },
-      { label: "Task Board", to: "/operations/tasks" },
-      { label: "My Tasks", to: "/operations/my-tasks" },
-    ]
+      { label: 'Operations Dashboard', to: '/operations/dashboard' },
+      { label: 'Task Board', to: '/operations/tasks' },
+      { label: 'My Tasks', to: '/operations/my-tasks' },
+    ],
   },
   {
-    groupLabel: "SERVICES & FEEDBACK",
+    groupLabel: 'SERVICES & FEEDBACK',
     items: [
-      { label: "Issue Reports", to: "/operations/issues" },
-      { label: "Guest Feedback", to: "/operations/feedbacks" },
-    ]
+      { label: 'Issue Reports', to: '/operations/issues' },
+      { label: 'Guest Feedback', to: '/operations/feedbacks' },
+    ],
   },
   // --- DÀNH CHO CÁC BẠN KHÁC ---
   {
-    groupLabel: "FRONT DESK",
+    groupLabel: 'FRONT DESK',
     items: [
-       // { label: "Check-in / Check-out", to: "/frontdesk" },
-    ]
+      // { label: "Check-in / Check-out", to: "/frontdesk" },
+    ],
   },
   {
-    groupLabel: "BOOKINGS",
+    groupLabel: 'BOOKINGS',
     items: [
-       // { label: "Reservations", to: "/bookings" },
-    ]
+      // { label: "Reservations", to: "/bookings" },
+    ],
   },
   {
-    groupLabel: "ROOM CATALOG",
+    groupLabel: 'ROOM CATALOG',
     items: [
-       // { label: "Manage Rooms", to: "/rooms" },
-    ]
+      { label: 'Loại phòng', to: '/admin/room-types' },
+      { label: 'Phòng', to: '/admin/rooms' },
+      { label: 'Tiện nghi', to: '/admin/amenities' },
+      { label: 'Sơ đồ phòng', to: '/admin/room-map' },
+    ],
   },
   {
-    groupLabel: "SYSTEM",
+    groupLabel: 'SYSTEM',
     items: [
-       // { label: "User Management", to: "/admin/users" },
-    ]
-  }
+      // { label: "User Management", to: "/admin/users" },
+    ],
+  },
 ];

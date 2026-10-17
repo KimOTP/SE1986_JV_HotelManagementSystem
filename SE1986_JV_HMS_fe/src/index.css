@@ -5,3 +5,129 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #f8f9fa;
 }
+
+.app-sidebar {
+  width: 250px;
+  min-height: 100%;
+}
+.rooms-module .card {
+  border-color: #e5e7eb;
+}
+.catalog-thumb {
+  width: 76px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 0.35rem;
+}
+.room-gallery-main {
+  width: 100%;
+  height: min(55vw, 470px);
+  object-fit: cover;
+  border-radius: 0.75rem;
+  background: #e9ecef;
+}
+.room-thumb {
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 0.4rem;
+  background: transparent;
+}
+.room-thumb.active {
+  border-color: var(--bs-primary);
+}
+.room-thumb img {
+  width: 76px;
+  height: 55px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+.room-card-image {
+  height: 220px;
+  object-fit: cover;
+  background: #e9ecef;
+}
+.room-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.room-detail-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.catalog-detail-icon {
+  display: inline-flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  color: var(--bs-primary);
+  background: rgba(var(--bs-primary-rgb), 0.1);
+  border-radius: 50%;
+}
+.room-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
+}
+.room-map-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  border: 1px solid #dee2e6;
+  border-left-width: 6px;
+  background: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  text-align: left;
+}
+.room-map-card.status-ready {
+  border-left-color: #198754;
+}
+.room-map-card.status-occupied {
+  border-left-color: #dc3545;
+}
+.room-map-card.status-dirty {
+  border-left-color: #ffc107;
+}
+.room-map-card.status-maintenance {
+  border-left-color: #6c757d;
+}
+.room-map-card.inactive {
+  opacity: 0.6;
+  background: #f1f3f5;
+}
+.legend {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+}
+.legend.ready {
+  background: #198754;
+}
+.legend.occupied {
+  background: #dc3545;
+}
+.legend.dirty {
+  background: #ffc107;
+}
+.legend.maintenance {
+  background: #6c757d;
+}
+@media (max-width: 575.98px) {
+  .room-gallery-main {
+    height: 280px;
+  }
+  .pagination {
+    flex-wrap: wrap;
+  }
+  .navbar-brand {
+    font-size: 0.9rem;
+  }
+  .rooms-module h1 {
+    font-size: 1.8rem;
+  }
+}
