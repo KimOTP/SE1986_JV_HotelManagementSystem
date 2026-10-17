@@ -24,7 +24,10 @@ export const sidebarMenu = [
   {
     groupLabel: 'FRONT DESK',
     items: [
-      // { label: "Check-in / Check-out", to: "/frontdesk" },
+      // permission: 'manage' (Receptionist/Manager) | 'view' (also Customer)
+      { label: 'Check-in', to: '/frontdesk/check-in', permission: 'manage' },
+      { label: 'Check-out', to: '/frontdesk/check-out', permission: 'manage' },
+      { label: 'Hóa đơn', to: '/frontdesk/invoices', permission: 'view' },
     ],
   },
   {
