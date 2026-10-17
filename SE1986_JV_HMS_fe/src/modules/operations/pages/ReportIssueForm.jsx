@@ -12,7 +12,12 @@ const schema = z.object({
 
 const ReportIssueForm = () => {
   const [submitted, setSubmitted] = useState(false);
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({ resolver: zodResolver(schema) });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm({ resolver: zodResolver(schema) });
 
   const onSubmit = (data) => {
     console.log('Issue reported:', data);
@@ -44,10 +49,19 @@ const ReportIssueForm = () => {
         </Form.Group>
         <Form.Group className="mb-3">
           <Form.Label>Description</Form.Label>
-          <Form.Control as="textarea" rows={3} {...register('description')} isInvalid={!!errors.description} />
-          <Form.Control.Feedback type="invalid">{errors.description?.message}</Form.Control.Feedback>
+          <Form.Control
+            as="textarea"
+            rows={3}
+            {...register('description')}
+            isInvalid={!!errors.description}
+          />
+          <Form.Control.Feedback type="invalid">
+            {errors.description?.message}
+          </Form.Control.Feedback>
         </Form.Group>
-        <Button variant="primary" type="submit">Submit Report</Button>
+        <Button variant="primary" type="submit">
+          Submit Report
+        </Button>
       </Form>
     </Container>
   );

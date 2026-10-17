@@ -13,13 +13,11 @@ const HousekeepingDashboard = () => {
   // 2. LẤY DỮ LIỆU CHO CÁC BẢNG BÊN DƯỚI
   // Lấy 4 task ưu tiên cao nhất chưa làm xong
   const urgentTasks = mockTasks
-    .filter(t => t.status !== 'DONE' && t.priority === 'High')
+    .filter((t) => t.status !== 'DONE' && t.priority === 'High')
     .slice(0, 4);
-    
+
   // Lấy 4 sự cố mới nhất chưa xử lý
-  const recentIssues = mockIssues
-    .filter(i => i.status !== 'RESOLVED')
-    .slice(0, 4);
+  const recentIssues = mockIssues.filter((i) => i.status !== 'RESOLVED').slice(0, 4);
 
   const stats = [
     { label: 'Tổng Tasks', value: totalTasks, color: 'primary' },
@@ -52,30 +50,45 @@ const HousekeepingDashboard = () => {
 
       {/* HÀNG 2: CHI TIẾT CÔNG VIỆC VÀ SỰ CỐ */}
       <Row className="g-4">
-        
         {/* CỘT TRÁI: TASK KHẨN CẤP */}
         <Col lg={7}>
           <Card className="border-0 shadow-sm h-100">
             <Card.Header className="bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
               <h5 className="fw-bold mb-0">Công việc ưu tiên cao</h5>
-              <Button as={Link} to="/operations/tasks" variant="link" className="text-decoration-none p-0">
+              <Button
+                as={Link}
+                to="/operations/tasks"
+                variant="link"
+                className="text-decoration-none p-0"
+              >
                 Xem Task Board
               </Button>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
               {urgentTasks.length === 0 ? (
-                 <div className="text-center py-4 text-muted">Tuyệt vời! Không có công việc khẩn cấp nào.</div>
+                <div className="text-center py-4 text-muted">
+                  Tuyệt vời! Không có công việc khẩn cấp nào.
+                </div>
               ) : (
                 <ListGroup variant="flush">
-                  {urgentTasks.map(task => (
-                    <ListGroup.Item key={task.id} className="px-0 py-3 border-bottom d-flex justify-content-between align-items-center">
+                  {urgentTasks.map((task) => (
+                    <ListGroup.Item
+                      key={task.id}
+                      className="px-0 py-3 border-bottom d-flex justify-content-between align-items-center"
+                    >
                       <div>
-                        <h6 className="mb-1 fw-bold">Phòng {task.roomNumber} - {task.type}</h6>
-                        <small className="text-muted">Người thực hiện: {task.assignedTo || 'Chưa phân công'}</small>
+                        <h6 className="mb-1 fw-bold">
+                          Phòng {task.roomNumber} - {task.type}
+                        </h6>
+                        <small className="text-muted">
+                          Người thực hiện: {task.assignedTo || 'Chưa phân công'}
+                        </small>
                       </div>
                       <div className="text-end">
-                        <Badge bg="danger" className="mb-2">High</Badge>
-                        <br/>
+                        <Badge bg="danger" className="mb-2">
+                          High
+                        </Badge>
+                        <br />
                         <small className="text-secondary">{task.status}</small>
                       </div>
                     </ListGroup.Item>
@@ -92,19 +105,29 @@ const HousekeepingDashboard = () => {
           <Card className="border-0 shadow-sm mb-4">
             <Card.Header className="bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
               <h5 className="fw-bold mb-0">Sự cố đang chờ</h5>
-              <Button as={Link} to="/operations/issues" variant="link" className="text-decoration-none p-0">
+              <Button
+                as={Link}
+                to="/operations/issues"
+                variant="link"
+                className="text-decoration-none p-0"
+              >
                 Xem tất cả
               </Button>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
               <ListGroup variant="flush">
-                {recentIssues.map(issue => (
-                  <ListGroup.Item key={issue.id} className="px-0 py-2 border-bottom d-flex justify-content-between align-items-center">
+                {recentIssues.map((issue) => (
+                  <ListGroup.Item
+                    key={issue.id}
+                    className="px-0 py-2 border-bottom d-flex justify-content-between align-items-center"
+                  >
                     <div>
                       <span className="fw-semibold text-danger me-2">Phòng {issue.roomNumber}</span>
                       <small className="text-muted">{issue.category}</small>
                     </div>
-                    <Badge bg="warning" text="dark">{issue.status}</Badge>
+                    <Badge bg="warning" text="dark">
+                      {issue.status}
+                    </Badge>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
@@ -119,17 +142,21 @@ const HousekeepingDashboard = () => {
                 <span className="text-muted small">Đã hoàn thành</span>
                 <span className="fw-bold text-success small">{completionRate}%</span>
               </div>
-              <ProgressBar now={completionRate} variant="success" className="mb-3" style={{ height: '10px' }} />
+              <ProgressBar
+                now={completionRate}
+                variant="success"
+                className="mb-3"
+                style={{ height: '10px' }}
+              />
               <p className="text-muted small mb-0">
                 Đã hoàn thành {doneTasks} trên tổng số {totalTasks} công việc được giao.
               </p>
             </Card.Body>
           </Card>
         </Col>
-
       </Row>
     </Container>
   );
 };
 
-export default HousekeepingDashboard; 
+export default HousekeepingDashboard;

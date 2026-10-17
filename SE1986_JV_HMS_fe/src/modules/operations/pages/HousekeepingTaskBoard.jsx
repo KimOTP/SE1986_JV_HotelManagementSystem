@@ -9,8 +9,8 @@ const HousekeepingTaskBoard = () => {
     { key: 'DONE', title: 'Done', bg: 'success' },
   ];
 
-  const INITIAL_LIMIT = 3; 
-  const LOAD_STEP = 3; 
+  const INITIAL_LIMIT = 3;
+  const LOAD_STEP = 3;
 
   const [visibleCount, setVisibleCount] = useState(INITIAL_LIMIT);
 
@@ -50,26 +50,40 @@ const HousekeepingTaskBoard = () => {
               <div className={`bg-${col.bg} bg-opacity-10 p-3 rounded h-100`}>
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="mb-0 fw-bold text-dark">{col.title}</h5>
-                  <Badge bg="dark" pill>{columnTasks.length}</Badge>
+                  <Badge bg="dark" pill>
+                    {columnTasks.length}
+                  </Badge>
                 </div>
-                
+
                 {visibleTasks.map((task) => (
                   <Card key={task.id} className="mb-3 shadow-sm border-0">
                     <Card.Body>
                       <div className="d-flex justify-content-between">
                         <Card.Title className="fw-bold">Phòng {task.roomNumber}</Card.Title>
-                        <Badge bg={task.priority === 'High' ? 'danger' : task.priority === 'Medium' ? 'warning' : 'secondary'}>
+                        <Badge
+                          bg={
+                            task.priority === 'High'
+                              ? 'danger'
+                              : task.priority === 'Medium'
+                                ? 'warning'
+                                : 'secondary'
+                          }
+                        >
                           {task.priority}
                         </Badge>
                       </div>
                       <Card.Text className="small text-muted mb-1">{task.type}</Card.Text>
-                      {task.assignedTo && <small className="text-secondary">NV: {task.assignedTo}</small>}
+                      {task.assignedTo && (
+                        <small className="text-secondary">NV: {task.assignedTo}</small>
+                      )}
                     </Card.Body>
                   </Card>
                 ))}
-                
+
                 {columnTasks.length === 0 && (
-                  <div className="text-center text-muted py-4 bg-white rounded border">Chưa có công việc</div>
+                  <div className="text-center text-muted py-4 bg-white rounded border">
+                    Chưa có công việc
+                  </div>
                 )}
               </div>
             </Col>
@@ -79,11 +93,10 @@ const HousekeepingTaskBoard = () => {
 
       {/* KHU VỰC NÚT BẤM ĐIỀU KHIỂN */}
       <div className="text-center mt-3 mb-5 d-flex justify-content-center gap-3">
-        
         {/* Nút Xem thêm (Chỉ hiện khi còn dữ liệu) */}
         {hasMoreData && (
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             className="px-5 py-2 rounded-pill shadow-sm"
             onClick={handleLoadMore}
           >
@@ -93,17 +106,15 @@ const HousekeepingTaskBoard = () => {
 
         {/* Nút Thu gọn (Chỉ hiện khi đã bấm Xem thêm ít nhất 1 lần) */}
         {isExpanded && (
-          <Button 
-            variant="outline-secondary" 
+          <Button
+            variant="outline-secondary"
             className="px-5 py-2 rounded-pill shadow-sm"
             onClick={handleShowLess}
           >
             Thu gọn
           </Button>
         )}
-        
       </div>
-      
     </Container>
   );
 };
