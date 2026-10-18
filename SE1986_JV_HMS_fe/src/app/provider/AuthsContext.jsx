@@ -167,6 +167,7 @@ export function AuthProvider({ children }) {
       canManageInvoices: hasPermission(PERMISSIONS.INVOICE_MANAGE),
 
       canViewInvoices: hasPermission(PERMISSIONS.INVOICE_VIEW),
+      canManageBookings: hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER),
 
       /*
        * Các permission dành cho Module A

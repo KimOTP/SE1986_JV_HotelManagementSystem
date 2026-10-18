@@ -35,7 +35,10 @@ export const sidebarMenu = [
   {
     groupLabel: 'BOOKINGS',
     items: [
-      // { label: "Reservations", to: "/bookings" },
+      { label: 'Tạo đặt phòng', to: '/bookings/new' },
+      { label: 'Đặt phòng của tôi', to: '/bookings' },
+      { label: 'Thanh toán tiền cọc', to: '/bookings/deposit' },
+      { label: 'Quản lý đặt phòng', to: '/admin/bookings', permission: 'bookingManage' },
     ],
   },
   {
