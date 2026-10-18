@@ -3,38 +3,32 @@ import { Link } from 'react-router';
 import { mockTasks, mockIssues } from '../mocks/mockData';
 
 const HousekeepingDashboard = () => {
-  // 1. TÍNH TOÁN SỐ LIỆU
   const totalTasks = mockTasks.length;
   const todoTasks = mockTasks.filter((t) => t.status === 'TODO').length;
   const inProgressTasks = mockTasks.filter((t) => t.status === 'IN_PROGRESS').length;
   const doneTasks = mockTasks.filter((t) => t.status === 'DONE').length;
   const completionRate = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
 
-  // 2. LẤY DỮ LIỆU CHO CÁC BẢNG BÊN DƯỚI
-  // Lấy 4 task ưu tiên cao nhất chưa làm xong
   const urgentTasks = mockTasks
     .filter((t) => t.status !== 'DONE' && t.priority === 'High')
     .slice(0, 4);
 
-  // Lấy 4 sự cố mới nhất chưa xử lý
   const recentIssues = mockIssues.filter((i) => i.status !== 'RESOLVED').slice(0, 4);
 
   const stats = [
-    { label: 'Tổng Tasks', value: totalTasks, color: 'primary' },
-    { label: 'Chờ xử lý (To Do)', value: todoTasks, color: 'secondary' },
+    { label: 'Tổng công việc', value: totalTasks, color: 'primary' },
+    { label: 'Chờ xử lý', value: todoTasks, color: 'secondary' },
     { label: 'Đang thực hiện', value: inProgressTasks, color: 'warning' },
     { label: 'Đã hoàn thành', value: doneTasks, color: 'success' },
   ];
 
   return (
     <Container fluid className="p-0">
-      {/* LỜI CHÀO */}
       <div className="mb-4">
         <h2 className="fw-bold">Tổng quan Vận hành</h2>
         <p className="text-muted">Chào buổi sáng, đây là tình hình hoạt động dọn phòng hôm nay.</p>
       </div>
 
-      {/* HÀNG 1: CÁC THẺ SỐ LIỆU */}
       <Row className="mb-4">
         {stats.map((s) => (
           <Col md={3} key={s.label}>
@@ -48,9 +42,7 @@ const HousekeepingDashboard = () => {
         ))}
       </Row>
 
-      {/* HÀNG 2: CHI TIẾT CÔNG VIỆC VÀ SỰ CỐ */}
       <Row className="g-4">
-        {/* CỘT TRÁI: TASK KHẨN CẤP */}
         <Col lg={7}>
           <Card className="border-0 shadow-sm h-100">
             <Card.Header className="bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
@@ -61,7 +53,7 @@ const HousekeepingDashboard = () => {
                 variant="link"
                 className="text-decoration-none p-0"
               >
-                Xem Task Board
+                Xem Bảng công việc
               </Button>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
@@ -86,10 +78,12 @@ const HousekeepingDashboard = () => {
                       </div>
                       <div className="text-end">
                         <Badge bg="danger" className="mb-2">
-                          High
+                          Cao
                         </Badge>
                         <br />
-                        <small className="text-secondary">{task.status}</small>
+                        <small className="text-secondary">
+                          {task.status === 'DONE' ? 'Đã hoàn thành' : task.status === 'IN_PROGRESS' ? 'Đang thực hiện' : 'Chờ xử lý'}
+                        </small>
                       </div>
                     </ListGroup.Item>
                   ))}
@@ -99,9 +93,7 @@ const HousekeepingDashboard = () => {
           </Card>
         </Col>
 
-        {/* CỘT PHẢI: SỰ CỐ MỚI & TIẾN ĐỘ */}
         <Col lg={5}>
-          {/* Sự cố mới */}
           <Card className="border-0 shadow-sm mb-4">
             <Card.Header className="bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
               <h5 className="fw-bold mb-0">Sự cố đang chờ</h5>
@@ -126,7 +118,7 @@ const HousekeepingDashboard = () => {
                       <small className="text-muted">{issue.category}</small>
                     </div>
                     <Badge bg="warning" text="dark">
-                      {issue.status}
+                      {issue.status === 'OPEN' ? 'Mới báo cáo' : 'Đang xử lý'}
                     </Badge>
                   </ListGroup.Item>
                 ))}
@@ -134,7 +126,6 @@ const HousekeepingDashboard = () => {
             </Card.Body>
           </Card>
 
-          {/* Tiến độ ngày hôm nay */}
           <Card className="border-0 shadow-sm">
             <Card.Body className="p-4">
               <h5 className="fw-bold mb-3">Tiến độ công việc hôm nay</h5>

@@ -27,8 +27,12 @@ import RegisterPage from './modules/auths/pages/RegisterPage';
 import ResetPasswordPage from './modules/auths/pages/ResetPasswordPage';
 import ProfilePage from './modules/auths/pages/ProfilePage';
 import UserManagementPage from './modules/auths/pages/UserManagementPage';
-
+import HousekeepingRouteGuard from './app/provider/HousekeepingRouteGuard';
 import BookingManagerRouteGuard from './app/provider/BookingManagerRouteGuard';
+
+// THÊM IMPORT NÀY ĐỂ CHECK QUYỀN Ở TRANG CHỦ
+import { PERMISSIONS } from './modules/auths/constants/authConstants';
+
 import {
   BookingHandoffPage,
   BookingDetailPage,
@@ -38,6 +42,7 @@ import {
   DepositPaymentPage,
   ManageBookingsPage,
 } from './modules/bookings/pages/BookingPages';
+
 const Internal = ({ children }) => <MainLayout>{children}</MainLayout>;
 
 const Guard = ({ children, mapOnly = false }) => (
@@ -50,6 +55,22 @@ function NotFound() {
       <p>Không tìm thấy trang.</p>
     </div>
   );
+}
+
+function HomeRedirect() {
+  const { isAuthenticated, hasPermission } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Nếu có quyền Housekeeping -> Vào trang Task
+  if (hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW)) {
+    return <Navigate to="/operations/tasks" replace />;
+  }
+
+  // Các trường hợp còn lại (Customer) -> Vào trang Hóa đơn
+  return <Navigate to="/frontdesk/invoices" replace />;
 }
 
 export default function App() {
@@ -68,66 +89,32 @@ export default function App() {
           <Route path="booking-handoff" element={<BookingHandoffPage />} />
           <Route path=":id" element={<RoomDetailPage />} />
         </Route>
-        <Route
-          path="/"
-          element={
-            isAuthenticated ? (
-              <Internal>
-                <HousekeepingTaskBoard />
-              </Internal>
-            ) : (
-              <Navigate to="/login" replace state={{ from: { pathname: '/' } }} />
-            )
-          }
-        />
-        <Route
-          path="/operations/tasks"
+
+        {/* ĐÃ TÁCH ROUTE '/' RA NGOÀI VÀ DÙNG HOMEREDIRECT */}
+        <Route 
+          path="/" 
           element={
             <Internal>
-              <HousekeepingTaskBoard />
+              <HomeRedirect />
             </Internal>
-          }
+          } 
         />
+
         <Route
-          path="/operations/my-tasks"
           element={
             <Internal>
-              <MyTasks />
+              <HousekeepingRouteGuard />
             </Internal>
           }
-        />
-        <Route
-          path="/operations/dashboard"
-          element={
-            <Internal>
-              <HousekeepingDashboard />
-            </Internal>
-          }
-        />
-        <Route
-          path="/operations/report-issue"
-          element={
-            <Internal>
-              <ReportIssueForm />
-            </Internal>
-          }
-        />
-        <Route
-          path="/operations/issues"
-          element={
-            <Internal>
-              <IssueManagementBoard />
-            </Internal>
-          }
-        />
-        <Route
-          path="/operations/feedbacks"
-          element={
-            <Internal>
-              <FeedbackManagement />
-            </Internal>
-          }
-        />
+        >
+          <Route path="/operations/tasks" element={<HousekeepingTaskBoard />} />
+          <Route path="/operations/my-tasks" element={<MyTasks />} />
+          <Route path="/operations/dashboard" element={<HousekeepingDashboard />} />
+          <Route path="/operations/report-issue" element={<ReportIssueForm />} />
+          <Route path="/operations/issues" element={<IssueManagementBoard />} />
+          <Route path="/operations/feedbacks" element={<FeedbackManagement />} />
+        </Route>
+        
         <Route
           path="/admin/room-types"
           element={

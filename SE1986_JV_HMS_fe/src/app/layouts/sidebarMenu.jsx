@@ -10,16 +10,41 @@ export const sidebarMenu = [
   {
     groupLabel: 'HOUSEKEEPING',
     items: [
-      { label: 'Operations Dashboard', to: '/operations/dashboard' },
-      { label: 'Task Board', to: '/operations/tasks' },
-      { label: 'My Tasks', to: '/operations/my-tasks' },
+      {
+        label: 'Tổng quan vận hành',
+        to: '/operations/dashboard',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW
+      },
+      {
+        label: 'Bảng công việc',
+        to: '/operations/tasks',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW
+      },
+      {
+        label: 'Công việc của tôi',
+        to: '/operations/my-tasks',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW
+      },
     ],
   },
   {
     groupLabel: 'SERVICES & FEEDBACK',
     items: [
-      { label: 'Issue Reports', to: '/operations/issues' },
-      { label: 'Guest Feedback', to: '/operations/feedbacks' },
+      {
+        label: 'Báo cáo sự cố',
+        to: '/operations/report-issue',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW
+      },
+      {
+        label: 'Quản lý sự cố',
+        to: '/operations/issues',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW // Chỉ Manager/Admin/Recep mới thấy
+      },
+      {
+        label: 'Đánh giá của khách',
+        to: '/operations/feedbacks',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_MANAGE
+      },
     ],
   },
   // --- DÀNH CHO CÁC BẠN KHÁC ---

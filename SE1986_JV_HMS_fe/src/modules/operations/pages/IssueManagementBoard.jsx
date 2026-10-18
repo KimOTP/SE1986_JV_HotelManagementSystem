@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Table,
   Badge,
@@ -9,10 +10,22 @@ import {
   Pagination,
   Modal,
   ListGroup,
+  Alert,
 } from 'react-bootstrap';
 import { mockIssues as initialIssues } from '../mocks/mockData';
+// Import Auth Context và Constants để phân quyền
+import { useAuth } from '../../../app/provider/AuthsContext';
+import { PERMISSIONS } from '../../auths/constants/authConstants';
 
 const IssueManagementBoard = () => {
+  const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  
+  // Kiểm tra quyền: Chỉ Manager/Admin mới có quyền MANAGE
+  const canManage = hasPermission(PERMISSIONS.HOUSEKEEPING_MANAGE);
+  // Kiểm tra quyền: Ai có quyền xem thì mới được tạo (Lễ tân được tạo)
+  const canCreate = hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW);
+
   const [issues, setIssues] = useState(initialIssues);
 
   // FORM STATE
@@ -44,7 +57,7 @@ const IssueManagementBoard = () => {
     setCurrentPage(1);
   };
 
-  // LỌC
+  // LỌC DỮ LIỆU
   const filteredIssues = useMemo(() => {
     let result = [...issues];
     if (searchParams.status !== 'ALL')
@@ -62,18 +75,40 @@ const IssueManagementBoard = () => {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentIssues = filteredIssues.slice(indexOfFirstItem, indexOfLastItem);
 
+  // HÀM XEM CHI TIẾT
   const handleViewMore = (issue) => {
     setSelectedIssue(issue);
     setShowModal(true);
   };
+
+  // HÀM ĐÁNH DẤU ĐÃ XỬ LÝ
   const handleResolve = (id) => {
     setIssues((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'RESOLVED' } : i)));
-    setShowModal(false);
+    setShowModal(false); // Đóng modal nếu đang mở
   };
 
   return (
     <div>
-      <h2 className="mb-4">Issue Management Board</h2>
+      {/* HEADER: TIÊU ĐỀ + NÚT BÁO CÁO */}
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="mb-0">Quản lý sự cố</h2>
+        
+        {/* Chỉ hiện nút Báo cáo nếu có quyền Tạo */}
+        {canCreate && (
+          <Button variant="primary" onClick={() => navigate('/operations/report-issue')}>
+            + Báo cáo sự cố mới
+          </Button>
+        )}
+      </div>
+
+      {/* THÔNG BÁO QUYỀN HẠN (Dành cho Lễ tân hoặc người chỉ có quyền View) */}
+      {!canManage && (
+        <Alert variant="info" className="py-2 mb-3 shadow-sm">
+          <small>
+            <strong>Chế độ Xem (View):</strong> Bạn có thể theo dõi và tạo báo cáo sự cố. Chỉ có Quản lý (Manager/Admin) mới có quyền cập nhật trạng thái "Đã xử lý".
+          </small>
+        </Alert>
+      )}
 
       {/* BỘ LỌC */}
       <Form onSubmit={handleSearch} className="mb-3 g-2 bg-light p-3 rounded border">
@@ -95,9 +130,9 @@ const IssueManagementBoard = () => {
               <Form.Label className="small mb-1 fw-semibold">Trạng thái</Form.Label>
               <Form.Select name="status" value={formData.status} onChange={handleFormChange}>
                 <option value="ALL">Tất cả</option>
-                <option value="OPEN">Open</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="RESOLVED">Resolved</option>
+                <option value="OPEN">Mới báo cáo</option>
+                <option value="IN_PROGRESS">Đang xử lý</option>
+                <option value="RESOLVED">Đã xử lý</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -106,10 +141,10 @@ const IssueManagementBoard = () => {
               <Form.Label className="small mb-1 fw-semibold">Danh mục</Form.Label>
               <Form.Select name="category" value={formData.category} onChange={handleFormChange}>
                 <option value="ALL">Tất cả</option>
-                <option value="Plumbing">Plumbing</option>
-                <option value="Electrical">Electrical</option>
-                <option value="Furniture">Furniture</option>
-                <option value="Other">Other</option>
+                <option value="Plumbing">Đường ống nước</option>
+                <option value="Electrical">Điện</option>
+                <option value="Furniture">Nội thất</option>
+                <option value="Other">Khác</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -129,15 +164,15 @@ const IssueManagementBoard = () => {
         </Row>
       </Form>
 
-      {/* BẢNG */}
-      <Table striped bordered hover className="align-middle">
+      {/* BẢNG DỮ LIỆU */}
+      <Table striped bordered hover className="align-middle bg-white shadow-sm">
         <thead className="table-light">
           <tr>
             <th>#</th>
-            <th>Room</th>
-            <th>Category</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th>Phòng</th>
+            <th>Danh mục</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
@@ -162,14 +197,24 @@ const IssueManagementBoard = () => {
                           ? 'danger'
                           : 'warning'
                     }
+                    text={i.status === 'IN_PROGRESS' ? 'dark' : 'white'}
                   >
-                    {i.status}
+                    {i.status === 'OPEN' ? 'Mới báo cáo' : i.status === 'IN_PROGRESS' ? 'Đang xử lý' : 'Đã xử lý'}
                   </Badge>
                 </td>
                 <td>
-                  <Button size="sm" variant="outline-primary" onClick={() => handleViewMore(i)}>
-                    Xem chi tiết
-                  </Button>
+                  <div className="d-flex gap-2 justify-content-start">
+                    <Button size="sm" variant="outline-primary" onClick={() => handleViewMore(i)}>
+                      Chi tiết
+                    </Button>
+
+                    {/* Nút Đã xử lý (Chỉ hiện khi có quyền MANAGE và chưa xử lý) */}
+                    {canManage && i.status !== 'RESOLVED' && (
+                      <Button size="sm" variant="success" onClick={() => handleResolve(i.id)}>
+                        Đã xử lý
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))
@@ -206,7 +251,7 @@ const IssueManagementBoard = () => {
         </div>
       )}
 
-      {/* MODAL */}
+      {/* MODAL CHI TIẾT */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Sự cố phòng {selectedIssue?.roomNumber}</Modal.Title>
@@ -229,6 +274,21 @@ const IssueManagementBoard = () => {
               <ListGroup.Item>
                 <strong>Người xử lý:</strong> {selectedIssue.assignedTo || 'Chưa phân công'}
               </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Trạng thái:</strong>{' '}
+                <Badge
+                  bg={
+                    selectedIssue.status === 'RESOLVED'
+                      ? 'success'
+                      : selectedIssue.status === 'OPEN'
+                        ? 'danger'
+                        : 'warning'
+                  }
+                  text={selectedIssue.status === 'IN_PROGRESS' ? 'dark' : 'white'}
+                >
+                  {selectedIssue.status === 'OPEN' ? 'Mới báo cáo' : selectedIssue.status === 'IN_PROGRESS' ? 'Đang xử lý' : 'Đã xử lý'}
+                </Badge>
+              </ListGroup.Item>
             </ListGroup>
           )}
         </Modal.Body>
@@ -236,7 +296,8 @@ const IssueManagementBoard = () => {
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Đóng
           </Button>
-          {selectedIssue?.status !== 'RESOLVED' && (
+          {/* Nút Đánh dấu trong Modal cũng phải check quyền */}
+          {canManage && selectedIssue?.status !== 'RESOLVED' && (
             <Button variant="success" onClick={() => handleResolve(selectedIssue.id)}>
               Đánh dấu đã xử lý
             </Button>
@@ -246,4 +307,5 @@ const IssueManagementBoard = () => {
     </div>
   );
 };
+
 export default IssueManagementBoard;
