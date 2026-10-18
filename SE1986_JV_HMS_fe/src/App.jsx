@@ -1,6 +1,7 @@
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import MainLayout from './app/layouts/MainLayout';
 import PublicLayout from './app/layouts/PublicLayout';
+import { useAuth } from './app/provider/AuthsContext';
 import RoomRouteGuard from './app/provider/RoomRouteGuard';
 import FrontDeskRouteGuard from './app/provider/FrontDeskRouteGuard';
 import HousekeepingTaskBoard from './modules/operations/pages/HousekeepingTaskBoard';
@@ -22,7 +23,14 @@ import InvoiceListPage from './modules/frontdesk/pages/InvoiceListPage';
 import InvoiceDetailPage from './modules/frontdesk/pages/InvoiceDetailPage';
 import InvoiceEditPage from './modules/frontdesk/pages/InvoiceEditPage';
 import InvoiceCreatePage from './modules/frontdesk/pages/InvoiceCreatePage';
+import LoginPage from './modules/auths/pages/LoginPage';
+import RegisterPage from './modules/auths/pages/RegisterPage';
+import ResetPasswordPage from './modules/auths/pages/ResetPasswordPage';
+import ProfilePage from './modules/auths/pages/ProfilePage';
+import UserManagementPage from './modules/auths/pages/UserManagementPage';
+
 const Internal = ({ children }) => <MainLayout>{children}</MainLayout>;
+
 const Guard = ({ children, mapOnly = false }) => (
   <RoomRouteGuard mapOnly={mapOnly}>{children}</RoomRouteGuard>
 );
@@ -34,10 +42,18 @@ function NotFound() {
     </div>
   );
 }
+
 export default function App() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/users" element={<UserManagementPage />} />
         <Route path="/rooms" element={<PublicLayout />}>
           <Route index element={<RoomSearchPage />} />
           <Route path="booking-handoff" element={<BookingHandoffPage />} />
@@ -46,9 +62,13 @@ export default function App() {
         <Route
           path="/"
           element={
-            <Internal>
-              <HousekeepingTaskBoard />
-            </Internal>
+            isAuthenticated ? (
+              <Internal>
+                <HousekeepingTaskBoard />
+              </Internal>
+            ) : (
+              <Navigate to="/login" replace state={{ from: { pathname: '/' } }} />
+            )
           }
         />
         <Route
