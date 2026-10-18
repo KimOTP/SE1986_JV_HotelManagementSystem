@@ -7,7 +7,11 @@ export default function Sidebar() {
   // Items without a `permission` are visible to everyone (existing behaviour).
   const canSee = (item) =>
     !item.permission ||
-    (item.permission === 'manage' ? auth.canManageInvoices : auth.canViewInvoices);
+    (item.permission === 'bookingManage'
+      ? auth.canManageBookings
+      : item.permission === 'manage'
+        ? auth.canManageInvoices
+        : auth.canViewInvoices);
   return (
     <aside className="app-sidebar bg-light border-end p-3">
       <Nav className="flex-column gap-1">

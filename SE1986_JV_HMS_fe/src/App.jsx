@@ -15,13 +15,22 @@ import AmenityManagementPage from './modules/rooms/pages/AmenityManagementPage';
 import RoomMapPage from './modules/rooms/pages/RoomMapPage';
 import RoomSearchPage from './modules/rooms/pages/RoomSearchPage';
 import RoomDetailPage from './modules/rooms/pages/RoomDetailPage';
-import BookingHandoffPage from './modules/rooms/pages/BookingHandoffPage';
 import CheckInPage from './modules/frontdesk/pages/CheckInPage';
 import CheckOutPage from './modules/frontdesk/pages/CheckOutPage';
 import InvoiceListPage from './modules/frontdesk/pages/InvoiceListPage';
 import InvoiceDetailPage from './modules/frontdesk/pages/InvoiceDetailPage';
 import InvoiceEditPage from './modules/frontdesk/pages/InvoiceEditPage';
 import InvoiceCreatePage from './modules/frontdesk/pages/InvoiceCreatePage';
+import BookingManagerRouteGuard from './app/provider/BookingManagerRouteGuard';
+import {
+  BookingHandoffPage,
+  BookingDetailPage,
+  BookingHistoryPage,
+  CancelBookingPage,
+  CreateBookingPage,
+  DepositPaymentPage,
+  ManageBookingsPage,
+} from './modules/bookings/pages/BookingPages';
 const Internal = ({ children }) => <MainLayout>{children}</MainLayout>;
 const Guard = ({ children, mapOnly = false }) => (
   <RoomRouteGuard mapOnly={mapOnly}>{children}</RoomRouteGuard>
@@ -136,6 +145,56 @@ export default function App() {
               <Guard mapOnly>
                 <RoomMapPage />
               </Guard>
+            </Internal>
+          }
+        />
+        <Route
+          path="/bookings/new"
+          element={
+            <Internal>
+              <CreateBookingPage />
+            </Internal>
+          }
+        />
+        <Route
+          path="/bookings/deposit"
+          element={
+            <Internal>
+              <DepositPaymentPage />
+            </Internal>
+          }
+        />
+        <Route
+          path="/bookings"
+          element={
+            <Internal>
+              <BookingHistoryPage />
+            </Internal>
+          }
+        />
+        <Route
+          path="/bookings/:id/cancel"
+          element={
+            <Internal>
+              <CancelBookingPage />
+            </Internal>
+          }
+        />
+        <Route
+          path="/bookings/:id"
+          element={
+            <Internal>
+              <BookingDetailPage />
+            </Internal>
+          }
+        />
+        <Route
+          path="/admin/bookings"
+          element={
+            <Internal>
+              <BookingManagerRouteGuard>
+                <ManageBookingsPage />
+              </BookingManagerRouteGuard>
             </Internal>
           }
         />

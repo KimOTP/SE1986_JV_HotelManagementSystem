@@ -86,7 +86,7 @@ Detail response là một `RoomType`; availability response là cùng dữ liệ
 
 ## Handoff Module C
 
-Hiện chưa có route tạo Booking thật. Nút Đặt phòng kiểm tra availability lần cuối rồi chuyển đến `/rooms/booking-handoff` bằng query string gồm `roomTypeId, checkIn, checkOut, guests, roomCount=1`; dữ liệu sống qua refresh/direct link. Trang handoff không tạo booking, thu tiền hay báo đặt thành công. Khi Module C có route thật, chỉ cần đổi đích trong `RoomDetailPage` (nên tập trung thành config/service khi contract chốt), không chiếm `/bookings/create` lúc này.
+Nút Đặt phòng kiểm tra availability lần cuối rồi chuyển đến `/rooms/booking-handoff` bằng query string gồm `roomTypeId, checkIn, checkOut, guests, roomCount=1`. Trang handoff tiếp tục sang form tạo yêu cầu booking demo và giữ dữ liệu qua refresh/direct link. Form kiểm tra availability thêm lần nữa trước khi lưu trạng thái `PENDING`; thao tác này chưa tạo hold phía backend hoặc thu tiền thật. Xem các route và giới hạn demo tại [module-c-bookings.md](./module-c-bookings.md).
 
 ## Ảnh, giá và giới hạn demo
 
