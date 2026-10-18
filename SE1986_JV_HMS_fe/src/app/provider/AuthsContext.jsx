@@ -1,34 +1,193 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState } from 'react';
-import { roomsDataSource } from '../../modules/rooms/api/roomsApi';
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
+
+import {
+  AUTH_STORAGE_KEYS,
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  ROLES,
+} from '../../modules/auths/constants/authConstants';
+import { authsApi } from '../../modules/auths/api/authsApi';
+
 
 const AuthContext = createContext(null);
-const ROLE_KEY = 'se1986.moduleB.demoRole';
-// Module D (Front Desk): staff roles can create/view/update/delete invoices; customers can only view.
-const INVOICE_MANAGER_ROLES = ['RECEPTIONIST', 'MANAGER'];
-const INVOICE_VIEWER_ROLES = [...INVOICE_MANAGER_ROLES, 'CUSTOMER'];
-const BOOKING_MANAGER_ROLES = ['ADMIN', 'MANAGER'];
-export function AuthProvider({ children }) {
-  const demoEnabled = roomsDataSource === 'mock' && import.meta.env.PROD !== true;
-  const [role, setRoleState] = useState(() =>
-    demoEnabled ? localStorage.getItem(ROLE_KEY) || 'ADMIN' : 'GUEST',
-  );
-  const setRole = (next) => {
-    if (demoEnabled && ['GUEST', 'ADMIN', 'MANAGER', 'RECEPTIONIST', 'CUSTOMER'].includes(next)) {
-      localStorage.setItem(ROLE_KEY, next);
-      setRoleState(next);
-    }
-  };
-  const value = {
+
+function getStoredUser() {
+  const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.USER);
+
+  if (!storedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedUser);
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+    return null;
+  }
+}
+
+function getStoredToken() {
+  return localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN);
+}
+
+function normalizeUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  const role = user.role || user.roles?.[0] || ROLES.CUSTOMER;
+
+  const roles = Array.isArray(user.roles) ? user.roles : [role];
+
+  const permissions = [
+    ...new Set(
+      roles.flatMap(
+        (currentRole) => ROLE_PERMISSIONS[currentRole] || [],
+      ),
+    ),
+  ];
+
+  return {
+    ...user,
     role,
-    setRole,
-    demoEnabled,
-    canManage: demoEnabled && role === 'ADMIN',
-    canViewMap: demoEnabled && ['ADMIN', 'MANAGER'].includes(role),
-    canManageInvoices: demoEnabled && INVOICE_MANAGER_ROLES.includes(role),
-    canViewInvoices: demoEnabled && INVOICE_VIEWER_ROLES.includes(role),
-    canManageBookings: demoEnabled && BOOKING_MANAGER_ROLES.includes(role),
+    roles,
+    permissions,
   };
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => normalizeUser(getStoredUser()));
+
+  const [token, setToken] = useState(() => getStoredToken());
+
+  const login = useCallback(({ user: loggedInUser, token: authToken }) => {
+    const normalizedUser = normalizeUser(loggedInUser);
+
+    setUser(normalizedUser);
+    setToken(authToken);
+
+    localStorage.setItem(
+      AUTH_STORAGE_KEYS.USER,
+      JSON.stringify(normalizedUser),
+    );
+
+    localStorage.setItem(AUTH_STORAGE_KEYS.TOKEN, authToken);
+  }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+
+    localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN);
+  }, []);
+
+  const updateProfile = useCallback(
+  async (profileData) => {
+    if (!user) {
+      throw new Error('Bạn chưa đăng nhập.');
+    }
+
+    const updatedUser = await authsApi.updateProfile({
+      userId: user.id,
+      ...profileData,
+    });
+
+    const normalizedUser = normalizeUser(updatedUser);
+
+    setUser(normalizedUser);
+
+    localStorage.setItem(
+      AUTH_STORAGE_KEYS.USER,
+      JSON.stringify(normalizedUser),
+    );
+
+    return normalizedUser;
+  },
+  [user],
+);
+  const hasRole = useCallback(
+    (role) => {
+      if (!user) {
+        return false;
+      }
+
+      const roles = Array.isArray(user.roles) ? user.roles : [];
+
+      return roles.includes(role);
+    },
+    [user],
+  );
+
+  const hasPermission = useCallback(
+    (permission) => {
+      if (!user) {
+        return false;
+      }
+
+      const permissions = Array.isArray(user.permissions)
+        ? user.permissions
+        : [];
+
+      return permissions.includes(permission);
+    },
+    [user],
+  );
+
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+
+      isAuthenticated: Boolean(user && token),
+
+      role: user?.role || null,
+      roles: user?.roles || [],
+      permissions: user?.permissions || [],
+
+      login,
+      logout,
+      updateProfile,
+
+      hasRole,
+      hasPermission,
+
+      canManage: hasPermission(PERMISSIONS.ROOM_MANAGE),
+
+      canViewMap: hasPermission(PERMISSIONS.ROOM_MAP_VIEW),
+
+      canManageInvoices: hasPermission(PERMISSIONS.INVOICE_MANAGE),
+
+      canViewInvoices: hasPermission(PERMISSIONS.INVOICE_VIEW),
+      canManageBookings: hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER),
+
+      /*
+       * Các permission dành cho Module A
+       */
+      canManageUsers: hasPermission(PERMISSIONS.USER_MANAGE),
+
+      canManageRoles: hasPermission(PERMISSIONS.ROLE_MANAGE),
+    }),
+    [user, token, login, logout,updateProfile, hasRole, hasPermission],
+  );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-export const useAuth = () => useContext(AuthContext);
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth phải được sử dụng bên trong AuthProvider.');
+  }
+
+  return context;
+}

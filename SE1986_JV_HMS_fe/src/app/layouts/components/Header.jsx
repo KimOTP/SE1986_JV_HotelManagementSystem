@@ -1,9 +1,17 @@
 import { Button, Container, Nav, Navbar } from 'react-bootstrap';
 import { List } from 'react-bootstrap-icons';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../provider/AuthsContext';
+
 export default function Header({ onMenu }) {
-  const auth = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <Navbar bg="dark" variant="dark" className="shadow-sm">
       <Container fluid>
@@ -19,19 +27,37 @@ export default function Header({ onMenu }) {
           Hotel Management System
         </Navbar.Brand>
         <Nav className="ms-auto align-items-center flex-row gap-2">
-          {auth.demoEnabled && (
-            <select
-              className="form-select form-select-sm"
-              aria-label="Vai trò demo"
-              value={auth.role}
-              onChange={(e) => auth.setRole(e.target.value)}
+          {isAuthenticated ? (
+            <>
+              <Navbar.Text className="text-light d-none d-sm-inline">
+                {user?.fullName || user?.name || user?.email}
+              </Navbar.Text>
+              <Button
+                as={Link}
+                to="/profile"
+                variant="outline-light"
+                size="sm"
+              >
+                Hồ sơ
+              </Button>
+              <Button
+                type="button"
+                onClick={handleLogout}
+                variant="outline-light"
+                size="sm"
+              >
+                Đăng xuất
+              </Button>
+            </>
+          ) : (
+            <Button
+              as={Link}
+              to="/login"
+              variant="outline-light"
+              size="sm"
             >
-              <option value="GUEST">Guest</option>
-              <option value="ADMIN">Admin</option>
-              <option value="MANAGER">Manager</option>
-              <option value="RECEPTIONIST">Receptionist</option>
-              <option value="CUSTOMER">Customer</option>
-            </select>
+              Đăng nhập
+            </Button>
           )}
           <Button as={Link} to="/rooms" variant="outline-light" size="sm">
             Tìm phòng

@@ -1,3 +1,5 @@
+import { PERMISSIONS } from '../../modules/auths/constants/authConstants';
+
 export const sidebarMenu = [
   {
     groupLabel: 'DASHBOARD',
@@ -51,7 +53,11 @@ export const sidebarMenu = [
   {
     groupLabel: 'SYSTEM',
     items: [
-      // { label: "User Management", to: "/admin/users" },
+      {
+        label: 'Quản lý người dùng',
+        to: '/users',
+        requiredPermission: PERMISSIONS.USER_MANAGE,
+      },
     ],
   },
 ];
