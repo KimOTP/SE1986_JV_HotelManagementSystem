@@ -12,7 +12,7 @@ import {
   ListGroup,
   Alert,
 } from 'react-bootstrap';
-import { mockIssues as initialIssues } from '../mocks/mockData';
+import { getDemoIssues, resolveDemoIssue } from '../mocks/issueStore';
 // Import Auth Context và Constants để phân quyền
 import { useAuth } from '../../../app/provider/AuthsContext';
 import { PERMISSIONS } from '../../auths/constants/authConstants';
@@ -20,13 +20,21 @@ import { PERMISSIONS } from '../../auths/constants/authConstants';
 const IssueManagementBoard = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  
+
   // Kiểm tra quyền: Chỉ Manager/Admin mới có quyền MANAGE
   const canManage = hasPermission(PERMISSIONS.HOUSEKEEPING_MANAGE);
   // Kiểm tra quyền: Ai có quyền xem thì mới được tạo (Lễ tân được tạo)
   const canCreate = hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW);
 
-  const [issues, setIssues] = useState(initialIssues);
+  const [initialData] = useState(() => {
+    try {
+      return { issues: getDemoIssues(), error: null };
+    } catch {
+      return { issues: [], error: 'Không thể đọc dữ liệu sự cố demo trong trình duyệt.' };
+    }
+  });
+  const [issues, setIssues] = useState(initialData.issues);
+  const [storageError, setStorageError] = useState(initialData.error);
 
   // FORM STATE
   const [formData, setFormData] = useState({ room: '', status: 'ALL', category: 'ALL' });
@@ -83,8 +91,15 @@ const IssueManagementBoard = () => {
 
   // HÀM ĐÁNH DẤU ĐÃ XỬ LÝ
   const handleResolve = (id) => {
-    setIssues((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'RESOLVED' } : i)));
-    setShowModal(false); // Đóng modal nếu đang mở
+    if (!canManage) return;
+    try {
+      setIssues(resolveDemoIssue(id));
+      setStorageError(null);
+      setShowModal(false);
+      setCurrentPage(1);
+    } catch {
+      setStorageError('Không thể lưu trạng thái. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -92,7 +107,7 @@ const IssueManagementBoard = () => {
       {/* HEADER: TIÊU ĐỀ + NÚT BÁO CÁO */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="mb-0">Quản lý sự cố</h2>
-        
+
         {/* Chỉ hiện nút Báo cáo nếu có quyền Tạo */}
         {canCreate && (
           <Button variant="primary" onClick={() => navigate('/operations/report-issue')}>
@@ -105,10 +120,16 @@ const IssueManagementBoard = () => {
       {!canManage && (
         <Alert variant="info" className="py-2 mb-3 shadow-sm">
           <small>
-            <strong>Chế độ Xem (View):</strong> Bạn có thể theo dõi và tạo báo cáo sự cố. Chỉ có Quản lý (Manager/Admin) mới có quyền cập nhật trạng thái "Đã xử lý".
+            <strong>Chế độ Xem (View):</strong> Bạn có thể theo dõi và tạo báo cáo sự cố. Chỉ có
+            Quản lý (Manager/Admin) mới có quyền cập nhật trạng thái "Đã xử lý".
           </small>
         </Alert>
       )}
+
+      <Alert variant="secondary">
+        Dữ liệu demo được lưu trên trình duyệt này, chưa kết nối máy chủ.
+      </Alert>
+      {storageError && <Alert variant="danger">{storageError}</Alert>}
 
       {/* BỘ LỌC */}
       <Form onSubmit={handleSearch} className="mb-3 g-2 bg-light p-3 rounded border">
@@ -199,7 +220,11 @@ const IssueManagementBoard = () => {
                     }
                     text={i.status === 'IN_PROGRESS' ? 'dark' : 'white'}
                   >
-                    {i.status === 'OPEN' ? 'Mới báo cáo' : i.status === 'IN_PROGRESS' ? 'Đang xử lý' : 'Đã xử lý'}
+                    {i.status === 'OPEN'
+                      ? 'Mới báo cáo'
+                      : i.status === 'IN_PROGRESS'
+                        ? 'Đang xử lý'
+                        : 'Đã xử lý'}
                   </Badge>
                 </td>
                 <td>
@@ -286,7 +311,11 @@ const IssueManagementBoard = () => {
                   }
                   text={selectedIssue.status === 'IN_PROGRESS' ? 'dark' : 'white'}
                 >
-                  {selectedIssue.status === 'OPEN' ? 'Mới báo cáo' : selectedIssue.status === 'IN_PROGRESS' ? 'Đang xử lý' : 'Đã xử lý'}
+                  {selectedIssue.status === 'OPEN'
+                    ? 'Mới báo cáo'
+                    : selectedIssue.status === 'IN_PROGRESS'
+                      ? 'Đang xử lý'
+                      : 'Đã xử lý'}
                 </Badge>
               </ListGroup.Item>
             </ListGroup>

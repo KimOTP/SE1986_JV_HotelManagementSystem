@@ -1,32 +1,37 @@
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { issueSchema } from '../schemas/issueSchema';
+import { createDemoIssue } from '../mocks/issueStore';
+import { useAuth } from '../../../app/provider/AuthsContext';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-const schema = z.object({
-  roomNumber: z.string().min(1, 'Vui lòng nhập số phòng'),
-  category: z.string().min(1, 'Vui lòng chọn loại sự cố'),
-  description: z.string().min(5, 'Mô tả sự cố ít nhất 5 ký tự'),
-});
-
 const ReportIssueForm = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [saveError, setSaveError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     reset,
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm({
+    resolver: zodResolver(issueSchema),
+    defaultValues: { roomNumber: '', category: '', description: '' },
+  });
 
   const onSubmit = (data) => {
-    console.log('Dữ liệu báo cáo sự cố:', data);
-    setSubmitted(true);
-    reset();
-    // Tự động ẩn thông báo sau 3 giây
-    setTimeout(() => setSubmitted(false), 3000);
+    setSubmitted(false);
+    setSaveError(null);
+    try {
+      createDemoIssue(data, user?.fullName || user?.name || user?.email);
+      setSubmitted(true);
+      reset();
+    } catch {
+      setSaveError('Không thể lưu báo cáo demo. Hãy kiểm tra bộ nhớ trình duyệt và thử lại.');
+    }
   };
 
   return (
@@ -43,16 +48,21 @@ const ReportIssueForm = () => {
       {/* Tiêu đề và mô tả */}
       <h2 className="mb-2 fw-bold">Báo cáo sự cố</h2>
       <p className="text-muted mb-4">
-        Vui lòng điền thông tin chi tiết về sự cố tại phòng. Bộ phận kỹ thuật sẽ được thông báo ngay
-        lập tức.
+        Vui lòng điền thông tin chi tiết về sự cố tại phòng. Hiện báo cáo được lưu demo trên trình
+        duyệt này.
       </p>
 
       {/* Thông báo thành công */}
       {submitted && (
         <Alert variant="success" className="shadow-sm">
-          Báo cáo thành công! Đã gửi đến bộ phận kỹ thuật.
+          Đã lưu báo cáo demo.{' '}
+          <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
+            Xem danh sách sự cố
+          </Button>
         </Alert>
       )}
+
+      {saveError && <Alert variant="danger">{saveError}</Alert>}
 
       {/* Form nhập liệu */}
       <Form
@@ -101,7 +111,7 @@ const ReportIssueForm = () => {
           <Button variant="outline-secondary" type="button" onClick={() => navigate(-1)}>
             Hủy
           </Button>
-          <Button variant="primary" type="submit">
+          <Button variant="primary" type="submit" disabled={isSubmitting}>
             Gửi báo cáo
           </Button>
         </div>
