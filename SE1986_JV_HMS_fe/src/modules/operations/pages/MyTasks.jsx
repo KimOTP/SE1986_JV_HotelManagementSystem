@@ -1,27 +1,30 @@
 import { useState, useMemo } from 'react';
-import { Table, Badge, Button, Form, Row, Col, Pagination } from 'react-bootstrap';
-import { mockTasks } from '../mocks/mockData';
+import { Table, Badge, Form, Row, Col, Pagination, Button } from 'react-bootstrap';
+import { mockTasks as initialTasks } from '../mocks/mockData';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 const MyTasks = () => {
   const { user } = useAuth();
   const currentUser = user?.name || user?.fullName;
 
-  // 1. STATE CHO FORM NHẬP LIỆU
+  // 1. QUẢN LÝ STATE DỮ LIỆU
+  const [tasks, setTasks] = useState(initialTasks);
+
+  // 2. STATE CHO FORM NHẬP LIỆU
   const [formData, setFormData] = useState({
     room: '',
     status: 'ALL',
     type: 'ALL',
   });
 
-  // 2. STATE CHO ĐIỀU KIỆN LỌC
+  // 3. STATE CHO ĐIỀU KIỆN LỌC
   const [searchParams, setSearchParams] = useState({
     room: '',
     status: 'ALL',
     type: 'ALL',
   });
 
-  // 3. STATE CHO PAGING
+  // 4. STATE CHO PAGING
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -33,8 +36,8 @@ const MyTasks = () => {
 
   // Hàm xử lý khi bấm nút TÌM KIẾM
   const handleSearch = (e) => {
-    e.preventDefault(); // Ngăn form load lại trang
-    setSearchParams(formData); // Chép dữ liệu từ form sang searchParams
+    e.preventDefault();
+    setSearchParams(formData);
     setCurrentPage(1);
   };
 
@@ -46,20 +49,30 @@ const MyTasks = () => {
     setCurrentPage(1);
   };
 
-  // 4. LỌC DỮ LIỆU (Dựa trên searchParams)
+  // 5. HÀM XỬ LÝ CẬP NHẬT TRẠNG THÁI (Dùng chung cho Dropdown)
+  const handleUpdateStatus = (taskId, newStatus) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId ? { ...task, status: newStatus } : task
+      )
+    );
+  };
+
+  // 6. LỌC DỮ LIỆU
   const filteredTasks = useMemo(() => {
-    let result = mockTasks.filter((t) => t.assignedTo === currentUser);
+    let result = tasks.filter((t) => t.assignedTo === currentUser);
 
     if (searchParams.status !== 'ALL')
       result = result.filter((t) => t.status === searchParams.status);
-    if (searchParams.type !== 'ALL') result = result.filter((t) => t.type === searchParams.type);
+    if (searchParams.type !== 'ALL')
+      result = result.filter((t) => t.type === searchParams.type);
     if (searchParams.room.trim() !== '')
       result = result.filter((t) => t.roomNumber.includes(searchParams.room.trim()));
 
     return result;
-  }, [currentUser, searchParams]);
+  }, [currentUser, searchParams, tasks]);
 
-  // 5. PHÂN TRANG
+  // 7. PHÂN TRANG
   const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -67,7 +80,7 @@ const MyTasks = () => {
 
   return (
     <div>
-      <h2 className="mb-4">My Tasks</h2>
+      <h2 className="mb-4">Công việc của tôi</h2>
 
       {/* KHU VỰC FILTER */}
       <Form onSubmit={handleSearch} className="mb-3 g-2 bg-light p-3 rounded border">
@@ -89,9 +102,9 @@ const MyTasks = () => {
               <Form.Label className="small mb-1 fw-semibold">Trạng thái</Form.Label>
               <Form.Select name="status" value={formData.status} onChange={handleFormChange}>
                 <option value="ALL">Tất cả</option>
-                <option value="TODO">To Do</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="DONE">Done</option>
+                <option value="TODO">Chờ xử lý</option>
+                <option value="IN_PROGRESS">Đang thực hiện</option>
+                <option value="DONE">Đã hoàn thành</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -100,9 +113,9 @@ const MyTasks = () => {
               <Form.Label className="small mb-1 fw-semibold">Loại công việc</Form.Label>
               <Form.Select name="type" value={formData.type} onChange={handleFormChange}>
                 <option value="ALL">Tất cả</option>
-                <option value="Daily Clean">Daily Clean</option>
-                <option value="Deep Clean">Deep Clean</option>
-                <option value="Maintenance">Maintenance</option>
+                <option value="Daily Clean">Dọn hàng ngày</option>
+                <option value="Deep Clean">Dọn tổng thể</option>
+                <option value="Maintenance">Bảo trì</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -127,18 +140,18 @@ const MyTasks = () => {
         <thead className="table-light">
           <tr>
             <th>#</th>
-            <th>Room</th>
-            <th>Type</th>
-            <th>Priority</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th>Phòng</th>
+            <th>Loại công việc</th>
+            <th>Độ ưu tiên</th>
+            <th>Trạng thái hiện tại</th>
+            <th>Cập nhật trạng thái</th>
           </tr>
         </thead>
         <tbody>
           {currentTasks.length === 0 ? (
             <tr>
               <td colSpan={6} className="text-center py-4 text-muted">
-                Không tìm thấy task nào phù hợp với bộ lọc.
+                Không tìm thấy công việc nào phù hợp với bộ lọc.
               </td>
             </tr>
           ) : (
@@ -157,7 +170,7 @@ const MyTasks = () => {
                           : 'secondary'
                     }
                   >
-                    {t.priority}
+                    {t.priority === 'High' ? 'Cao' : t.priority === 'Medium' ? 'Trung bình' : 'Thấp'}
                   </Badge>
                 </td>
                 <td>
@@ -170,15 +183,21 @@ const MyTasks = () => {
                           : 'secondary'
                     }
                   >
-                    {t.status}
+                    {t.status === 'DONE' ? 'Đã hoàn thành' : t.status === 'IN_PROGRESS' ? 'Đang thực hiện' : 'Chờ xử lý'}
                   </Badge>
                 </td>
                 <td>
-                  {t.status !== 'DONE' && (
-                    <Button size="sm" variant="success">
-                      Mark as Done
-                    </Button>
-                  )}
+                  {/* DROPDOWN ĐỂ CẬP NHẬT TRẠNG THÁI */}
+                  <Form.Select
+                    size="sm"
+                    value={t.status}
+                    onChange={(e) => handleUpdateStatus(t.id, e.target.value)}
+                    style={{ width: '160px' }}
+                  >
+                    <option value="TODO">Chờ xử lý</option>
+                    <option value="IN_PROGRESS">Đang thực hiện</option>
+                    <option value="DONE">Đã hoàn thành</option>
+                  </Form.Select>
                 </td>
               </tr>
             ))
@@ -191,7 +210,7 @@ const MyTasks = () => {
         <div className="d-flex justify-content-between align-items-center mt-3">
           <span className="text-muted small">
             Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredTasks.length)} /{' '}
-            {filteredTasks.length} tasks
+            {filteredTasks.length} công việc
           </span>
           <Pagination className="mb-0">
             <Pagination.Prev

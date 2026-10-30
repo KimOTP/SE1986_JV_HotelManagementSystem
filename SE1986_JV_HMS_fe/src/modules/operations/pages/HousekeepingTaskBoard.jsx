@@ -4,9 +4,9 @@ import { mockTasks } from '../mocks/mockData';
 
 const HousekeepingTaskBoard = () => {
   const columns = [
-    { key: 'TODO', title: 'To Do', bg: 'secondary' },
-    { key: 'IN_PROGRESS', title: 'In Progress', bg: 'warning' },
-    { key: 'DONE', title: 'Done', bg: 'success' },
+    { key: 'TODO', title: 'Chờ xử lý', bg: 'secondary' },
+    { key: 'IN_PROGRESS', title: 'Đang thực hiện', bg: 'warning' },
+    { key: 'DONE', title: 'Đã hoàn thành', bg: 'success' },
   ];
 
   const INITIAL_LIMIT = 3;
@@ -14,30 +14,26 @@ const HousekeepingTaskBoard = () => {
 
   const [visibleCount, setVisibleCount] = useState(INITIAL_LIMIT);
 
-  // Hàm Xem thêm
   const handleLoadMore = () => {
     setVisibleCount((prev) => prev + LOAD_STEP);
   };
 
-  // Hàm Thu gọn (đưa về số lượng ban đầu)
   const handleShowLess = () => {
     setVisibleCount(INITIAL_LIMIT);
   };
 
-  // Kiểm tra xem có cột nào còn dữ liệu chưa hiện không
   const hasMoreData = columns.some((col) => {
     const totalTasksInCol = mockTasks.filter((t) => t.status === col.key).length;
     return totalTasksInCol > visibleCount;
   });
 
-  // Kiểm tra xem người dùng đã bấm Xem thêm chưa (để hiện nút Thu gọn)
   const isExpanded = visibleCount > INITIAL_LIMIT;
 
   return (
     <Container fluid className="p-4">
       <div className="text-center mb-4">
         <h5 className="text-primary fw-bold mb-0">Ban công tác dọn phòng</h5>
-        <h2 className="mb-0">Housekeeping Task Board</h2>
+        <h2 className="mb-0">Bảng công việc</h2>
       </div>
 
       <Row>
@@ -69,7 +65,7 @@ const HousekeepingTaskBoard = () => {
                                 : 'secondary'
                           }
                         >
-                          {task.priority}
+                          {task.priority === 'High' ? 'Cao' : task.priority === 'Medium' ? 'Trung bình' : 'Thấp'}
                         </Badge>
                       </div>
                       <Card.Text className="small text-muted mb-1">{task.type}</Card.Text>
@@ -91,9 +87,7 @@ const HousekeepingTaskBoard = () => {
         })}
       </Row>
 
-      {/* KHU VỰC NÚT BẤM ĐIỀU KHIỂN */}
       <div className="text-center mt-3 mb-5 d-flex justify-content-center gap-3">
-        {/* Nút Xem thêm (Chỉ hiện khi còn dữ liệu) */}
         {hasMoreData && (
           <Button
             variant="primary"
@@ -104,7 +98,6 @@ const HousekeepingTaskBoard = () => {
           </Button>
         )}
 
-        {/* Nút Thu gọn (Chỉ hiện khi đã bấm Xem thêm ít nhất 1 lần) */}
         {isExpanded && (
           <Button
             variant="outline-secondary"

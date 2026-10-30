@@ -5,19 +5,19 @@ export const sidebarMenu = [
     groupLabel: 'HOUSEKEEPING',
     items: [
       {
-        label: 'Operations Dashboard',
+        label: 'Tổng quan vận hành',
         to: '/operations/dashboard',
-        requiredPermission: PERMISSIONS.OPERATIONS_VIEW,
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW,
       },
       {
-        label: 'Task Board',
+        label: 'Bảng công việc',
         to: '/operations/tasks',
-        requiredPermission: PERMISSIONS.HOUSEKEEPING,
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW,
       },
       {
-        label: 'My Tasks',
+        label: 'Công việc của tôi',
         to: '/operations/my-tasks',
-        requiredPermission: PERMISSIONS.HOUSEKEEPING,
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW,
       },
     ],
   },
@@ -25,14 +25,19 @@ export const sidebarMenu = [
     groupLabel: 'SERVICES & FEEDBACK',
     items: [
       {
-        label: 'Issue Reports',
-        to: '/operations/issues',
-        requiredPermission: PERMISSIONS.OPERATIONS_VIEW,
+        label: 'Báo cáo sự cố',
+        to: '/operations/report-issue',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW,
       },
       {
-        label: 'Guest Feedback',
+        label: 'Quản lý sự cố',
+        to: '/operations/issues',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_VIEW,
+      },
+      {
+        label: 'Đánh giá của khách',
         to: '/operations/feedbacks',
-        requiredPermission: PERMISSIONS.OPERATIONS_VIEW,
+        requiredPermission: PERMISSIONS.HOUSEKEEPING_MANAGE,
       },
     ],
   },

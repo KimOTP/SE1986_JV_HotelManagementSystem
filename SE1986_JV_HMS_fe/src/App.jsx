@@ -109,7 +109,7 @@ export default function App() {
           <Route
             path="operations/tasks"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING}>
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
                 <HousekeepingTaskBoard />
               </PermissionRoute>
             }
@@ -117,7 +117,7 @@ export default function App() {
           <Route
             path="operations/my-tasks"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING}>
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
                 <MyTasks />
               </PermissionRoute>
             }
@@ -125,7 +125,7 @@ export default function App() {
           <Route
             path="operations/dashboard"
             element={
-              <PermissionRoute permission={PERMISSIONS.OPERATIONS_VIEW}>
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
                 <HousekeepingDashboard />
               </PermissionRoute>
             }
@@ -133,7 +133,7 @@ export default function App() {
           <Route
             path="operations/report-issue"
             element={
-              <PermissionRoute permission={PERMISSIONS.OPERATIONS_VIEW}>
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
                 <ReportIssueForm />
               </PermissionRoute>
             }
@@ -141,7 +141,7 @@ export default function App() {
           <Route
             path="operations/issues"
             element={
-              <PermissionRoute permission={PERMISSIONS.OPERATIONS_VIEW}>
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
                 <IssueManagementBoard />
               </PermissionRoute>
             }
@@ -149,7 +149,7 @@ export default function App() {
           <Route
             path="operations/feedbacks"
             element={
-              <PermissionRoute permission={PERMISSIONS.OPERATIONS_VIEW}>
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_MANAGE}>
                 <FeedbackManagement />
               </PermissionRoute>
             }
