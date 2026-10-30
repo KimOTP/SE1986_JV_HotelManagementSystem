@@ -3,7 +3,6 @@ import MainLayout from './app/layouts/MainLayout';
 import PublicLayout from './app/layouts/PublicLayout';
 import ProtectedRoute from './app/provider/ProtectedRoute';
 import { useAuth } from './app/provider/AuthsContext.jsx';
-import { PERMISSIONS, ROLES } from './modules/auths/constants/authConstants';
 import HousekeepingTaskBoard from './modules/operations/pages/HousekeepingTaskBoard';
 import MyTasks from './modules/operations/pages/MyTasks';
 import HousekeepingDashboard from './modules/operations/pages/HousekeepingDashboard';
@@ -39,14 +38,15 @@ import {
 } from './modules/bookings/pages/BookingPages';
 
 function RoleHomeRedirect() {
-  const { role } = useAuth();
-  const destinations = {
-    [ROLES.ADMIN]: '/users',
-    [ROLES.MANAGER]: '/bookings',
-    [ROLES.STAFF]: '/operations/my-tasks',
-    [ROLES.CUSTOMER]: '/bookings',
-  };
-  return <Navigate to={destinations[role] || '/profile'} replace />;
+  const { hasPermission } = useAuth();
+  const destinations = [
+    ['/users', 'UC-A5'],
+    ['/bookings', 'UC-C3'],
+    ['/operations/my-tasks', 'UC-E2'],
+    ['/rooms', 'UC-B4'],
+    ['/profile', 'UC-A4'],
+  ];
+  return <Navigate to={destinations.find(([, permission]) => hasPermission(permission))?.[0] || '/profile'} replace />;
 }
 
 function NotFound() {
@@ -68,6 +68,12 @@ function PermissionRoute({ permission, children }) {
   );
 }
 
+function PublicPermission({ permission, children }) {
+  const { isAuthenticated, hasPermission } = useAuth();
+  if (!isAuthenticated || hasPermission(permission)) return children;
+  return <div className="container py-5"><div className="alert alert-danger">403 · Vai trò hiện tại không có quyền mở màn hình này.</div></div>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -75,10 +81,11 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/403" element={<div className="container py-5"><div className="alert alert-danger">403 · Vai trò hiện tại không có quyền mở màn hình này.</div></div>} />
         <Route path="/rooms" element={<PublicLayout />}>
-          <Route index element={<RoomSearchPage />} />
-          <Route path="booking-handoff" element={<BookingHandoffPage />} />
-          <Route path=":id" element={<RoomDetailPage />} />
+          <Route index element={<PublicPermission permission="UC-B4"><RoomSearchPage /></PublicPermission>} />
+          <Route path="booking-handoff" element={<PublicPermission permission="UC-B4"><BookingHandoffPage /></PublicPermission>} />
+          <Route path=":id" element={<PublicPermission permission="UC-B5"><RoomDetailPage /></PublicPermission>} />
         </Route>
 
         <Route
@@ -93,7 +100,7 @@ export default function App() {
           <Route
             path="users"
             element={
-              <PermissionRoute permission={PERMISSIONS.USER_MANAGE}>
+              <PermissionRoute permission="UC-A5">
                 <UserManagementPage />
               </PermissionRoute>
             }
@@ -101,7 +108,7 @@ export default function App() {
           <Route
             path="admin/roles"
             element={
-              <PermissionRoute permission={PERMISSIONS.ROLE_MANAGE}>
+              <PermissionRoute permission="UC-A6">
                 <RoleManagementPage />
               </PermissionRoute>
             }
@@ -109,7 +116,7 @@ export default function App() {
           <Route
             path="operations/tasks"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+              <PermissionRoute permission="UC-E1">
                 <HousekeepingTaskBoard />
               </PermissionRoute>
             }
@@ -117,7 +124,7 @@ export default function App() {
           <Route
             path="operations/my-tasks"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+              <PermissionRoute permission="UC-E2">
                 <MyTasks />
               </PermissionRoute>
             }
@@ -125,7 +132,7 @@ export default function App() {
           <Route
             path="operations/dashboard"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+              <PermissionRoute permission="UC-E3">
                 <HousekeepingDashboard />
               </PermissionRoute>
             }
@@ -133,7 +140,7 @@ export default function App() {
           <Route
             path="operations/report-issue"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+              <PermissionRoute permission="UC-E4">
                 <ReportIssueForm />
               </PermissionRoute>
             }
@@ -141,7 +148,7 @@ export default function App() {
           <Route
             path="operations/issues"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+              <PermissionRoute permission="UC-E5">
                 <IssueManagementBoard />
               </PermissionRoute>
             }
@@ -149,7 +156,7 @@ export default function App() {
           <Route
             path="operations/feedbacks"
             element={
-              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_MANAGE}>
+              <PermissionRoute permission="UC-E6">
                 <FeedbackManagement />
               </PermissionRoute>
             }
@@ -157,7 +164,7 @@ export default function App() {
           <Route
             path="admin/room-types"
             element={
-              <PermissionRoute permission={PERMISSIONS.ROOM_MANAGE}>
+              <PermissionRoute permission="UC-B1">
                 <RoomTypeListPage />
               </PermissionRoute>
             }
@@ -165,7 +172,7 @@ export default function App() {
           <Route
             path="admin/rooms"
             element={
-              <PermissionRoute permission={PERMISSIONS.ROOM_MANAGE}>
+              <PermissionRoute permission="UC-B2">
                 <RoomListPage />
               </PermissionRoute>
             }
@@ -173,7 +180,7 @@ export default function App() {
           <Route
             path="admin/amenities"
             element={
-              <PermissionRoute permission={PERMISSIONS.ROOM_MANAGE}>
+              <PermissionRoute permission="UC-B3">
                 <AmenityManagementPage />
               </PermissionRoute>
             }
@@ -181,7 +188,7 @@ export default function App() {
           <Route
             path="admin/room-map"
             element={
-              <PermissionRoute permission={PERMISSIONS.ROOM_MAP_VIEW}>
+              <PermissionRoute permission="UC-B6">
                 <RoomMapPage />
               </PermissionRoute>
             }
@@ -189,7 +196,7 @@ export default function App() {
           <Route
             path="bookings/new"
             element={
-              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+              <PermissionRoute permission="UC-C1">
                 <CreateBookingPage />
               </PermissionRoute>
             }
@@ -197,7 +204,7 @@ export default function App() {
           <Route
             path="bookings/deposit"
             element={
-              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+              <PermissionRoute permission="UC-C2">
                 <DepositPaymentPage />
               </PermissionRoute>
             }
@@ -205,7 +212,7 @@ export default function App() {
           <Route
             path="bookings"
             element={
-              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+              <PermissionRoute permission="UC-C3">
                 <BookingHistoryPage />
               </PermissionRoute>
             }
@@ -213,7 +220,7 @@ export default function App() {
           <Route
             path="bookings/:id/cancel"
             element={
-              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+              <PermissionRoute permission="UC-C4">
                 <CancelBookingPage />
               </PermissionRoute>
             }
@@ -221,7 +228,7 @@ export default function App() {
           <Route
             path="bookings/:id"
             element={
-              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+              <PermissionRoute permission="UC-C6">
                 <BookingDetailPage />
               </PermissionRoute>
             }
@@ -229,7 +236,7 @@ export default function App() {
           <Route
             path="admin/bookings"
             element={
-              <PermissionRoute permission={PERMISSIONS.BOOKING_MANAGE}>
+              <PermissionRoute permission="UC-C5">
                 <ManageBookingsPage />
               </PermissionRoute>
             }
@@ -237,7 +244,7 @@ export default function App() {
           <Route
             path="frontdesk/check-in"
             element={
-              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+              <PermissionRoute permission="UC-D1">
                 <CheckInPage />
               </PermissionRoute>
             }
@@ -245,7 +252,7 @@ export default function App() {
           <Route
             path="frontdesk/check-out"
             element={
-              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+              <PermissionRoute permission="UC-D2">
                 <CheckOutPage />
               </PermissionRoute>
             }
@@ -253,7 +260,7 @@ export default function App() {
           <Route
             path="frontdesk/invoices"
             element={
-              <PermissionRoute permission={PERMISSIONS.INVOICE_VIEW}>
+              <PermissionRoute permission="UC-D6">
                 <InvoiceListPage />
               </PermissionRoute>
             }
@@ -261,7 +268,7 @@ export default function App() {
           <Route
             path="frontdesk/invoices/new"
             element={
-              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+              <PermissionRoute permission="UC-D3">
                 <InvoiceCreatePage />
               </PermissionRoute>
             }
@@ -269,7 +276,7 @@ export default function App() {
           <Route
             path="frontdesk/invoices/:id/edit"
             element={
-              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+              <PermissionRoute permission="UC-D5">
                 <InvoiceEditPage />
               </PermissionRoute>
             }
@@ -277,7 +284,7 @@ export default function App() {
           <Route
             path="frontdesk/invoices/:id"
             element={
-              <PermissionRoute permission={PERMISSIONS.INVOICE_VIEW}>
+              <PermissionRoute permission="UC-D4">
                 <InvoiceDetailPage />
               </PermissionRoute>
             }
