@@ -11,6 +11,8 @@ export const ROLES = {
   CUSTOMER: 'CUSTOMER',
 };
 
+// UC codes are the authorization source for screens and actions. These
+// descriptive aliases are retained only for existing call sites/data.
 export const PERMISSIONS = {
   ROOM_VIEW: 'ROOM_VIEW',
   ROOM_MANAGE: 'ROOM_MANAGE',
@@ -27,11 +29,9 @@ export const PERMISSIONS = {
   BOOKING_MANAGE: 'BOOKING_MANAGE',
 };
 
-export const DATABASE_PERMISSION_CODES = [
-  ...Array.from('ABCDE').flatMap((module) =>
-    Array.from({ length: 6 }, (_, index) => `UC-${module}${index + 1}`),
-  ),
-];
+export const DATABASE_PERMISSION_CODES = [...'ABCDE'].flatMap((module) =>
+  Array.from({ length: 6 }, (_, index) => `UC-${module}${index + 1}`),
+);
 
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: 'Quản trị viên',
@@ -40,82 +40,77 @@ export const ROLE_LABELS = {
   [ROLES.CUSTOMER]: 'Khách hàng',
 };
 
+// Defaults based on the project brief. Role permission edits are exact UC
+// grants; broad legacy permissions are intentionally excluded from defaults.
+// Screen and action to UC mapping. In this iteration, related view/edit
+// capabilities on one screen are granted through its primary UC.
+export const PERMISSION_CATALOG = [
+  { code: PERMISSIONS.ROOM_VIEW, label: 'Xem danh mục phòng (legacy)' },
+  { code: PERMISSIONS.ROOM_MANAGE, label: 'Quản lý phòng (legacy)' },
+  { code: PERMISSIONS.ROOM_MAP_VIEW, label: 'Xem sơ đồ phòng (legacy)' },
+  { code: PERMISSIONS.INVOICE_VIEW, label: 'Xem hóa đơn (legacy)' },
+  { code: PERMISSIONS.INVOICE_MANAGE, label: 'Quản lý hóa đơn (legacy)' },
+  { code: PERMISSIONS.USER_VIEW, label: 'Xem người dùng (legacy)' },
+  { code: PERMISSIONS.USER_MANAGE, label: 'UC-A5 · Quản lý nhân viên/quản lý' },
+  { code: PERMISSIONS.ROLE_VIEW, label: 'Xem vai trò và quyền (legacy)' },
+  { code: PERMISSIONS.ROLE_MANAGE, label: 'UC-A6 · Quản lý vai trò và quyền' },
+  { code: PERMISSIONS.HOUSEKEEPING_VIEW, label: 'Xem nghiệp vụ buồng phòng (legacy)' },
+  { code: PERMISSIONS.HOUSEKEEPING_MANAGE, label: 'Quản lý buồng phòng (legacy)' },
+  { code: PERMISSIONS.BOOKING_VIEW, label: 'Xem đặt phòng (legacy)' },
+  { code: PERMISSIONS.BOOKING_MANAGE, label: 'Quản lý đặt phòng (legacy)' },
+];
+
 export const ROLE_PERMISSION_DEFAULTS = {
-  [ROLES.ADMIN]: [
-    ...DATABASE_PERMISSION_CODES,
-    PERMISSIONS.ROOM_VIEW,
-    PERMISSIONS.ROOM_MANAGE,
-    PERMISSIONS.ROOM_MAP_VIEW,
-    PERMISSIONS.INVOICE_VIEW,
-    PERMISSIONS.INVOICE_MANAGE,
-    PERMISSIONS.USER_VIEW,
-    PERMISSIONS.ROLE_VIEW,
-    PERMISSIONS.HOUSEKEEPING_VIEW,
-    PERMISSIONS.HOUSEKEEPING_MANAGE,
-    PERMISSIONS.BOOKING_VIEW,
-    PERMISSIONS.BOOKING_MANAGE,
-  ],
+  [ROLES.ADMIN]: [...new Set([...DATABASE_PERMISSION_CODES, 'UC-C3'])],
   [ROLES.MANAGER]: [
     'UC-A2', 'UC-A3', 'UC-A4',
-    'UC-B4', 'UC-B5', 'UC-B6',
-    'UC-C5', 'UC-C6',
-    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5',
-    'UC-E1', 'UC-E3', 'UC-E4', 'UC-E5', 'UC-E6',
-    PERMISSIONS.ROOM_VIEW,
-    PERMISSIONS.ROOM_MANAGE,
-    PERMISSIONS.ROOM_MAP_VIEW,
-    PERMISSIONS.INVOICE_VIEW,
-    PERMISSIONS.INVOICE_MANAGE,
-    PERMISSIONS.USER_VIEW,
-    PERMISSIONS.ROLE_VIEW,
-    PERMISSIONS.HOUSEKEEPING_VIEW,
-    PERMISSIONS.HOUSEKEEPING_MANAGE,
-    PERMISSIONS.BOOKING_VIEW,
-    PERMISSIONS.BOOKING_MANAGE,
+    'UC-B1', 'UC-B2', 'UC-B3', 'UC-B6',
+    'UC-C3', 'UC-C5', 'UC-C6',
+    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5', 'UC-D6',
+    'UC-E1', 'UC-E3', 'UC-E5', 'UC-E6',
   ],
   [ROLES.STAFF]: [
     'UC-A2', 'UC-A3', 'UC-A4',
-    'UC-B4', 'UC-B5', 'UC-B6',
-    'UC-C6',
-    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4',
+    'UC-B4', 'UC-B5', 'UC-B6', 'UC-C6',
+    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5', 'UC-D6',
     'UC-E2', 'UC-E4', 'UC-E5',
-    PERMISSIONS.ROOM_VIEW,
-    PERMISSIONS.INVOICE_VIEW,
-    PERMISSIONS.INVOICE_MANAGE,
-    PERMISSIONS.HOUSEKEEPING_VIEW,
-    PERMISSIONS.BOOKING_VIEW,
   ],
   [ROLES.CUSTOMER]: [
     'UC-A1', 'UC-A2', 'UC-A3', 'UC-A4',
     'UC-B4', 'UC-B5',
     'UC-C1', 'UC-C2', 'UC-C3', 'UC-C4', 'UC-C6',
-    'UC-E4', 'UC-E6',
-    PERMISSIONS.ROOM_VIEW,
-    PERMISSIONS.INVOICE_VIEW,
-    PERMISSIONS.BOOKING_VIEW,
+    'UC-D4', 'UC-E4', 'UC-E6',
   ],
 };
 
-export const PERMISSION_CATALOG = [
-  { code: PERMISSIONS.ROOM_VIEW, label: 'Xem danh mục phòng' },
-  { code: PERMISSIONS.ROOM_MANAGE, label: 'Quản lý phòng' },
-  { code: PERMISSIONS.ROOM_MAP_VIEW, label: 'Xem sơ đồ phòng' },
-  { code: PERMISSIONS.INVOICE_VIEW, label: 'Xem hóa đơn' },
-  { code: PERMISSIONS.INVOICE_MANAGE, label: 'Quản lý hóa đơn' },
-  { code: PERMISSIONS.USER_VIEW, label: 'Xem người dùng' },
-  { code: PERMISSIONS.USER_MANAGE, label: 'UC-A5 · Quản lý nhân viên/quản lý' },
-  { code: PERMISSIONS.ROLE_VIEW, label: 'Xem vai trò và quyền' },
-  { code: PERMISSIONS.ROLE_MANAGE, label: 'UC-A6 · Quản lý vai trò và quyền' },
-  { code: PERMISSIONS.HOUSEKEEPING_VIEW, label: 'Xem nghiệp vụ buồng phòng' },
-  { code: PERMISSIONS.HOUSEKEEPING_MANAGE, label: 'Quản lý buồng phòng' },
-  { code: PERMISSIONS.BOOKING_VIEW, label: 'Xem đặt phòng' },
-  { code: PERMISSIONS.BOOKING_MANAGE, label: 'Quản lý đặt phòng' },
-];
-
-export const INTERNAL_ROLES = [
-  ROLES.ADMIN,
-  ROLES.MANAGER,
-  ROLES.STAFF,
-];
-
+export const INTERNAL_ROLES = [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF];
 export const PUBLIC_ROLES = [ROLES.CUSTOMER];
+
+export const UC_SCREEN_PERMISSIONS = {
+  '/users': 'UC-A5',
+  '/admin/roles': 'UC-A6',
+  '/admin/room-types': 'UC-B1',
+  '/admin/rooms': 'UC-B2',
+  '/admin/amenities': 'UC-B3',
+  '/admin/room-map': 'UC-B6',
+  '/rooms': 'UC-B4',
+  '/rooms/:id': 'UC-B5',
+  '/bookings/new': 'UC-C1',
+  '/bookings/deposit': 'UC-C2',
+  '/bookings': 'UC-C3',
+  '/bookings/:id/cancel': 'UC-C4',
+  '/admin/bookings': 'UC-C5',
+  '/bookings/:id': 'UC-C6',
+  '/frontdesk/check-in': 'UC-D1',
+  '/frontdesk/check-out': 'UC-D2',
+  '/frontdesk/invoices/new': 'UC-D3',
+  '/frontdesk/invoices/:id': 'UC-D4',
+  '/frontdesk/invoices/:id/edit': 'UC-D5',
+  '/frontdesk/invoices': 'UC-D6',
+  '/operations/tasks': 'UC-E1',
+  '/operations/my-tasks': 'UC-E2',
+  '/operations/dashboard': 'UC-E3',
+  '/operations/report-issue': 'UC-E4',
+  '/operations/issues': 'UC-E5',
+  '/operations/feedbacks': 'UC-E6',
+};

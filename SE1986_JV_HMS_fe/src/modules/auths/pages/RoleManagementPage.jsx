@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { authsApi } from '../api/authsApi';
 import {
   DATABASE_PERMISSION_CODES,
-  PERMISSION_CATALOG,
   ROLE_LABELS,
   ROLES,
 } from '../constants/authConstants';
@@ -122,7 +121,7 @@ export default function RoleManagementPage() {
       <div className="mb-4">
         <h2 className="mb-1">Quản lý vai trò & quyền</h2>
         <p className="text-muted mb-0">
-          UC-A6 · Cấu hình quyền theo role trong database.
+          UC-A6 · Ma trận quyền theo UC. Admin có toàn quyền; Manager, Staff và Customer chỉnh theo quy trình dự án. Bản demo lưu trên trình duyệt.
         </p>
       </div>
 
@@ -152,12 +151,12 @@ export default function RoleManagementPage() {
       {selectedRole && (
         <>
           <section className="card shadow-sm mb-4">
-            <div className="card-header fw-semibold">Quyền theo database (UC-A1 đến UC-E6)</div>
+            <div className="card-header fw-semibold">Quyền theo use case (UC-A1 đến UC-E6)</div>
             <div className="card-body">
               <div className="row g-3">
                 {databasePermissions.map(({ code, label }) => {
                   const isLockedAdminAccess =
-                    selectedRoleCode === ROLES.ADMIN && code === 'UC-A6';
+                    selectedRoleCode === ROLES.ADMIN;
                   const checked = selectedPermissions.includes(code);
 
                   return (
@@ -173,36 +172,13 @@ export default function RoleManagementPage() {
                         <span className="form-check-label">
                           <span className="d-block fw-semibold">{label}</span>
                           {isLockedAdminAccess && (
-                            <span className="small text-muted">Quyền UC-A6 của ADMIN luôn được giữ.</span>
+                            <span className="small text-muted">Quyền UC mặc định của ADMIN đang được khóa trong bản demo.</span>
                           )}
                         </span>
                       </label>
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          </section>
-
-          <section className="card shadow-sm mb-4">
-            <div className="card-header fw-semibold">Quyền sử dụng chức năng</div>
-            <div className="card-body">
-              <div className="row g-3">
-                {PERMISSION_CATALOG
-                  .filter(({ code }) => code !== 'UC-A5' && code !== 'UC-A6')
-                  .map(({ code, label }) => (
-                    <div className="col-12 col-md-6 col-xl-4" key={code}>
-                      <label className="form-check border rounded p-3 h-100">
-                        <input
-                          className="form-check-input me-2"
-                          type="checkbox"
-                          checked={selectedPermissions.includes(code)}
-                          onChange={() => togglePermission(code)}
-                        />
-                        <span className="form-check-label">{label}</span>
-                      </label>
-                    </div>
-                  ))}
               </div>
             </div>
           </section>

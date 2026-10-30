@@ -107,6 +107,32 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return undefined;
+    let active = true;
+    const refresh = async () => {
+      const permissions = await authsApi.getPermissionsForRoles(user.roles);
+      if (!active) return;
+      const updatedUser = { ...user, permissions };
+      setUser(updatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+    };
+    const onPermissionsChanged = (event) => {
+      if (event.detail?.role && !user.roles.includes(event.detail.role)) return;
+      refresh();
+    };
+    const onStorage = (event) => {
+      if (event.key === 'se1986.auth.permissions.version') refresh();
+    };
+    window.addEventListener('auth:permissions-changed', onPermissionsChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      active = false;
+      window.removeEventListener('auth:permissions-changed', onPermissionsChanged);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [user]);
+
+  useEffect(() => {
     const handleUnauthorized = () => logout();
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => {
