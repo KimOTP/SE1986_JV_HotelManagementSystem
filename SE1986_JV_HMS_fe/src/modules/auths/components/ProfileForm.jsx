@@ -8,7 +8,8 @@ import {
 } from '../schemas/authSchemas';
 
 import { authsApi } from '../api/authsApi';
-import { useAuth } from '../../../app/provider/AuthsContext';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
+import { ROLE_LABELS } from '../constants/authConstants';
 
 export default function ProfileForm() {
   const { user, updateProfile } = useAuth();
@@ -195,7 +196,7 @@ export default function ProfileForm() {
               id="profileRole"
               type="text"
               className="form-control"
-              value={user?.role || ''}
+              value={ROLE_LABELS[user?.role] || user?.role || ''}
               readOnly
             />
           </div>

@@ -6,76 +6,117 @@ export const AUTH_STORAGE_KEYS = {
 export const ROLES = {
   ADMIN: 'ADMIN',
   MANAGER: 'MANAGER',
-  RECEPTIONIST: 'RECEPTIONIST',
+  STAFF: 'STAFF',
+  RECEPTIONIST: 'STAFF',
   CUSTOMER: 'CUSTOMER',
 };
 
 export const PERMISSIONS = {
   ROOM_VIEW: 'ROOM_VIEW',
   ROOM_MANAGE: 'ROOM_MANAGE',
-
   ROOM_MAP_VIEW: 'ROOM_MAP_VIEW',
-
   INVOICE_VIEW: 'INVOICE_VIEW',
   INVOICE_MANAGE: 'INVOICE_MANAGE',
-
   USER_VIEW: 'USER_VIEW',
-  USER_MANAGE: 'USER_MANAGE',
-
+  USER_MANAGE: 'UC-A5',
   ROLE_VIEW: 'ROLE_VIEW',
-  ROLE_MANAGE: 'ROLE_MANAGE',
+  ROLE_MANAGE: 'UC-A6',
+  HOUSEKEEPING: 'HOUSEKEEPING',
+  OPERATIONS_VIEW: 'OPERATIONS_VIEW',
+  BOOKING_VIEW: 'BOOKING_VIEW',
+  BOOKING_MANAGE: 'BOOKING_MANAGE',
 };
 
-export const ROLE_PERMISSIONS = {
+export const DATABASE_PERMISSION_CODES = [
+  ...Array.from('ABCDE').flatMap((module) =>
+    Array.from({ length: 6 }, (_, index) => `UC-${module}${index + 1}`),
+  ),
+];
+
+export const ROLE_LABELS = {
+  [ROLES.ADMIN]: 'Quản trị viên',
+  [ROLES.MANAGER]: 'Quản lý',
+  [ROLES.STAFF]: 'Nhân viên',
+  [ROLES.CUSTOMER]: 'Khách hàng',
+};
+
+export const ROLE_PERMISSION_DEFAULTS = {
   [ROLES.ADMIN]: [
+    ...DATABASE_PERMISSION_CODES,
     PERMISSIONS.ROOM_VIEW,
     PERMISSIONS.ROOM_MANAGE,
     PERMISSIONS.ROOM_MAP_VIEW,
-
     PERMISSIONS.INVOICE_VIEW,
     PERMISSIONS.INVOICE_MANAGE,
-
     PERMISSIONS.USER_VIEW,
-    PERMISSIONS.USER_MANAGE,
-
     PERMISSIONS.ROLE_VIEW,
-    PERMISSIONS.ROLE_MANAGE,
+    PERMISSIONS.HOUSEKEEPING,
+    PERMISSIONS.OPERATIONS_VIEW,
+    PERMISSIONS.BOOKING_VIEW,
+    PERMISSIONS.BOOKING_MANAGE,
   ],
-
   [ROLES.MANAGER]: [
+    'UC-A2', 'UC-A3', 'UC-A4',
+    'UC-B4', 'UC-B5', 'UC-B6',
+    'UC-C5', 'UC-C6',
+    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5',
+    'UC-E1', 'UC-E3', 'UC-E4', 'UC-E5', 'UC-E6',
     PERMISSIONS.ROOM_VIEW,
     PERMISSIONS.ROOM_MANAGE,
     PERMISSIONS.ROOM_MAP_VIEW,
-
     PERMISSIONS.INVOICE_VIEW,
     PERMISSIONS.INVOICE_MANAGE,
-
     PERMISSIONS.USER_VIEW,
-    PERMISSIONS.USER_MANAGE,
-
     PERMISSIONS.ROLE_VIEW,
-    PERMISSIONS.ROLE_MANAGE,
+    PERMISSIONS.HOUSEKEEPING,
+    PERMISSIONS.OPERATIONS_VIEW,
+    PERMISSIONS.BOOKING_VIEW,
+    PERMISSIONS.BOOKING_MANAGE,
   ],
-
-  [ROLES.RECEPTIONIST]: [
+  [ROLES.STAFF]: [
+    'UC-A2', 'UC-A3', 'UC-A4',
+    'UC-B4', 'UC-B5', 'UC-B6',
+    'UC-C6',
+    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4',
+    'UC-E2', 'UC-E4', 'UC-E5',
     PERMISSIONS.ROOM_VIEW,
-
     PERMISSIONS.INVOICE_VIEW,
     PERMISSIONS.INVOICE_MANAGE,
+    PERMISSIONS.HOUSEKEEPING,
+    PERMISSIONS.OPERATIONS_VIEW,
+    PERMISSIONS.BOOKING_VIEW,
   ],
-
   [ROLES.CUSTOMER]: [
+    'UC-A1', 'UC-A2', 'UC-A3', 'UC-A4',
+    'UC-B4', 'UC-B5',
+    'UC-C1', 'UC-C2', 'UC-C3', 'UC-C4', 'UC-C6',
+    'UC-E4', 'UC-E6',
     PERMISSIONS.ROOM_VIEW,
     PERMISSIONS.INVOICE_VIEW,
+    PERMISSIONS.BOOKING_VIEW,
   ],
 };
+
+export const PERMISSION_CATALOG = [
+  { code: PERMISSIONS.ROOM_VIEW, label: 'Xem danh mục phòng' },
+  { code: PERMISSIONS.ROOM_MANAGE, label: 'Quản lý phòng' },
+  { code: PERMISSIONS.ROOM_MAP_VIEW, label: 'Xem sơ đồ phòng' },
+  { code: PERMISSIONS.INVOICE_VIEW, label: 'Xem hóa đơn' },
+  { code: PERMISSIONS.INVOICE_MANAGE, label: 'Quản lý hóa đơn' },
+  { code: PERMISSIONS.USER_VIEW, label: 'Xem người dùng' },
+  { code: PERMISSIONS.USER_MANAGE, label: 'UC-A5 · Quản lý nhân viên/quản lý' },
+  { code: PERMISSIONS.ROLE_VIEW, label: 'Xem vai trò và quyền' },
+  { code: PERMISSIONS.ROLE_MANAGE, label: 'UC-A6 · Quản lý vai trò và quyền' },
+  { code: PERMISSIONS.HOUSEKEEPING, label: 'Nghiệp vụ buồng phòng' },
+  { code: PERMISSIONS.OPERATIONS_VIEW, label: 'Xem nghiệp vụ vận hành' },
+  { code: PERMISSIONS.BOOKING_VIEW, label: 'Xem đặt phòng' },
+  { code: PERMISSIONS.BOOKING_MANAGE, label: 'Quản lý đặt phòng' },
+];
 
 export const INTERNAL_ROLES = [
   ROLES.ADMIN,
   ROLES.MANAGER,
-  ROLES.RECEPTIONIST,
+  ROLES.STAFF,
 ];
 
-export const PUBLIC_ROLES = [
-  ROLES.CUSTOMER,
-];
+export const PUBLIC_ROLES = [ROLES.CUSTOMER];

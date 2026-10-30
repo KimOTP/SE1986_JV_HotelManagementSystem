@@ -1,8 +1,6 @@
 const ROLE_LABELS = {
-  ADMIN: 'Admin',
-  MANAGER: 'Manager',
-  RECEPTIONIST: 'Receptionist',
-  CUSTOMER: 'Customer',
+  MANAGER: 'Quản lý',
+  STAFF: 'Nhân viên',
 };
 
 export default function UserList({
@@ -41,9 +39,8 @@ export default function UserList({
             aria-label="Lọc theo vai trò"
           >
             <option value="ALL">Tất cả vai trò</option>
-            <option value="ADMIN">Admin</option>
             <option value="MANAGER">Manager</option>
-            <option value="RECEPTIONIST">Receptionist</option>
+            <option value="STAFF">Nhân viên</option>
           </select>
         </div>
 
