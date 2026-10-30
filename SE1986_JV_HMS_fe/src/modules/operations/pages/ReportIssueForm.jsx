@@ -2,9 +2,11 @@ import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { issueSchema } from '../schemas/issueSchema';
+import { z } from 'zod';
+import { getIssueTypes } from '../api/issueTypesApi';
 import { createDemoIssue } from '../mocks/issueStore';
 import { useAuth } from '../../../app/provider/AuthsContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 const ReportIssueForm = () => {
@@ -12,21 +14,55 @@ const ReportIssueForm = () => {
   const { user } = useAuth();
   const [saveError, setSaveError] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [catalog, setCatalog] = useState({ items: [], loading: true, error: null });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getIssueTypes(controller.signal)
+      .then((items) => {
+        if (!controller.signal.aborted) setCatalog({ items, loading: false, error: null });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setCatalog({
+            items: [],
+            loading: false,
+            error: 'Không tải được danh mục. Hãy kiểm tra backend đang chạy ở cổng 8080.',
+          });
+        }
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  const formSchema = issueSchema.omit({ category: true, issueTypeId: true }).extend({
+    issueTypeId: z
+      .string()
+      .refine(
+        (id) => catalog.items.some((item) => String(item.id) === id),
+        'Vui lòng chọn loại sự cố hợp lệ',
+      ),
+  });
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
   } = useForm({
-    resolver: zodResolver(issueSchema),
-    defaultValues: { roomNumber: '', category: '', description: '' },
+    resolver: zodResolver(formSchema),
+    defaultValues: { roomNumber: '', issueTypeId: '', description: '' },
   });
 
   const onSubmit = (data) => {
     setSubmitted(false);
     setSaveError(null);
     try {
-      createDemoIssue(data, user?.fullName || user?.name || user?.email);
+      const selectedType = catalog.items.find((item) => String(item.id) === data.issueTypeId);
+      if (!selectedType) throw new Error('Invalid issue type');
+      createDemoIssue(
+        { ...data, issueTypeId: selectedType.id, category: selectedType.name },
+        user?.fullName || user?.name || user?.email,
+      );
       setSubmitted(true);
       reset();
     } catch {
@@ -63,6 +99,24 @@ const ReportIssueForm = () => {
       )}
 
       {saveError && <Alert variant="danger">{saveError}</Alert>}
+      {catalog.error && (
+        <Alert variant="danger">
+          {catalog.error}{' '}
+          <Button
+            variant="outline-danger"
+            size="sm"
+            onClick={() => {
+              setCatalog({ items: [], loading: true, error: null });
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Thử lại
+          </Button>
+        </Alert>
+      )}
+      {!catalog.loading && !catalog.error && catalog.items.length === 0 && (
+        <Alert variant="warning">Chưa có loại sự cố đang hoạt động trong database.</Alert>
+      )}
 
       {/* Form nhập liệu */}
       <Form
@@ -82,14 +136,26 @@ const ReportIssueForm = () => {
 
         <Form.Group className="mb-3">
           <Form.Label className="fw-semibold">Danh mục sự cố</Form.Label>
-          <Form.Select {...register('category')} isInvalid={!!errors.category}>
-            <option value="">-- Chọn danh mục --</option>
-            <option value="Electrical">Điện (Electrical)</option>
-            <option value="Plumbing">Đường ống nước (Plumbing)</option>
-            <option value="Furniture">Nội thất (Furniture)</option>
-            <option value="Other">Khác (Other)</option>
+          <Form.Select
+            {...register('issueTypeId')}
+            isInvalid={!!errors.issueTypeId}
+            disabled={catalog.loading || !!catalog.error || catalog.items.length === 0}
+          >
+            <option value="">
+              {catalog.loading ? 'Đang tải danh mục...' : '-- Chọn danh mục --'}
+            </option>
+            {catalog.items.map((item) => (
+              <option key={item.id} value={String(item.id)}>
+                {item.name}
+              </option>
+            ))}
           </Form.Select>
-          <Form.Control.Feedback type="invalid">{errors.category?.message}</Form.Control.Feedback>
+          <Form.Control.Feedback type="invalid">
+            {errors.issueTypeId?.message}
+          </Form.Control.Feedback>
+          <Form.Text>
+            Danh mục lấy từ database; báo cáo vẫn được lưu demo trên trình duyệt.
+          </Form.Text>
         </Form.Group>
 
         <Form.Group className="mb-4">
@@ -111,7 +177,13 @@ const ReportIssueForm = () => {
           <Button variant="outline-secondary" type="button" onClick={() => navigate(-1)}>
             Hủy
           </Button>
-          <Button variant="primary" type="submit" disabled={isSubmitting}>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={
+              isSubmitting || catalog.loading || !!catalog.error || catalog.items.length === 0
+            }
+          >
             Gửi báo cáo
           </Button>
         </div>

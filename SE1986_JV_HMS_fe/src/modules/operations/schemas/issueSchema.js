@@ -8,7 +8,8 @@ export const issueSchema = z.object({
     .trim()
     .min(1, 'Vui lòng nhập số phòng')
     .max(20, 'Số phòng tối đa 20 ký tự'),
-  category: z.enum(issueCategories, { error: 'Vui lòng chọn loại sự cố hợp lệ' }),
+  category: z.string().trim().min(1, 'Vui lòng chọn loại sự cố').max(100),
+  issueTypeId: z.number().int().positive().optional(),
   description: z
     .string()
     .trim()

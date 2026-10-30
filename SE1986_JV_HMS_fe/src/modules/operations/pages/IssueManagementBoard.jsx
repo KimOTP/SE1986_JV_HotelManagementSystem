@@ -162,10 +162,11 @@ const IssueManagementBoard = () => {
               <Form.Label className="small mb-1 fw-semibold">Danh mục</Form.Label>
               <Form.Select name="category" value={formData.category} onChange={handleFormChange}>
                 <option value="ALL">Tất cả</option>
-                <option value="Plumbing">Đường ống nước</option>
-                <option value="Electrical">Điện</option>
-                <option value="Furniture">Nội thất</option>
-                <option value="Other">Khác</option>
+                {[...new Set(issues.map((issue) => issue.category))].map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Col>

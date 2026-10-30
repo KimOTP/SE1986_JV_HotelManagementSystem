@@ -32,3 +32,15 @@
 Commit sau cần bổ sung `title` (bắt buộc, 200 ký tự), priority, chọn phòng/danh mục từ API và DTO dùng ID trước khi gửi sang backend. Không gửi trực tiếp payload demo vào bảng SQL.
 
 UC-E1/E2/E3/E5/E6 vẫn cần hoàn thiện nghiệp vụ, phân quyền theo từng use case và API. Khi có backend Spring/JPA, dùng join fetch cho quan hệ cần hiển thị để tránh N+1; hiện repo chưa có JPA để áp dụng.
+
+## Bước 2: Đọc danh mục từ SQL Server
+
+- Form gọi `GET /api/operations/issue-types`, chọn theo ID và hiển thị tên từ database.
+- Có trạng thái tải, danh mục rỗng, lỗi và Thử lại; không tự thay bằng mock khi lỗi.
+- Báo cáo vẫn lưu localStorage kèm `issueTypeId` và tên, chưa gửi vào SQL Server.
+- Bộ lọc bảng hỗ trợ danh mục của báo cáo cũ và mới.
+- Chạy backend ở cổng 8080 và frontend bằng `npm run dev`. Khởi động lại Vite để nhận proxy `/api` mới.
+- Có thể đặt `VITE_OPERATIONS_API_BASE_URL` để đổi URL. Gọi khác origin cần CORS ở backend. Production cần reverse proxy `/api` hoặc URL API riêng; Vite proxy chỉ dùng khi phát triển.
+- Kiểm tra: mở form, thấy Điện/Nước/Thiết bị/Vệ sinh; gửi demo và lọc theo danh mục trên bảng; tải lại vẫn còn dữ liệu. Tắt backend, mở lại form để kiểm tra lỗi; bật backend và bấm Thử lại.
+
+Commit gợi ý: `feat(operations): load issue types from backend in report form`
