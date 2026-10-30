@@ -117,15 +117,44 @@ const toPublicUser = (user) => {
   };
 };
 
-const normalizeRolePermissions = (rolePermissions) =>
-  Object.fromEntries(
-    Object.values(ROLES)
-      .filter((role, index, roles) => roles.indexOf(role) === index)
-      .map((role) => [
-        role,
-        [...new Set(rolePermissions?.[role] || ROLE_PERMISSION_DEFAULTS[role] || [])],
-      ]),
+const normalizeRolePermissions = (rolePermissions) => {
+  const knownRoles = Object.values(ROLES).filter(
+    (role, index, roles) => roles.indexOf(role) === index,
   );
+
+  return Object.fromEntries(
+    knownRoles.map((role) => {
+      const stored = rolePermissions?.[role];
+      if (!Array.isArray(stored)) {
+        return [role, ROLE_PERMISSION_DEFAULTS[role] || []];
+      }
+
+      const permissions = new Set(
+        stored.map((permission) => {
+          if (permission === 'USER_MANAGE') return PERMISSIONS.USER_MANAGE;
+          if (permission === 'ROLE_MANAGE') return PERMISSIONS.ROLE_MANAGE;
+          return permission;
+        }),
+      );
+
+      if (permissions.has('HOUSEKEEPING') || permissions.has('OPERATIONS_VIEW')) {
+        permissions.add(PERMISSIONS.HOUSEKEEPING_VIEW);
+      }
+      if (
+        permissions.has('HOUSEKEEPING') &&
+        [ROLES.ADMIN, ROLES.MANAGER].includes(role)
+      ) {
+        permissions.add(PERMISSIONS.HOUSEKEEPING_MANAGE);
+      }
+      if (role !== ROLES.ADMIN) {
+        permissions.delete(PERMISSIONS.USER_MANAGE);
+        permissions.delete(PERMISSIONS.ROLE_MANAGE);
+      }
+
+      return [role, [...permissions]];
+    }),
+  );
+};
 
 const getStoredRolePermissions = () => {
   if (typeof window === 'undefined') {
