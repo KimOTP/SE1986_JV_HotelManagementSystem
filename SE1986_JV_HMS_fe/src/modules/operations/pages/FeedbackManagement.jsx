@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Card, Button, Modal, Form, Row, Col, Badge, Pagination } from 'react-bootstrap';
 import { mockFeedbacks as initialFeedbacks } from '../mocks/mockData';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 const FeedbackManagement = () => {
+  const { hasPermission } = useAuth();
+  const canReply = hasPermission('UC-E6');
   const [feedbacks, setFeedbacks] = useState(initialFeedbacks);
 
   // FORM & SEARCH STATE
@@ -139,11 +142,11 @@ const FeedbackManagement = () => {
                   <small className="text-primary fw-bold d-block mb-1">Phản hồi từ Quản lý:</small>
                   <span className="text-muted">{f.reply}</span>
                 </div>
-              ) : (
+              ) : canReply ? (
                 <Button size="sm" variant="primary" onClick={() => openReply(f.id)}>
                   Phản hồi ngay
                 </Button>
-              )}
+              ) : null}
             </Card.Body>
           </Card>
         ))
@@ -179,7 +182,7 @@ const FeedbackManagement = () => {
       )}
 
       {/* MODAL */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+      <Modal show={canReply && showModal} onHide={() => setShowModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Phản hồi khách hàng</Modal.Title>
         </Modal.Header>
@@ -196,7 +199,7 @@ const FeedbackManagement = () => {
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Hủy
           </Button>
-          <Button variant="primary" onClick={handleReply}>
+          <Button variant="primary" onClick={handleReply} disabled={!canReply}>
             Gửi phản hồi
           </Button>
         </Modal.Footer>

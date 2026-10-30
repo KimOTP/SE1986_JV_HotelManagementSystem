@@ -8,9 +8,12 @@ import {
   getInvoiceByBooking,
   getReservation,
 } from '../mocks/frontdeskStore';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 // UC-D3: Create Invoice (pre-filled from the booking; always saved as UNPAID)
 export default function InvoiceCreatePage() {
+  const { hasPermission } = useAuth();
+  const canCreateInvoice = hasPermission('UC-D3');
   const [params] = useSearchParams();
   const bookingId = params.get('bookingId');
   const navigate = useNavigate();
@@ -47,6 +50,9 @@ export default function InvoiceCreatePage() {
         <Link to={`/frontdesk/invoices/${existing.id}`}>Xem hóa đơn</Link>
       </Alert>
     );
+  }
+  if (!canCreateInvoice) {
+    return <Alert variant="danger">Bạn không có UC-D3 để tạo hóa đơn.</Alert>;
   }
 
   const onSubmit = (data) => {

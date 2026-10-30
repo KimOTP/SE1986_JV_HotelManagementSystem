@@ -9,7 +9,10 @@ import { PAYMENT_METHODS, calcTotals, currency } from '../utils/frontdeskUtils';
 
 // UC-D4: View Invoice Detail
 export default function InvoiceDetailPage() {
-  const { canManageInvoices } = useAuth();
+  const { hasPermission } = useAuth();
+  const canManageInvoices = hasPermission('UC-D5');
+  const canDeleteInvoices = hasPermission('UC-D6');
+  const canViewInvoice = hasPermission('UC-D4');
   const { id } = useParams();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState(() => getInvoice(id));
@@ -22,6 +25,9 @@ export default function InvoiceDetailPage() {
         <Link to="/frontdesk/invoices">Về danh sách</Link>
       </Alert>
     );
+  }
+  if (!canViewInvoice && !canManageInvoices && !canDeleteInvoices) {
+    return <Alert variant="danger">Bạn không có quyền UC-D4 để xem hóa đơn.</Alert>;
   }
 
   const totals = calcTotals(invoice);
@@ -47,13 +53,13 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="d-flex gap-2">
           <Button variant="outline-dark" onClick={() => window.print()}><Printer /> In</Button>
-          {canManageInvoices && (
+          {(canManageInvoices || canDeleteInvoices) && (
             <>
-              {invoice.status !== 'PAID' && (
-                <Button variant="success" onClick={handlePay}><CashCoin /> Thanh toán</Button>
+              {canManageInvoices && invoice.status !== 'PAID' && (
+              <Button variant="success" onClick={handlePay}><CashCoin /> Thanh toán</Button>
               )}
-              <Button as={Link} to={`/frontdesk/invoices/${invoice.id}/edit`} variant="outline-primary"><Pencil /> Chỉnh sửa</Button>
-              <Button variant="outline-danger" onClick={() => setShowDelete(true)}><Trash /> Xóa</Button>
+              {canManageInvoices && <Button as={Link} to={`/frontdesk/invoices/${invoice.id}/edit`} variant="outline-primary"><Pencil /> Chỉnh sửa</Button>}
+              {canDeleteInvoices && <Button variant="outline-danger" onClick={() => setShowDelete(true)}><Trash /> Xóa</Button>}
             </>
           )}
         </div>
@@ -103,7 +109,7 @@ export default function InvoiceDetailPage() {
         </Col>
       </Row>
 
-      <Modal show={showDelete} onHide={() => setShowDelete(false)} centered>
+      <Modal show={canDeleteInvoices && showDelete} onHide={() => setShowDelete(false)} centered>
         <Modal.Header closeButton><Modal.Title>Xóa hóa đơn</Modal.Title></Modal.Header>
         <Modal.Body>Bạn có chắc muốn xóa hóa đơn <strong>{invoice.id}</strong>? Hành động này không thể hoàn tác.</Modal.Body>
         <Modal.Footer>

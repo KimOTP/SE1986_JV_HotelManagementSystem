@@ -4,7 +4,8 @@ import { mockTasks as initialTasks } from '../mocks/mockData';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 const MyTasks = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const canUpdateTask = hasPermission('UC-E2');
   const currentUser = user?.name || user?.fullName;
 
   // 1. QUẢN LÝ STATE DỮ LIỆU
@@ -191,6 +192,7 @@ const MyTasks = () => {
                   <Form.Select
                     size="sm"
                     value={t.status}
+                    disabled={!canUpdateTask}
                     onChange={(e) => handleUpdateStatus(t.id, e.target.value)}
                     style={{ width: '160px' }}
                   >

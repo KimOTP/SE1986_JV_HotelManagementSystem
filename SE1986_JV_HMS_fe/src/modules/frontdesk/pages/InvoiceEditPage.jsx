@@ -3,9 +3,12 @@ import { Alert } from 'react-bootstrap';
 import { Link, useNavigate, useParams } from 'react-router';
 import InvoiceForm from '../components/InvoiceForm';
 import { getInvoice, updateInvoice } from '../mocks/frontdeskStore';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 // UC-D5: Update Invoice
 export default function InvoiceEditPage() {
+  const { hasPermission } = useAuth();
+  const canUpdateInvoice = hasPermission('UC-D5');
   const { id } = useParams();
   const navigate = useNavigate();
   const [invoice] = useState(() => getInvoice(id));
@@ -17,6 +20,7 @@ export default function InvoiceEditPage() {
       </Alert>
     );
   }
+  if (!canUpdateInvoice) return <Alert variant="danger">Bạn không có UC-D5 để cập nhật hóa đơn.</Alert>;
 
   const onSubmit = (data) => {
     updateInvoice(id, data);

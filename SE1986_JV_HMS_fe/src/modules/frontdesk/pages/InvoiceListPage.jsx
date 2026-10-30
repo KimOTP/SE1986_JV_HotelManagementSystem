@@ -11,7 +11,10 @@ const EMPTY = { keyword: '', status: 'ALL' };
 
 // Invoice list + UC-D6: Delete Invoice (confirm modal)
 export default function InvoiceListPage() {
-  const { canManageInvoices } = useAuth();
+  const { hasPermission } = useAuth();
+  const canManageInvoices = hasPermission('UC-D5');
+  const canDeleteInvoices = hasPermission('UC-D6');
+  const canViewInvoices = hasPermission('UC-D4');
   const [invoices, setInvoices] = useState(getInvoices);
   const [formData, setFormData] = useState(EMPTY);
   const [searchParams, setSearchParams] = useState(EMPTY);
@@ -61,7 +64,7 @@ export default function InvoiceListPage() {
           <h2 className="fw-bold mb-1">Quản lý hóa đơn</h2>
           <p className="text-muted mb-0">
             {canManageInvoices
-              ? 'Hóa đơn được tự sinh khi trả phòng. Tại đây bạn có thể xem, chỉnh sửa và xóa.'
+              ? 'Hóa đơn được tự sinh khi trả phòng. Tại đây bạn có thể xem và quản lý theo quyền được cấp.'
               : 'Xem thông tin hóa đơn lưu trú của bạn.'}
           </p>
         </div>
@@ -114,14 +117,14 @@ export default function InvoiceListPage() {
                 <td><InvoiceStatusBadge status={i.status} /></td>
                 <td>
                   <div className="d-flex gap-1">
-                    <Button as={Link} to={`/frontdesk/invoices/${i.id}`} size="sm" variant="outline-primary" title="Xem"><Eye /></Button>
-                    {canManageInvoices && (
+                    {canViewInvoices && <Button as={Link} to={`/frontdesk/invoices/${i.id}`} size="sm" variant="outline-primary" title="Xem"><Eye /></Button>}
+                    {(canManageInvoices || canDeleteInvoices) && (
                       <>
-                        {i.status !== 'PAID' && (
+                        {canManageInvoices && i.status !== 'PAID' && (
                           <Button size="sm" variant="success" title="Thanh toán" onClick={() => handlePay(i)}><CashCoin /> Thanh toán</Button>
                         )}
-                        <Button as={Link} to={`/frontdesk/invoices/${i.id}/edit`} size="sm" variant="outline-secondary" title="Sửa"><Pencil /></Button>
-                        <Button size="sm" variant="outline-danger" title="Xóa" onClick={() => setToDelete(i)}><Trash /></Button>
+                        {canManageInvoices && <Button as={Link} to={`/frontdesk/invoices/${i.id}/edit`} size="sm" variant="outline-secondary" title="Sửa"><Pencil /></Button>}
+                        {canDeleteInvoices && <Button size="sm" variant="outline-danger" title="Xóa" onClick={() => setToDelete(i)}><Trash /></Button>}
                       </>
                     )}
                   </div>
@@ -147,7 +150,7 @@ export default function InvoiceListPage() {
         </div>
       )}
 
-      <Modal show={!!toDelete} onHide={() => setToDelete(null)} centered>
+      <Modal show={canDeleteInvoices && !!toDelete} onHide={() => setToDelete(null)} centered>
         <Modal.Header closeButton><Modal.Title>Xóa hóa đơn</Modal.Title></Modal.Header>
         <Modal.Body>
           Bạn có chắc muốn xóa hóa đơn <strong>{toDelete?.id}</strong> của khách <strong>{toDelete?.guestName}</strong>?

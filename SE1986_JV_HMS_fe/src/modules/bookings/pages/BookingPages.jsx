@@ -161,6 +161,8 @@ export function BookingHandoffPage() {
 }
 
 export function CreateBookingPage() {
+  const { hasPermission } = useAuth();
+  const canCreateBooking = hasPermission('UC-C1');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRoomTypeId = params.get('roomTypeId') || '';
@@ -209,6 +211,7 @@ export function CreateBookingPage() {
 
   const submit = (event) => {
     event.preventDefault();
+    if (!canCreateBooking) return setError('Bạn không có UC-C1 để tạo đặt phòng.');
     setError('');
     const dateErrors = validateSearch({
       checkIn: form.checkIn,
@@ -412,7 +415,7 @@ export function CreateBookingPage() {
               type="submit"
               size="lg"
               className="w-100"
-              disabled={loadingTypes || submitting || !roomType}
+              disabled={!canCreateBooking || loadingTypes || submitting || !roomType}
             >
               {submitting ? 'Đang kiểm tra phòng…' : 'Tạo đặt phòng'}
             </Button>
@@ -424,6 +427,8 @@ export function CreateBookingPage() {
 }
 
 export function DepositPaymentPage() {
+  const { hasPermission } = useAuth();
+  const canPayDeposit = hasPermission('UC-C2');
   const [params] = useSearchParams();
   const [bookings, setBookings] = useState(() => getBookings());
   const [selectedId, setSelectedId] = useState(params.get('bookingId') || '');
@@ -435,6 +440,7 @@ export function DepositPaymentPage() {
   const payableBookings = bookings.filter((booking) => booking.status === 'PENDING');
 
   const pay = () => {
+    if (!canPayDeposit) return setError('Bạn không có UC-C2 để thanh toán tiền cọc.');
     setError('');
     setNotice('');
     setPaying(true);
@@ -515,7 +521,7 @@ export function DepositPaymentPage() {
                     <strong className="text-primary">{money(selected.depositRequired)}</strong>
                   </div>
                   {selected.status === 'PENDING' ? (
-                    <Button className="w-100" onClick={pay} disabled={paying}>
+                    <Button className="w-100" onClick={pay} disabled={!canPayDeposit || paying}>
                       {paying ? 'Đang xử lý…' : 'Xác nhận thanh toán demo'}
                     </Button>
                   ) : (
@@ -540,7 +546,9 @@ export function DepositPaymentPage() {
 }
 
 export function BookingHistoryPage() {
-  const { role, canManageBookings } = useAuth();
+  const { role, hasPermission } = useAuth();
+  const canManageBookings = hasPermission('UC-C5');
+  const canCreateBooking = hasPermission('UC-C1');
   const [bookings, setBookings] = useState(() => getBookings());
   const [statusFilter, setStatusFilter] = useState('ALL');
   const visible = canManageBookings
@@ -556,11 +564,11 @@ export function BookingHistoryPage() {
       <PageHeading
         title="Đặt phòng của tôi"
         description="Theo dõi trạng thái và lịch sử các lần đặt phòng."
-        actions={
+        actions={canCreateBooking && (
           <Button as={Link} to="/bookings/new">
             Tạo đặt phòng
           </Button>
-        }
+        )}
       />
       {isCustomerView && (
         <Alert variant="info">
@@ -640,6 +648,8 @@ export function BookingHistoryPage() {
 }
 
 export function CancelBookingPage() {
+  const { hasPermission } = useAuth();
+  const canCancelBooking = hasPermission('UC-C4');
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(() => getBooking(id));
@@ -716,7 +726,7 @@ export function CancelBookingPage() {
             <Button variant="outline-secondary" as={Link} to={`/bookings/${booking.id}`}>
               Giữ đặt phòng
             </Button>
-            <Button variant="danger" onClick={() => setShowConfirm(true)}>
+            <Button variant="danger" onClick={() => setShowConfirm(true)} disabled={!canCancelBooking}>
               Tiếp tục hủy
             </Button>
           </div>
@@ -733,7 +743,7 @@ export function CancelBookingPage() {
           <Button variant="outline-secondary" onClick={() => setShowConfirm(false)}>
             Quay lại
           </Button>
-          <Button variant="danger" onClick={confirmCancel}>
+          <Button variant="danger" onClick={confirmCancel} disabled={!canCancelBooking}>
             Xác nhận hủy đặt phòng
           </Button>
         </Modal.Footer>
@@ -869,7 +879,10 @@ export function ManageBookingsPage() {
 
 export function BookingDetailPage() {
   const { id } = useParams();
-  const { canManageBookings } = useAuth();
+  const { hasPermission } = useAuth();
+  const canManageBookings = hasPermission('UC-C5');
+  const canCancelBooking = hasPermission('UC-C4');
+  const canPayDeposit = hasPermission('UC-C2');
   const booking = getBooking(id);
   if (!booking) {
     return (
@@ -877,6 +890,11 @@ export function BookingDetailPage() {
         Không tìm thấy đặt phòng <strong>{id}</strong>. <Link to="/bookings">Về danh sách</Link>
       </Alert>
     );
+  }
+  const canViewAllBookings = canManageBookings;
+  const belongsToCurrentCustomer = booking.customerKey === DEMO_BOOKING_CUSTOMER_KEY;
+  if (!canViewAllBookings && !belongsToCurrentCustomer) {
+    return <Alert variant="danger">Bạn không có UC-C6 để xem đặt phòng này.</Alert>;
   }
   const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status);
   const canPay = booking.status === 'PENDING';
@@ -959,7 +977,7 @@ export function BookingDetailPage() {
           <Card className="shadow-sm">
             <Card.Body className="p-4">
               <h5 className="fw-bold mb-3">Thao tác</h5>
-              {canPay && (
+              {canPay && canPayDeposit && (
                 <Button
                   as={Link}
                   to={`/bookings/deposit?bookingId=${booking.id}`}
@@ -968,7 +986,7 @@ export function BookingDetailPage() {
                   Thanh toán tiền cọc
                 </Button>
               )}
-              {canCancel && (
+              {canCancel && canCancelBooking && (
                 <Button
                   as={Link}
                   to={`/bookings/${booking.id}/cancel`}
@@ -978,7 +996,7 @@ export function BookingDetailPage() {
                   Hủy đặt phòng
                 </Button>
               )}
-              {!canPay && !canCancel && (
+              {(!canPay || !canPayDeposit) && (!canCancel || !canCancelBooking) && (
                 <p className="text-muted mb-0">
                   Không có thao tác nào khả dụng cho trạng thái này.
                 </p>
