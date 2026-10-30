@@ -1,28 +1,10 @@
 import { Nav } from 'react-bootstrap';
 import { NavLink } from 'react-router';
 import { sidebarMenu } from '../sidebarMenu';
-import { useAuth } from '../../provider/AuthsContext';
+import { useAuth } from '../../provider/AuthsContext.jsx';
 
 export default function Sidebar() {
   const auth = useAuth();
-
-  const canSee = (item) => {
-    if (item.requiredPermission) {
-      return auth.hasPermission(item.requiredPermission);
-    }
-
-    if (!item.permission) {
-      return true;
-    }
-
-    if (item.permission === 'bookingManage') {
-      return auth.canManageBookings;
-    }
-
-    return item.permission === 'manage'
-      ? auth.canManageInvoices
-      : auth.canViewInvoices;
-  };
 
   return (
     <aside className="app-sidebar bg-light border-end p-3">
@@ -30,7 +12,9 @@ export default function Sidebar() {
         {sidebarMenu
           .map((group) => ({
             ...group,
-            items: group.items.filter(canSee),
+            items: group.items.filter((item) =>
+              auth.hasPermission(item.requiredPermission),
+            ),
           }))
           .filter((group) => group.items.length > 0)
           .map((group) => (

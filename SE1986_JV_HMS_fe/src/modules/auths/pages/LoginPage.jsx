@@ -1,15 +1,25 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 
 import LoginForm from '../components/LoginForm';
+import { ROLES } from '../constants/authConstants';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/';
-
-  const handleSuccess = () => {
-    navigate(from, { replace: true });
+  const handleSuccess = (user) => {
+    const requestedLocation = location.state?.from;
+    const roleHome = {
+      [ROLES.ADMIN]: '/users',
+      [ROLES.MANAGER]: '/bookings',
+      [ROLES.STAFF]: '/operations/my-tasks',
+      [ROLES.CUSTOMER]: '/bookings',
+    };
+    const destination =
+      requestedLocation?.pathname && requestedLocation.pathname !== '/'
+        ? requestedLocation
+        : roleHome[user.role] || '/profile';
+    navigate(destination, { replace: true });
   };
 
   return (

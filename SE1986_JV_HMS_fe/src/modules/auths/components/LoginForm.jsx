@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import { loginSchema } from '../schemas/authSchemas';
 import { authsApi } from '../api/authsApi';
-import { useAuth } from '../../../app/provider/AuthsContext';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 export default function LoginForm({ onSuccess }) {
   const { login } = useAuth();

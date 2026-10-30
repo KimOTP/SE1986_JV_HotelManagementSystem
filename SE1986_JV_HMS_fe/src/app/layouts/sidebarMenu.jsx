@@ -2,52 +2,108 @@ import { PERMISSIONS } from '../../modules/auths/constants/authConstants';
 
 export const sidebarMenu = [
   {
-    groupLabel: 'DASHBOARD',
-    items: [
-      // { label: "Overview", to: "/dashboard" },
-    ],
-  },
-  {
     groupLabel: 'HOUSEKEEPING',
     items: [
-      { label: 'Operations Dashboard', to: '/operations/dashboard' },
-      { label: 'Task Board', to: '/operations/tasks' },
-      { label: 'My Tasks', to: '/operations/my-tasks' },
+      {
+        label: 'Operations Dashboard',
+        to: '/operations/dashboard',
+        requiredPermission: PERMISSIONS.OPERATIONS_VIEW,
+      },
+      {
+        label: 'Task Board',
+        to: '/operations/tasks',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING,
+      },
+      {
+        label: 'My Tasks',
+        to: '/operations/my-tasks',
+        requiredPermission: PERMISSIONS.HOUSEKEEPING,
+      },
     ],
   },
   {
     groupLabel: 'SERVICES & FEEDBACK',
     items: [
-      { label: 'Issue Reports', to: '/operations/issues' },
-      { label: 'Guest Feedback', to: '/operations/feedbacks' },
+      {
+        label: 'Issue Reports',
+        to: '/operations/issues',
+        requiredPermission: PERMISSIONS.OPERATIONS_VIEW,
+      },
+      {
+        label: 'Guest Feedback',
+        to: '/operations/feedbacks',
+        requiredPermission: PERMISSIONS.OPERATIONS_VIEW,
+      },
     ],
   },
-  // --- DÀNH CHO CÁC BẠN KHÁC ---
   {
     groupLabel: 'FRONT DESK',
     items: [
-      // permission: 'manage' (Receptionist/Manager) | 'view' (also Customer)
-      { label: 'Check-in', to: '/frontdesk/check-in', permission: 'manage' },
-      { label: 'Check-out', to: '/frontdesk/check-out', permission: 'manage' },
-      { label: 'Hóa đơn', to: '/frontdesk/invoices', permission: 'view' },
+      {
+        label: 'Check-in',
+        to: '/frontdesk/check-in',
+        requiredPermission: PERMISSIONS.INVOICE_MANAGE,
+      },
+      {
+        label: 'Check-out',
+        to: '/frontdesk/check-out',
+        requiredPermission: PERMISSIONS.INVOICE_MANAGE,
+      },
+      {
+        label: 'Hóa đơn',
+        to: '/frontdesk/invoices',
+        requiredPermission: PERMISSIONS.INVOICE_VIEW,
+      },
     ],
   },
   {
     groupLabel: 'BOOKINGS',
     items: [
-      { label: 'Tạo đặt phòng', to: '/bookings/new' },
-      { label: 'Đặt phòng của tôi', to: '/bookings' },
-      { label: 'Thanh toán tiền cọc', to: '/bookings/deposit' },
-      { label: 'Quản lý đặt phòng', to: '/admin/bookings', permission: 'bookingManage' },
+      {
+        label: 'Tạo đặt phòng',
+        to: '/bookings/new',
+        requiredPermission: PERMISSIONS.BOOKING_VIEW,
+      },
+      {
+        label: 'Đặt phòng của tôi',
+        to: '/bookings',
+        requiredPermission: PERMISSIONS.BOOKING_VIEW,
+      },
+      {
+        label: 'Thanh toán tiền cọc',
+        to: '/bookings/deposit',
+        requiredPermission: PERMISSIONS.BOOKING_VIEW,
+      },
+      {
+        label: 'Quản lý đặt phòng',
+        to: '/admin/bookings',
+        requiredPermission: PERMISSIONS.BOOKING_MANAGE,
+      },
     ],
   },
   {
     groupLabel: 'ROOM CATALOG',
     items: [
-      { label: 'Loại phòng', to: '/admin/room-types' },
-      { label: 'Phòng', to: '/admin/rooms' },
-      { label: 'Tiện nghi', to: '/admin/amenities' },
-      { label: 'Sơ đồ phòng', to: '/admin/room-map' },
+      {
+        label: 'Loại phòng',
+        to: '/admin/room-types',
+        requiredPermission: PERMISSIONS.ROOM_MANAGE,
+      },
+      {
+        label: 'Phòng',
+        to: '/admin/rooms',
+        requiredPermission: PERMISSIONS.ROOM_MANAGE,
+      },
+      {
+        label: 'Tiện nghi',
+        to: '/admin/amenities',
+        requiredPermission: PERMISSIONS.ROOM_MANAGE,
+      },
+      {
+        label: 'Sơ đồ phòng',
+        to: '/admin/room-map',
+        requiredPermission: PERMISSIONS.ROOM_MAP_VIEW,
+      },
     ],
   },
   {
@@ -57,6 +113,11 @@ export const sidebarMenu = [
         label: 'Quản lý người dùng',
         to: '/users',
         requiredPermission: PERMISSIONS.USER_MANAGE,
+      },
+      {
+        label: 'Quản lý vai trò & quyền',
+        to: '/admin/roles',
+        requiredPermission: PERMISSIONS.ROLE_MANAGE,
       },
     ],
   },

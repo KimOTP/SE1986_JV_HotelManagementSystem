@@ -3,7 +3,7 @@ import { Alert, Button, Col, Form, Modal, Pagination, Row, Table } from 'react-b
 import { CashCoin, Eye, Pencil, Trash } from 'react-bootstrap-icons';
 import { Link } from 'react-router';
 import { deleteInvoice, getInvoices, payInvoice } from '../mocks/frontdeskStore';
-import { useAuth } from '../../../app/provider/AuthsContext';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { InvoiceStatusBadge } from '../components/InvoiceSummary';
 import { INVOICE_STATUS, calcTotals, currency } from '../utils/frontdeskUtils';
 

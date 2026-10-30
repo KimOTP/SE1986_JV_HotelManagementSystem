@@ -3,7 +3,7 @@ import { Alert, Button, Card, Col, Modal, Row, Table } from 'react-bootstrap';
 import { ArrowLeft, CashCoin, Pencil, Printer, Trash } from 'react-bootstrap-icons';
 import { Link, useNavigate, useParams } from 'react-router';
 import { deleteInvoice, getInvoice, payInvoice } from '../mocks/frontdeskStore';
-import { useAuth } from '../../../app/provider/AuthsContext';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import InvoiceSummary, { InvoiceStatusBadge } from '../components/InvoiceSummary';
 import { PAYMENT_METHODS, calcTotals, currency } from '../utils/frontdeskUtils';
 

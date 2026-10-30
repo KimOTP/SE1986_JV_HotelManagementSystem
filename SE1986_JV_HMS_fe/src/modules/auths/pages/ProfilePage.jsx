@@ -1,6 +1,6 @@
 import { Link, Navigate } from 'react-router';
 
-import { useAuth } from '../../../app/provider/AuthsContext';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import ProfileForm from '../components/ProfileForm';
 
 export default function ProfilePage() {

@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Table, Badge, Button, Form, Row, Col, Pagination } from 'react-bootstrap';
 import { mockTasks } from '../mocks/mockData';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 const MyTasks = () => {
-  const currentUser = 'Nguyễn Văn A';
+  const { user } = useAuth();
+  const currentUser = user?.name || user?.fullName;
 
   // 1. STATE CHO FORM NHẬP LIỆU
   const [formData, setFormData] = useState({
@@ -55,7 +57,7 @@ const MyTasks = () => {
       result = result.filter((t) => t.roomNumber.includes(searchParams.room.trim()));
 
     return result;
-  }, [searchParams]);
+  }, [currentUser, searchParams]);
 
   // 5. PHÂN TRANG
   const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
