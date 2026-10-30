@@ -1,10 +1,8 @@
-import axios from 'axios';
 import { z } from 'zod';
+import axiosClient from '../../../shared/api/axiosClient';
 
-const client = axios.create({
-  baseURL: import.meta.env.VITE_OPERATIONS_API_BASE_URL || '/api',
-  timeout: 15000,
-});
+const baseURL =
+  import.meta.env.VITE_OPERATIONS_API_BASE_URL || axiosClient.defaults.baseURL;
 
 const issueTypesSchema = z.array(
   z.object({
@@ -14,6 +12,9 @@ const issueTypesSchema = z.array(
 );
 
 export async function getIssueTypes(signal) {
-  const response = await client.get('/operations/issue-types', { signal });
+  const response = await axiosClient.get('/operations/issue-types', {
+    baseURL,
+    signal,
+  });
   return issueTypesSchema.parse(response.data);
 }
