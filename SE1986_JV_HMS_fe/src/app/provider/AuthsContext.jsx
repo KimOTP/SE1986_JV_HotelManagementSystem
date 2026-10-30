@@ -3,6 +3,7 @@
 import {
   createContext,
   useCallback,
+  useEffect,
   useContext,
   useMemo,
   useState,
@@ -11,7 +12,7 @@ import {
 import {
   AUTH_STORAGE_KEYS,
   PERMISSIONS,
-  ROLE_PERMISSIONS,
+  ROLE_PERMISSION_DEFAULTS,
   ROLES,
 } from '../../modules/auths/constants/authConstants';
 import { authsApi } from '../../modules/auths/api/authsApi';
@@ -43,17 +44,21 @@ function normalizeUser(user) {
     return null;
   }
 
-  const role = user.role || user.roles?.[0] || ROLES.CUSTOMER;
-
-  const roles = Array.isArray(user.roles) ? user.roles : [role];
-
-  const permissions = [
-    ...new Set(
-      roles.flatMap(
-        (currentRole) => ROLE_PERMISSIONS[currentRole] || [],
-      ),
-    ),
-  ];
+  const normalizeRole = (role) =>
+    role === 'RECEPTIONIST' ? ROLES.STAFF : role;
+  const role = normalizeRole(user.role || user.roles?.[0] || ROLES.CUSTOMER);
+  const roles = Array.isArray(user.roles)
+    ? [...new Set(user.roles.map(normalizeRole))]
+    : [role];
+  const permissions = Array.isArray(user.permissions)
+    ? user.permissions
+    : [
+        ...new Set(
+          roles.flatMap(
+            (currentRole) => ROLE_PERMISSION_DEFAULTS[currentRole] || [],
+          ),
+        ),
+      ];
 
   return {
     ...user,
@@ -90,6 +95,54 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN);
   }, []);
 
+  const refreshAuthorization = useCallback(async () => {
+    if (!user) {
+      return;
+    }
+
+    const permissions = await authsApi.getPermissionsForRoles(user.roles);
+    const updatedUser = { ...user, permissions };
+    setUser(updatedUser);
+    localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+  }, [user]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => logout();
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [logout]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let active = true;
+    authsApi.getPermissionsForRoles(user.roles).then((permissions) => {
+      if (!active) {
+        return;
+      }
+
+      const currentPermissions = user.permissions || [];
+      if (
+        permissions.length === currentPermissions.length &&
+        permissions.every((permission) => currentPermissions.includes(permission))
+      ) {
+        return;
+      }
+
+      const updatedUser = { ...user, permissions };
+      setUser(updatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
   const updateProfile = useCallback(
   async (profileData) => {
     if (!user) {
@@ -101,7 +154,11 @@ export function AuthProvider({ children }) {
       ...profileData,
     });
 
-    const normalizedUser = normalizeUser(updatedUser);
+    const normalizedUser = normalizeUser({
+      ...updatedUser,
+      permissions: user.permissions,
+      roles: user.roles,
+    });
 
     setUser(normalizedUser);
 
@@ -156,6 +213,7 @@ export function AuthProvider({ children }) {
       login,
       logout,
       updateProfile,
+      refreshAuthorization,
 
       hasRole,
       hasPermission,
@@ -167,7 +225,7 @@ export function AuthProvider({ children }) {
       canManageInvoices: hasPermission(PERMISSIONS.INVOICE_MANAGE),
 
       canViewInvoices: hasPermission(PERMISSIONS.INVOICE_VIEW),
-      canManageBookings: hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER),
+      canManageBookings: hasPermission(PERMISSIONS.BOOKING_MANAGE),
 
       /*
        * Các permission dành cho Module A
@@ -176,7 +234,16 @@ export function AuthProvider({ children }) {
 
       canManageRoles: hasPermission(PERMISSIONS.ROLE_MANAGE),
     }),
-    [user, token, login, logout,updateProfile, hasRole, hasPermission],
+    [
+      user,
+      token,
+      login,
+      logout,
+      updateProfile,
+      refreshAuthorization,
+      hasRole,
+      hasPermission,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

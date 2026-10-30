@@ -21,6 +21,17 @@ export async function loginAsReceptionist() {
   });
 }
 
+export async function loginAsStaff() {
+  return loginAsReceptionist();
+}
+
+export async function loginAsHousekeeper() {
+  return authsApi.login({
+    email: 'housekeeper@hotel.com',
+    password: '123456',
+  });
+}
+
 export async function loginAsCustomer() {
   return authsApi.login({
     email: 'customer@hotel.com',

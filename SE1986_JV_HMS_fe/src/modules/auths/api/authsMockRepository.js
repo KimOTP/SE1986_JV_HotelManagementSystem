@@ -1,12 +1,20 @@
 
-import { ROLES } from "../constants/authConstants";
+import {
+  DATABASE_PERMISSION_CODES,
+  PERMISSIONS,
+  ROLE_LABELS,
+  ROLE_PERMISSION_DEFAULTS,
+  ROLES,
+} from '../constants/authConstants';
 
 const USERS_STORAGE_KEY = "se1986.auth.mock.users";
+const ROLE_PERMISSIONS_STORAGE_KEY = 'se1986.auth.mock.rolePermissions';
 
 const DEFAULT_USERS = [
   {
     id: "user-admin",
     name: "Administrator",
+    fullName: "Administrator",
     email: "admin@hotel.com",
     password: "123456",
     role: ROLES.ADMIN,
@@ -15,6 +23,7 @@ const DEFAULT_USERS = [
   {
     id: "user-manager",
     name: "Hotel Manager",
+    fullName: "Hotel Manager",
     email: "manager@hotel.com",
     password: "123456",
     role: ROLES.MANAGER,
@@ -22,15 +31,28 @@ const DEFAULT_USERS = [
   },
   {
     id: "user-receptionist",
-    name: "Receptionist",
+    name: 'Nguyễn Văn A',
+    fullName: 'Nguyễn Văn A',
     email: "receptionist@hotel.com",
     password: "123456",
-    role: ROLES.RECEPTIONIST,
+    role: ROLES.STAFF,
+    jobTitle: 'Lễ tân',
+    enabled: true,
+  },
+  {
+    id: "user-housekeeper",
+    name: 'Trần Thị B',
+    fullName: 'Trần Thị B',
+    email: "housekeeper@hotel.com",
+    password: "123456",
+    role: ROLES.STAFF,
+    jobTitle: 'Nhân viên buồng phòng',
     enabled: true,
   },
   {
     id: "user-customer",
     name: "Customer",
+    fullName: "Customer",
     email: "customer@hotel.com",
     password: "123456",
     role: ROLES.CUSTOMER,
@@ -55,7 +77,11 @@ const getStoredUsers = () => {
       const parsedUsers = JSON.parse(storedUsers);
 
       if (Array.isArray(parsedUsers)) {
-        return parsedUsers;
+        return parsedUsers.map((user) =>
+          user.role === 'RECEPTIONIST'
+            ? { ...user, role: ROLES.STAFF }
+            : user,
+        );
       }
     }
   } catch (error) {
@@ -86,8 +112,81 @@ const toPublicUser = (user) => {
 
   return {
     ...publicUser,
+    role: user.role === 'RECEPTIONIST' ? ROLES.STAFF : user.role,
     fullName: user.fullName || user.name || '',
   };
+};
+
+const normalizeRolePermissions = (rolePermissions) => {
+  const knownRoles = Object.values(ROLES).filter(
+    (role, index, roles) => roles.indexOf(role) === index,
+  );
+
+  return Object.fromEntries(
+    knownRoles.map((role) => {
+      const stored = rolePermissions?.[role];
+      if (!Array.isArray(stored)) {
+        return [role, ROLE_PERMISSION_DEFAULTS[role] || []];
+      }
+
+      const permissions = new Set(
+        stored.map((permission) => {
+          if (permission === 'USER_MANAGE') return PERMISSIONS.USER_MANAGE;
+          if (permission === 'ROLE_MANAGE') return PERMISSIONS.ROLE_MANAGE;
+          return permission;
+        }),
+      );
+
+      if (permissions.has('HOUSEKEEPING') || permissions.has('OPERATIONS_VIEW')) {
+        permissions.add(PERMISSIONS.HOUSEKEEPING_VIEW);
+      }
+      if (
+        permissions.has('HOUSEKEEPING') &&
+        [ROLES.ADMIN, ROLES.MANAGER].includes(role)
+      ) {
+        permissions.add(PERMISSIONS.HOUSEKEEPING_MANAGE);
+      }
+      if (role !== ROLES.ADMIN) {
+        permissions.delete(PERMISSIONS.USER_MANAGE);
+        permissions.delete(PERMISSIONS.ROLE_MANAGE);
+      }
+
+      return [role, [...permissions]];
+    }),
+  );
+};
+
+const getStoredRolePermissions = () => {
+  if (typeof window === 'undefined') {
+    return normalizeRolePermissions(ROLE_PERMISSION_DEFAULTS);
+  }
+
+  try {
+    const storedPermissions = window.localStorage.getItem(
+      ROLE_PERMISSIONS_STORAGE_KEY,
+    );
+    if (storedPermissions) {
+      return normalizeRolePermissions(JSON.parse(storedPermissions));
+    }
+  } catch (error) {
+    console.error('Không thể đọc cấu hình quyền vai trò:', error);
+  }
+
+  const defaults = normalizeRolePermissions(ROLE_PERMISSION_DEFAULTS);
+  window.localStorage.setItem(
+    ROLE_PERMISSIONS_STORAGE_KEY,
+    JSON.stringify(defaults),
+  );
+  return defaults;
+};
+
+const getEffectivePermissions = (roles = []) => {
+  const rolePermissions = getStoredRolePermissions();
+  return [
+    ...new Set(
+      roles.flatMap((role) => rolePermissions[role] || []),
+    ),
+  ];
 };
 
 export const authsMockRepository = {
@@ -110,6 +209,51 @@ export const authsMockRepository = {
     }
   },
 
+  async getRoles() {
+    const rolePermissions = getStoredRolePermissions();
+    return Object.entries(ROLE_LABELS).map(([code, name]) => ({
+      code,
+      name,
+      permissions: rolePermissions[code] || [],
+    }));
+  },
+
+  async getPermissionsForRoles(roles) {
+    return getEffectivePermissions(roles);
+  },
+
+  async updateRolePermissions({ actorPermissions, role, permissions }) {
+    if (!actorPermissions?.includes(PERMISSIONS.ROLE_MANAGE)) {
+      throw new Error('Bạn không có UC-A6 để quản lý vai trò và quyền.');
+    }
+    if (!ROLE_LABELS[role]) {
+      throw new Error('Vai trò không hợp lệ.');
+    }
+    if (!Array.isArray(permissions)) {
+      throw new Error('Danh sách quyền không hợp lệ.');
+    }
+
+    const validPermissions = new Set([
+      ...DATABASE_PERMISSION_CODES,
+      ...Object.values(PERMISSIONS),
+    ]);
+    const uniquePermissions = [...new Set(permissions)];
+    if (uniquePermissions.some((permission) => !validPermissions.has(permission))) {
+      throw new Error('Danh sách chứa quyền không được hỗ trợ.');
+    }
+    if (role === ROLES.ADMIN && !uniquePermissions.includes('UC-A6')) {
+      throw new Error('Không thể gỡ UC-A6 khỏi vai trò ADMIN.');
+    }
+
+    const rolePermissions = getStoredRolePermissions();
+    rolePermissions[role] = uniquePermissions;
+    window.localStorage.setItem(
+      ROLE_PERMISSIONS_STORAGE_KEY,
+      JSON.stringify(rolePermissions),
+    );
+    return { code: role, permissions: uniquePermissions };
+  },
+
   async login({ email, password }) {
     const normalizedEmail = normalizeEmail(email);
     const users = getStoredUsers();
@@ -126,8 +270,14 @@ export const authsMockRepository = {
       throw new Error("Tài khoản đã bị vô hiệu hóa.");
     }
 
+    const publicUser = toPublicUser(user);
+    const roles = publicUser.roles || [publicUser.role];
     return {
-      user: toPublicUser(user),
+      user: {
+        ...publicUser,
+        roles,
+        permissions: getEffectivePermissions(roles),
+      },
       token: `mock-token-${user.id}-${Date.now()}`,
     };
   },
@@ -275,18 +425,17 @@ export const authsMockRepository = {
   return { success: true };
   },
   async createInternalUser({
-  actorRole,
+  actorPermissions,
   fullName,
   email,
   role,
   password,
 }) {
-  if (!['ADMIN', 'MANAGER'].includes(actorRole)) {
-    throw new Error('Bạn không có quyền tạo tài khoản.');
+  if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
+    throw new Error('Bạn không có UC-A5 để tạo tài khoản nội bộ.');
   }
-
-  if (actorRole === 'MANAGER' && role === 'ADMIN') {
-    throw new Error('MANAGER không được tạo tài khoản ADMIN.');
+  if (![ROLES.MANAGER, ROLES.STAFF].includes(role)) {
+    throw new Error('UC-A5 chỉ cho phép tạo tài khoản MANAGER hoặc STAFF.');
   }
 
   const users = getStoredUsers();
@@ -316,14 +465,14 @@ export const authsMockRepository = {
   },
   async updateInternalUser({
   actorId,
-  actorRole,
+  actorPermissions,
   userId,
   fullName,
   email,
   role,
 }) {
-  if (!['ADMIN', 'MANAGER'].includes(actorRole)) {
-    throw new Error('Bạn không có quyền cập nhật tài khoản.');
+  if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
+    throw new Error('Bạn không có UC-A5 để cập nhật tài khoản nội bộ.');
   }
 
   const users = getStoredUsers();
@@ -338,12 +487,11 @@ export const authsMockRepository = {
 
   const target = users[userIndex];
 
-  if (actorRole === 'MANAGER' && target.role === 'ADMIN') {
-    throw new Error('MANAGER không được chỉnh sửa tài khoản ADMIN.');
+  if (![ROLES.MANAGER, ROLES.STAFF].includes(target.role)) {
+    throw new Error('UC-A5 chỉ quản lý tài khoản MANAGER hoặc STAFF.');
   }
-
-  if (actorRole === 'MANAGER' && role === 'ADMIN') {
-    throw new Error('MANAGER không được cấp vai trò ADMIN.');
+  if (![ROLES.MANAGER, ROLES.STAFF].includes(role)) {
+    throw new Error('UC-A5 chỉ cho phép gán vai trò MANAGER hoặc STAFF.');
   }
 
   if (
@@ -378,12 +526,12 @@ export const authsMockRepository = {
   },
   async setInternalUserStatus({
   actorId,
-  actorRole,
+  actorPermissions,
   userId,
   enabled,
 }) {
-  if (!['ADMIN', 'MANAGER'].includes(actorRole)) {
-    throw new Error('Bạn không có quyền thay đổi trạng thái tài khoản.');
+  if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
+    throw new Error('Bạn không có UC-A5 để thay đổi trạng thái tài khoản.');
   }
 
   if (String(actorId) === String(userId)) {
@@ -402,8 +550,8 @@ export const authsMockRepository = {
 
   const target = users[userIndex];
 
-  if (actorRole === 'MANAGER' && target.role === 'ADMIN') {
-    throw new Error('MANAGER không được thay đổi trạng thái tài khoản ADMIN.');
+  if (![ROLES.MANAGER, ROLES.STAFF].includes(target.role)) {
+    throw new Error('UC-A5 chỉ quản lý tài khoản MANAGER hoặc STAFF.');
   }
 
   users[userIndex] = {

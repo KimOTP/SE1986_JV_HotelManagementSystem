@@ -1,9 +1,9 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import MainLayout from './app/layouts/MainLayout';
 import PublicLayout from './app/layouts/PublicLayout';
-import { useAuth } from './app/provider/AuthsContext';
-import RoomRouteGuard from './app/provider/RoomRouteGuard';
-import FrontDeskRouteGuard from './app/provider/FrontDeskRouteGuard';
+import ProtectedRoute from './app/provider/ProtectedRoute';
+import { useAuth } from './app/provider/AuthsContext.jsx';
+import { PERMISSIONS, ROLES } from './modules/auths/constants/authConstants';
 import HousekeepingTaskBoard from './modules/operations/pages/HousekeepingTaskBoard';
 import MyTasks from './modules/operations/pages/MyTasks';
 import HousekeepingDashboard from './modules/operations/pages/HousekeepingDashboard';
@@ -27,12 +27,7 @@ import RegisterPage from './modules/auths/pages/RegisterPage';
 import ResetPasswordPage from './modules/auths/pages/ResetPasswordPage';
 import ProfilePage from './modules/auths/pages/ProfilePage';
 import UserManagementPage from './modules/auths/pages/UserManagementPage';
-import HousekeepingRouteGuard from './app/provider/HousekeepingRouteGuard';
-import BookingManagerRouteGuard from './app/provider/BookingManagerRouteGuard';
-
-// THÊM IMPORT NÀY ĐỂ CHECK QUYỀN Ở TRANG CHỦ
-import { PERMISSIONS } from './modules/auths/constants/authConstants';
-
+import RoleManagementPage from './modules/auths/pages/RoleManagementPage';
 import {
   BookingHandoffPage,
   BookingDetailPage,
@@ -43,195 +38,252 @@ import {
   ManageBookingsPage,
 } from './modules/bookings/pages/BookingPages';
 
-const Internal = ({ children }) => <MainLayout>{children}</MainLayout>;
+function RoleHomeRedirect() {
+  const { role } = useAuth();
+  const destinations = {
+    [ROLES.ADMIN]: '/users',
+    [ROLES.MANAGER]: '/bookings',
+    [ROLES.STAFF]: '/operations/my-tasks',
+    [ROLES.CUSTOMER]: '/bookings',
+  };
+  return <Navigate to={destinations[role] || '/profile'} replace />;
+}
 
-const Guard = ({ children, mapOnly = false }) => (
-  <RoomRouteGuard mapOnly={mapOnly}>{children}</RoomRouteGuard>
-);
 function NotFound() {
+  const location = useLocation();
+
   return (
     <div className="text-center py-5">
       <h1>404</h1>
-      <p>Không tìm thấy trang.</p>
+      <p>Không tìm thấy trang: {location.pathname}</p>
     </div>
   );
 }
 
-function HomeRedirect() {
-  const { isAuthenticated, hasPermission } = useAuth();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Nếu có quyền Housekeeping -> Vào trang Task
-  if (hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW)) {
-    return <Navigate to="/operations/tasks" replace />;
-  }
-
-  // Các trường hợp còn lại (Customer) -> Vào trang Hóa đơn
-  return <Navigate to="/frontdesk/invoices" replace />;
+function PermissionRoute({ permission, children }) {
+  return (
+    <ProtectedRoute requiredPermission={permission}>
+      {children}
+    </ProtectedRoute>
+  );
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuth();
-
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/users" element={<UserManagementPage />} />
         <Route path="/rooms" element={<PublicLayout />}>
           <Route index element={<RoomSearchPage />} />
           <Route path="booking-handoff" element={<BookingHandoffPage />} />
           <Route path=":id" element={<RoomDetailPage />} />
         </Route>
 
-        {/* ĐÃ TÁCH ROUTE '/' RA NGOÀI VÀ DÙNG HOMEREDIRECT */}
-        <Route 
-          path="/" 
-          element={
-            <Internal>
-              <HomeRedirect />
-            </Internal>
-          } 
-        />
-
         <Route
           element={
-            <Internal>
-              <HousekeepingRouteGuard />
-            </Internal>
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
           }
         >
-          <Route path="/operations/tasks" element={<HousekeepingTaskBoard />} />
-          <Route path="/operations/my-tasks" element={<MyTasks />} />
-          <Route path="/operations/dashboard" element={<HousekeepingDashboard />} />
-          <Route path="/operations/report-issue" element={<ReportIssueForm />} />
-          <Route path="/operations/issues" element={<IssueManagementBoard />} />
-          <Route path="/operations/feedbacks" element={<FeedbackManagement />} />
-        </Route>
-        
-        <Route
-          path="/admin/room-types"
-          element={
-            <Internal>
-              <Guard>
-                <RoomTypeListPage />
-              </Guard>
-            </Internal>
-          }
-        />
-        <Route
-          path="/admin/rooms"
-          element={
-            <Internal>
-              <Guard>
-                <RoomListPage />
-              </Guard>
-            </Internal>
-          }
-        />
-        <Route
-          path="/admin/amenities"
-          element={
-            <Internal>
-              <Guard>
-                <AmenityManagementPage />
-              </Guard>
-            </Internal>
-          }
-        />
-        <Route
-          path="/admin/room-map"
-          element={
-            <Internal>
-              <Guard mapOnly>
-                <RoomMapPage />
-              </Guard>
-            </Internal>
-          }
-        />
-        <Route
-          path="/bookings/new"
-          element={
-            <Internal>
-              <CreateBookingPage />
-            </Internal>
-          }
-        />
-        <Route
-          path="/bookings/deposit"
-          element={
-            <Internal>
-              <DepositPaymentPage />
-            </Internal>
-          }
-        />
-        <Route
-          path="/bookings"
-          element={
-            <Internal>
-              <BookingHistoryPage />
-            </Internal>
-          }
-        />
-        <Route
-          path="/bookings/:id/cancel"
-          element={
-            <Internal>
-              <CancelBookingPage />
-            </Internal>
-          }
-        />
-        <Route
-          path="/bookings/:id"
-          element={
-            <Internal>
-              <BookingDetailPage />
-            </Internal>
-          }
-        />
-        <Route
-          path="/admin/bookings"
-          element={
-            <Internal>
-              <BookingManagerRouteGuard>
-                <ManageBookingsPage />
-              </BookingManagerRouteGuard>
-            </Internal>
-          }
-        />
-        {[
-          // permission: 'manage' = Receptionist/Manager, 'view' = + Customer (read-only)
-          ['/frontdesk/check-in', <CheckInPage />, 'manage'],
-          ['/frontdesk/check-out', <CheckOutPage />, 'manage'],
-          ['/frontdesk/invoices', <InvoiceListPage />, 'view'],
-          ['/frontdesk/invoices/new', <InvoiceCreatePage />, 'manage'],
-          ['/frontdesk/invoices/:id', <InvoiceDetailPage />, 'view'],
-          ['/frontdesk/invoices/:id/edit', <InvoiceEditPage />, 'manage'],
-        ].map(([path, page, permission]) => (
+          <Route index element={<RoleHomeRedirect />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route
-            key={path}
-            path={path}
+            path="users"
             element={
-              <Internal>
-                <FrontDeskRouteGuard permission={permission}>{page}</FrontDeskRouteGuard>
-              </Internal>
+              <PermissionRoute permission={PERMISSIONS.USER_MANAGE}>
+                <UserManagementPage />
+              </PermissionRoute>
             }
           />
-        ))}
-        <Route
-          path="*"
-          element={
-            <Internal>
-              <NotFound />
-            </Internal>
-          }
-        />
+          <Route
+            path="admin/roles"
+            element={
+              <PermissionRoute permission={PERMISSIONS.ROLE_MANAGE}>
+                <RoleManagementPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/tasks"
+            element={
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+                <HousekeepingTaskBoard />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/my-tasks"
+            element={
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+                <MyTasks />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/dashboard"
+            element={
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+                <HousekeepingDashboard />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/report-issue"
+            element={
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+                <ReportIssueForm />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/issues"
+            element={
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_VIEW}>
+                <IssueManagementBoard />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/feedbacks"
+            element={
+              <PermissionRoute permission={PERMISSIONS.HOUSEKEEPING_MANAGE}>
+                <FeedbackManagement />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="admin/room-types"
+            element={
+              <PermissionRoute permission={PERMISSIONS.ROOM_MANAGE}>
+                <RoomTypeListPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="admin/rooms"
+            element={
+              <PermissionRoute permission={PERMISSIONS.ROOM_MANAGE}>
+                <RoomListPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="admin/amenities"
+            element={
+              <PermissionRoute permission={PERMISSIONS.ROOM_MANAGE}>
+                <AmenityManagementPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="admin/room-map"
+            element={
+              <PermissionRoute permission={PERMISSIONS.ROOM_MAP_VIEW}>
+                <RoomMapPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="bookings/new"
+            element={
+              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+                <CreateBookingPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="bookings/deposit"
+            element={
+              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+                <DepositPaymentPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="bookings"
+            element={
+              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+                <BookingHistoryPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="bookings/:id/cancel"
+            element={
+              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+                <CancelBookingPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="bookings/:id"
+            element={
+              <PermissionRoute permission={PERMISSIONS.BOOKING_VIEW}>
+                <BookingDetailPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="admin/bookings"
+            element={
+              <PermissionRoute permission={PERMISSIONS.BOOKING_MANAGE}>
+                <ManageBookingsPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="frontdesk/check-in"
+            element={
+              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+                <CheckInPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="frontdesk/check-out"
+            element={
+              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+                <CheckOutPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="frontdesk/invoices"
+            element={
+              <PermissionRoute permission={PERMISSIONS.INVOICE_VIEW}>
+                <InvoiceListPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="frontdesk/invoices/new"
+            element={
+              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+                <InvoiceCreatePage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="frontdesk/invoices/:id/edit"
+            element={
+              <PermissionRoute permission={PERMISSIONS.INVOICE_MANAGE}>
+                <InvoiceEditPage />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="frontdesk/invoices/:id"
+            element={
+              <PermissionRoute permission={PERMISSIONS.INVOICE_VIEW}>
+                <InvoiceDetailPage />
+              </PermissionRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

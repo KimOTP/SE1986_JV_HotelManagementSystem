@@ -5,26 +5,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { internalUserSchema } from '../../schemas/authSchemas';
 
 const INTERNAL_ROLES = [
-  { value: 'MANAGER', label: 'Manager' },
-  { value: 'RECEPTIONIST', label: 'Receptionist' },
+  { value: 'MANAGER', label: 'Quản lý' },
+  { value: 'STAFF', label: 'Nhân viên' },
 ];
 
 export default function UserForm({
   selectedUser,
-  actorRole,
   onSave,
   onCancel,
   isSaving = false,
 }) {
   const isEditing = Boolean(selectedUser);
-  const canAssignAdmin = actorRole === 'ADMIN';
-
-  const availableRoles = canAssignAdmin
-    ? [
-        { value: 'ADMIN', label: 'Admin' },
-        ...INTERNAL_ROLES,
-      ]
-    : INTERNAL_ROLES;
+  const availableRoles = INTERNAL_ROLES;
 
   const {
   register,
@@ -37,7 +29,7 @@ export default function UserForm({
   defaultValues: {
     fullName: '',
     email: '',
-    role: 'RECEPTIONIST',
+    role: 'STAFF',
     password: '',
   },
 });
@@ -46,7 +38,7 @@ export default function UserForm({
     reset({
       fullName: selectedUser?.fullName || '',
       email: selectedUser?.email || '',
-      role: selectedUser?.role || 'RECEPTIONIST',
+      role: selectedUser?.role || 'STAFF',
       password: '',
     });
   }, [selectedUser, reset]);

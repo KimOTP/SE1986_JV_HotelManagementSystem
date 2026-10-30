@@ -1,10 +1,8 @@
-import axios from 'axios';
 import { z } from 'zod';
+import axiosClient from '../../../shared/api/axiosClient';
 
-const client = axios.create({
-  baseURL: import.meta.env.VITE_OPERATIONS_API_BASE_URL || '/api',
-  timeout: 15000,
-});
+const baseURL =
+  import.meta.env.VITE_OPERATIONS_API_BASE_URL || axiosClient.defaults.baseURL;
 const issueSchema = z.object({
   id: z.number().int().positive(),
   roomNumber: z.string(),
@@ -18,6 +16,10 @@ const issueSchema = z.object({
   createdAt: z.string(),
 });
 export async function getDatabaseIssues(params, signal) {
-  const response = await client.get('/operations/issues', { params, signal });
+  const response = await axiosClient.get('/operations/issues', {
+    baseURL,
+    params,
+    signal,
+  });
   return z.array(issueSchema).parse(response.data);
 }

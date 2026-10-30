@@ -53,4 +53,3 @@ Commit gợi ý: `feat(operations): add paginated issue list API with fetch join
 Các bộ lọc mặc định chuỗi rỗng (không lọc); room tìm chứa chuỗi, status/category khớp chính xác.
 Status không hợp lệ trả HTTP 400. Bộ lọc chạy trước phân trang trong SQL.
 Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
-

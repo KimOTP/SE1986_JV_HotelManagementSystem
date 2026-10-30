@@ -16,7 +16,7 @@ export default function HousekeepingRouteGuard() {
     );
   }
 
-  // 2. Đã đăng nhập nhưng không có quyền xem 
+  // 2. Đã đăng nhập nhưng không có quyền xem
   if (!hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW)) {
     return (
       <div className="container py-5 text-center">

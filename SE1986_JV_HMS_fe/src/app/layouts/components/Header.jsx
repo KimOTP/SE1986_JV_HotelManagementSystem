@@ -1,7 +1,7 @@
 import { Button, Container, Nav, Navbar } from 'react-bootstrap';
 import { List } from 'react-bootstrap-icons';
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '../../provider/AuthsContext';
+import { useAuth } from '../../provider/AuthsContext.jsx';
 
 export default function Header({ onMenu }) {
   const { isAuthenticated, user, logout } = useAuth();

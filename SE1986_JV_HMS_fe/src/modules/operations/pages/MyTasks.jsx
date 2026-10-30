@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Table, Badge, Form, Row, Col, Pagination, Button } from 'react-bootstrap';
 import { mockTasks as initialTasks } from '../mocks/mockData';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 const MyTasks = () => {
-  const currentUser = 'Nguyễn Văn A';
+  const { user } = useAuth();
+  const currentUser = user?.name || user?.fullName;
 
   // 1. QUẢN LÝ STATE DỮ LIỆU
   const [tasks, setTasks] = useState(initialTasks);
@@ -62,13 +64,13 @@ const MyTasks = () => {
 
     if (searchParams.status !== 'ALL')
       result = result.filter((t) => t.status === searchParams.status);
-    if (searchParams.type !== 'ALL') 
+    if (searchParams.type !== 'ALL')
       result = result.filter((t) => t.type === searchParams.type);
     if (searchParams.room.trim() !== '')
       result = result.filter((t) => t.roomNumber.includes(searchParams.room.trim()));
 
     return result;
-  }, [tasks, searchParams]);
+  }, [currentUser, searchParams, tasks]);
 
   // 7. PHÂN TRANG
   const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);

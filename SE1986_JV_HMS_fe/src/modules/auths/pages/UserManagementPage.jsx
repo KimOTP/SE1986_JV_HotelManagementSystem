@@ -1,20 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate } from 'react-router';
+import { Link } from 'react-router';
 
 import { authsApi } from '../api/authsApi';
 import UserForm from '../components/UserManagement/UserForm';
 import UserList from '../components/UserManagement/UserList';
 
-import { useAuth } from '../../../app/provider/AuthsContext';
-import { PERMISSIONS } from '../constants/authConstants';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 export default function UserManagementPage() {
-  const {
-    user,
-    role,
-    isAuthenticated,
-    hasPermission,
-  } = useAuth();
+  const { user, role, permissions } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -28,20 +22,14 @@ export default function UserManagementPage() {
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  const canManageUsers = hasPermission(
-    PERMISSIONS.USER_MANAGE,
-  );
+  const fetchInternalUsers = useCallback(async () => {
+    const result = await authsApi.getUsers();
+    return result.filter((item) => ['MANAGER', 'STAFF'].includes(item.role));
+  }, []);
 
   const loadUsers = useCallback(async () => {
     try {
-      const result = await authsApi.getUsers();
-
-      // Chỉ quản lý tài khoản nội bộ ở UC-A5
-      const internalUsers = result.filter((item) =>
-        ['ADMIN', 'MANAGER', 'RECEPTIONIST'].includes(item.role),
-      );
-
-      setUsers(internalUsers);
+      setUsers(await fetchInternalUsers());
       setPageError('');
     } catch (error) {
       setPageError(
@@ -50,54 +38,40 @@ export default function UserManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchInternalUsers]);
 
   useEffect(() => {
-    if (!isAuthenticated || !canManageUsers) {
-      return undefined;
-    }
-
-    let isCurrent = true;
-
-    authsApi
-      .getUsers()
-      .then((result) => {
-        if (!isCurrent) {
-          return;
+    let active = true;
+    fetchInternalUsers()
+      .then((internalUsers) => {
+        if (active) {
+          setUsers(internalUsers);
+          setPageError('');
         }
-
-        const internalUsers = result.filter((item) =>
-          ['ADMIN', 'MANAGER', 'RECEPTIONIST'].includes(item.role),
-        );
-
-        setUsers(internalUsers);
-        setPageError('');
       })
       .catch((error) => {
-        if (isCurrent) {
-          setPageError(
-            error?.message || 'Không thể tải danh sách tài khoản.',
-          );
+        if (active) {
+          setPageError(error?.message || 'Không thể tải danh sách tài khoản.');
         }
       })
       .finally(() => {
-        if (isCurrent) {
+        if (active) {
           setIsLoading(false);
         }
       });
 
     return () => {
-      isCurrent = false;
+      active = false;
     };
-  }, [isAuthenticated, canManageUsers]);
+  }, [fetchInternalUsers]);
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
     return users.filter((item) => {
       const matchesSearch =
-        item.fullName.toLowerCase().includes(normalizedSearch) ||
-        item.email.toLowerCase().includes(normalizedSearch);
+        (item.fullName || '').toLowerCase().includes(normalizedSearch) ||
+        (item.email || '').toLowerCase().includes(normalizedSearch);
 
       const matchesRole =
         roleFilter === 'ALL' || item.role === roleFilter;
@@ -110,28 +84,6 @@ export default function UserManagementPage() {
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [users, search, roleFilter, statusFilter]);
-
-  if (!isAuthenticated || !user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: { pathname: '/users' } }}
-      />
-    );
-  }
-
-  if (!canManageUsers) {
-    return (
-      <div className="container py-5">
-        <div className="alert alert-danger" role="alert">
-          Bạn không có quyền truy cập chức năng quản lý tài khoản.
-        </div>
-
-        <Link to="/rooms">Quay lại trang phòng</Link>
-      </div>
-    );
-  }
 
   const openCreateForm = () => {
     setSelectedUser(null);
@@ -161,7 +113,7 @@ export default function UserManagementPage() {
       if (selectedUser) {
         await authsApi.updateInternalUser({
           actorId: user.id,
-          actorRole: role,
+          actorPermissions: permissions,
           userId: selectedUser.id,
           fullName: formData.fullName,
           email: formData.email,
@@ -171,7 +123,7 @@ export default function UserManagementPage() {
         setPageSuccess('Cập nhật tài khoản thành công.');
       } else {
         await authsApi.createInternalUser({
-          actorRole: role,
+          actorPermissions: permissions,
           fullName: formData.fullName,
           email: formData.email,
           role: formData.role,
@@ -212,7 +164,7 @@ export default function UserManagementPage() {
     try {
       await authsApi.setInternalUserStatus({
         actorId: user.id,
-        actorRole: role,
+        actorPermissions: permissions,
         userId: targetUser.id,
         enabled: nextEnabled,
       });
@@ -239,7 +191,7 @@ export default function UserManagementPage() {
           <h2 className="mb-1">Quản lý tài khoản</h2>
 
           <p className="text-muted mb-0">
-            Tạo, cập nhật và quản lý trạng thái tài khoản nội bộ.
+            UC-A5 · Quản lý tài khoản nhân viên và quản lý.
           </p>
         </div>
 
@@ -268,12 +220,11 @@ export default function UserManagementPage() {
         <div className="card shadow-sm mb-4">
           <div className="card-body p-4">
             <h4 className="mb-3">
-              {selectedUser ? 'Cập nhật tài khoản' : 'Tạo tài khoản nội bộ'}
+              {selectedUser ? 'Cập nhật tài khoản nội bộ' : 'Tạo tài khoản nội bộ'}
             </h4>
 
             <UserForm
               selectedUser={selectedUser}
-              actorRole={role}
               onSave={handleSave}
               onCancel={closeForm}
               isSaving={isSaving}
@@ -285,7 +236,7 @@ export default function UserManagementPage() {
       <div className="card shadow-sm">
         <div className="card-body p-3 p-lg-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5 className="mb-0">Danh sách tài khoản nội bộ</h5>
+            <h5 className="mb-0">Danh sách MANAGER và STAFF</h5>
 
             <span className="badge text-bg-secondary">
               {filteredUsers.length} tài khoản
