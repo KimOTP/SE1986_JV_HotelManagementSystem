@@ -14,8 +14,8 @@ public class IssueService {
     public IssueService(IssueRepository repository) {
         this.repository = repository;
     }
-    public List<IssueResponse> getIssues(int page, int size) {
-        return repository.findIssues(PageRequest.of(page, size)).stream().map(issue -> {
+    public List<IssueResponse> getIssues(int page, int size, String room, String status, String category) {
+        return repository.findIssues(room.trim(), status.trim(), category.trim(), PageRequest.of(page, size)).stream().map(issue -> {
             var staff = issue.getAssignedStaff();
             return new IssueResponse(
                     issue.getId(), issue.getRoom().getId(), issue.getRoom().getRoomNumber(),

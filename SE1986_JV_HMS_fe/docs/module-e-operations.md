@@ -44,3 +44,24 @@ UC-E1/E2/E3/E5/E6 vẫn cần hoàn thiện nghiệp vụ, phân quyền theo t�
 - Kiểm tra: mở form, thấy Điện/Nước/Thiết bị/Vệ sinh; gửi demo và lọc theo danh mục trên bảng; tải lại vẫn còn dữ liệu. Tắt backend, mở lại form để kiểm tra lỗi; bật backend và bấm Thử lại.
 
 Commit gợi ý: `feat(operations): load issue types from backend in report form`
+
+## Bước 4: Bảng sự cố dùng database
+
+- `/operations/issues` gọi API thật, 5 bản ghi/trang; không đọc hoặc cập nhật localStorage.
+- Bộ lọc `room`, `status`, `category` được gửi tới backend, áp dụng trước phân trang.
+- Room là tìm chứa chuỗi; status và category là so khớp chính xác. Đổi bộ lọc quay về trang đầu.
+- Hiển thị đủ năm trạng thái SQL và chi tiết tiêu đề, ưu tiên, người báo cáo, người được gán.
+- Có tải lại, lỗi, trang rỗng và hủy request cũ khi đổi trang hoặc rời màn hình.
+- API chưa trả tổng số bản ghi nên dùng Trước/Sau. Nếu trang cuối có đúng 5 bản ghi, có thể mở thêm một trang rỗng rồi quay lại.
+- Bảng hiện chỉ đọc; cập nhật trạng thái sẽ được thêm khi có API ghi. Form báo cáo vẫn lưu demo và đã ghi rõ báo cáo đó chưa xuất hiện trên bảng database.
+
+### Kiểm tra thủ công
+
+1. Khởi động lại backend để nhận bộ lọc mới, chạy frontend và đăng nhập tài khoản có quyền Operations.
+2. Mở `/operations/issues`: với seed ban đầu thấy phòng 103, danh mục Thiết bị, trạng thái Đã phân công.
+3. Lọc phòng 103 + ASSIGNED: vẫn có bản ghi. Lọc OPEN: không có bản ghi nếu database chỉ có seed ban đầu.
+4. Bấm Đặt lại và Chi tiết, kiểm tra tiêu đề và tên người liên quan.
+5. Tắt backend, bấm Tải lại: phải báo lỗi, không hiển thị dữ liệu mock. Bật backend và Thử lại.
+6. Bộ lọc mới kiểm tra trực tiếp bằng `/api/operations/issues?room=103&status=ASSIGNED`.
+
+Commit gợi ý: `feat(operations): display database issues with server-side filters`

@@ -33,7 +33,7 @@ optimistic locking và phân quyền trước khi bỏ chế độ immutable.
 
 Backend chưa có authentication/authorization; API này chỉ dành cho phát triển local.
 Trước khi triển khai chia sẻ cần JWT và giới hạn dữ liệu theo quyền/khách sạn.
-Frontend hiện vẫn dùng danh sách sự cố demo; chỉ dropdown danh mục đã gọi backend.
+Frontend dùng API cho danh mục và bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
 
 ## Kiểm tra sau khi khởi động lại backend
 
@@ -45,3 +45,12 @@ Frontend hiện vẫn dùng danh sách sự cố demo; chỉ dropdown danh mục
 5. `page=-1`, `size=0`, `size=101` hoặc `page=abc` trả HTTP 400.
 
 Commit gợi ý: `feat(operations): add paginated issue list API with fetch joins`
+
+## Bộ lọc danh sách sự cố
+
+`GET /api/operations/issues?page=0&size=5&room=103&status=ASSIGNED&category=Thiết%20bị`
+
+Các bộ lọc mặc định chuỗi rỗng (không lọc); room tìm chứa chuỗi, status/category khớp chính xác.
+Status không hợp lệ trả HTTP 400. Bộ lọc chạy trước phân trang trong SQL.
+Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
+

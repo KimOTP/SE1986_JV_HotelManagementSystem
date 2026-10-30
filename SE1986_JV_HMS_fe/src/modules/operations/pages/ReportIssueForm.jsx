@@ -91,9 +91,10 @@ const ReportIssueForm = () => {
       {/* Thông báo thành công */}
       {submitted && (
         <Alert variant="success" className="shadow-sm">
-          Đã lưu báo cáo demo.{' '}
+          Đã lưu báo cáo demo trên trình duyệt. Báo cáo này chưa được gửi vào database và chưa xuất
+          hiện trên bảng quản lý.{' '}
           <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
-            Xem danh sách sự cố
+            Xem danh sách từ database
           </Button>
         </Alert>
       )}
