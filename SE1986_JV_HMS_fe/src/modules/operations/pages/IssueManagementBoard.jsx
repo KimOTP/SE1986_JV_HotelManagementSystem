@@ -14,6 +14,7 @@ import {
 } from 'react-bootstrap';
 import { getDatabaseIssues } from '../api/issuesApi';
 import { getIssueTypes } from '../api/issueTypesApi';
+import AssignIssueModal from '../components/AssignIssueModal';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import { PERMISSIONS } from '../../auths/constants/authConstants';
 
@@ -49,6 +50,8 @@ export default function IssueManagementBoard() {
   const [result, setResult] = useState({ items: [], loading: true, error: null });
   const [categories, setCategories] = useState({ items: [], error: null });
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [assigningIssue, setAssigningIssue] = useState(null);
+  const [assignmentSuccess, setAssignmentSuccess] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,8 +121,14 @@ export default function IssueManagementBoard() {
       </div>
       <Alert variant="info">
         Danh sách lấy từ database. Báo cáo mới được lưu vào SQL Server khi backend bật chế độ
-        local-demo. Chức năng phân công và cập nhật trạng thái sẽ được bổ sung sau.
+        local-demo. Manager/Admin có thể phân công sự cố mới khi cấu hình manager local hợp lệ.
       </Alert>
+      {assignmentSuccess && (
+        <Alert variant="success" dismissible onClose={() => setAssignmentSuccess(null)}>
+          Đã phân công sự cố #{assignmentSuccess.id}, trạng thái Đã phân công. Bộ lọc hiện tại vẫn
+          được giữ nguyên.
+        </Alert>
+      )}
       {result.error && (
         <Alert variant="danger">
           {result.error}{' '}
@@ -240,6 +249,18 @@ export default function IssueManagementBoard() {
                   >
                     Chi tiết
                   </Button>
+                  {hasPermission(PERMISSIONS.HOUSEKEEPING_MANAGE) && issue.status === 'OPEN' && (
+                    <Button
+                      className="ms-2"
+                      size="sm"
+                      onClick={() => {
+                        setAssignmentSuccess(null);
+                        setAssigningIssue(issue);
+                      }}
+                    >
+                      Phân công
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))
@@ -299,6 +320,18 @@ export default function IssueManagementBoard() {
           </Button>
         </Modal.Footer>
       </Modal>
+      {assigningIssue && (
+        <AssignIssueModal
+          key={assigningIssue.id}
+          issue={assigningIssue}
+          onClose={() => setAssigningIssue(null)}
+          onAssigned={(response) => {
+            setAssigningIssue(null);
+            setAssignmentSuccess(response);
+            refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

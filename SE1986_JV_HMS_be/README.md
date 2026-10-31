@@ -104,3 +104,45 @@ Unit tests không cần SQL Server và không ghi dữ liệu thật:
 
 Tests bao gồm đóng ghi mặc định, reporter thiếu/inactive, room/type không hợp lệ,
 trim/validation và insert đúng reporter, Unicode, ID database. Chưa kiểm thử JDBC tích hợp trên SQL Server thật.
+
+## Phân công sự cố OPEN
+
+Cấu hình IntelliJ backend:
+
+- Active profiles: `local-demo`.
+- Giữ `OPERATIONS_DEMO_REPORTER_EMAIL` để tạo báo cáo.
+- Thêm `OPERATIONS_DEMO_MANAGER_EMAIL=manager@sba.example` (tài khoản seed Manager Demo).
+
+Reporter và manager là hai cấu hình riêng. Manager phải là user active có vai trò ADMIN/MANAGER active.
+MANAGER phải có bản ghi staff active cùng khách sạn sự cố; ADMIN được quản lý các khách sạn hoạt động.
+Đây vẫn là danh tính local cấu hình ở backend, không phải xác thực JWT. Không triển khai chia sẻ chế độ này.
+
+| Method | Endpoint | Kết quả |
+| --- | --- | --- |
+| GET | `/api/operations/issue-assignment-context` | Trạng thái bật phân công và tên manager local |
+| GET | `/api/operations/issues/{id}/assignees` | Staff active/user active/role STAFF active cùng khách sạn |
+| PATCH | `/api/operations/issues/{id}/assignment` | Body `{ "staffId": 3 }`; OPEN chưa gán → ASSIGNED |
+
+PATCH lưu assigned_staff_id, assigned_by (user ID manager do backend xác định), updated_at (UTC).
+Không nhận assigned_by từ frontend. Conditional UPDATE chỉ tác động khi status=OPEN và chưa có assignee.
+Hai thao tác đồng thời: thao tác tới sau nhận 409; không ghi đè phân công trước.
+Mã lỗi: 400 staff sai/không phù hợp, 403 manager khác khách sạn, 404 không có sự cố active,
+409 sự cố không còn OPEN hoặc đã được gán, hay có xung đột, 503 chưa bật manager local hợp lệ.
+
+### Chạy thử
+
+1. Khởi động lại backend với profile và biến trên, chạy frontend.
+2. Đăng nhập tài khoản Manager/Admin trên React (quyền HOUSEKEEPING_MANAGE).
+3. Tạo báo cáo mới để có trạng thái OPEN. Bản ghi seed #1 đã ASSIGNED nên không có nút Phân công.
+4. Trong bảng, bấm Phân công, kiểm tra tên manager local, chọn nhân viên và xác nhận.
+5. Bảng tự tải lại giữ bộ lọc; trạng thái ASSIGNED, Chi tiết có tên người được gán, tải trang vẫn còn.
+6. Nếu đang lọc OPEN, bản ghi vừa phân công biến mất khỏi kết quả theo đúng bộ lọc.
+7. Hai cửa sổ cùng mở modal cho một sự cố OPEN: cửa sổ thứ hai xác nhận sau phải báo xung đột.
+8. Bỏ biến manager/profile: modal khóa gửi. Manager khác khách sạn/staff inactive không được phân công.
+
+Chưa có tái phân công hoặc nhận việc/hoàn tất, chưa tự tạo housekeeping task.
+Không thay đổi schema SQL. Frontend ẩn nút với tài khoản thiếu HOUSEKEEPING_MANAGE;
+backend kiểm tra manager theo cấu hình local, cần thay bằng principal JWT khi tích hợp Module A.
+
+Kiểm thử unit: `./mvnw.cmd -Dtest=IssueAssignmentServiceTests,IssueReportServiceTests test`.
+11 test phân công và 7 test tạo báo cáo dùng JDBC giả lập; không thay thế kiểm thử trên SQL Server thật.

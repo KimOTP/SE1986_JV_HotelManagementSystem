@@ -82,3 +82,13 @@ Kiểm tra gửi form hợp lệ: bảng phải xuất hiện sự cố OPEN m�
 Báo cáo localStorage cũ không tự migrate vào database.
 
 Commit: `feat(operations): create database issue reports in explicit local demo mode`
+
+## Bước 6: Phân công sự cố OPEN (local-demo)
+
+- Bảng có nút Phân công cho sự cố OPEN khi tài khoản React có HOUSEKEEPING_MANAGE.
+- Modal chọn staff lấy từ backend theo khách sạn, có loading/lỗi/tải lại và cảnh báo danh tính manager local.
+- PATCH lưu nhân viên, người phân công và trạng thái ASSIGNED; bảng tự tải lại giữ bộ lọc.
+- Backend giới hạn role manager, phạm vi khách sạn, staff hoạt động, chuyển trạng thái có điều kiện để tránh ghi đè đồng thời.
+- Xem README backend để cấu hình `OPERATIONS_DEMO_MANAGER_EMAIL=manager@sba.example` và profile `local-demo`.
+- Chưa tái phân công/cập nhật tiến độ, chưa tự tạo housekeeping task, chưa có JWT thật.
+- Build frontend, lint file sửa và 18 unit test backend đạt; cần kiểm tra tích hợp SQL Server trên máy local.
