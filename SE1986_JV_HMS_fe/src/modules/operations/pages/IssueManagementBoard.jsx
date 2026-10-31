@@ -112,13 +112,13 @@ export default function IssueManagementBoard() {
             Tải lại
           </Button>
           {hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW) && (
-            <Button onClick={() => navigate('/operations/report-issue')}>+ Báo cáo demo</Button>
+            <Button onClick={() => navigate('/operations/report-issue')}>+ Báo cáo sự cố</Button>
           )}
         </div>
       </div>
       <Alert variant="info">
-        Danh sách lấy từ database, hiện chỉ hỗ trợ xem. Form báo cáo vẫn lưu demo trên trình duyệt;
-        báo cáo demo chưa xuất hiện trong danh sách này.
+        Danh sách lấy từ database. Báo cáo mới được lưu vào SQL Server khi backend bật chế độ
+        local-demo. Chức năng phân công và cập nhật trạng thái sẽ được bổ sung sau.
       </Alert>
       {result.error && (
         <Alert variant="danger">

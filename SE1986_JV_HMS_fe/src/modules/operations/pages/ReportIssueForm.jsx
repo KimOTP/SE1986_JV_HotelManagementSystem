@@ -1,47 +1,29 @@
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { issueSchema } from '../schemas/issueSchema';
-import { z } from 'zod';
-import { getIssueTypes } from '../api/issueTypesApi';
-import { createDemoIssue } from '../mocks/issueStore';
-import { useAuth } from '../../../app/provider/AuthsContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { issueReportSchema } from '../schemas/issueReportSchema';
+import { getIssueTypes } from '../api/issueTypesApi';
+import {
+  createDatabaseIssue,
+  getIssueRooms,
+  getIssueReportingContext,
+} from '../api/issueReportsApi';
 
-const ReportIssueForm = () => {
+const defaults = { roomId: '', issueTypeId: '', title: '', description: '', priority: 'NORMAL' };
+export default function ReportIssueForm() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const saving = useRef(false);
   const [saveError, setSaveError] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [catalog, setCatalog] = useState({ items: [], loading: true, error: null });
+  const [created, setCreated] = useState(null);
   const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    getIssueTypes(controller.signal)
-      .then((items) => {
-        if (!controller.signal.aborted) setCatalog({ items, loading: false, error: null });
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setCatalog({
-            items: [],
-            loading: false,
-            error: 'Không tải được danh mục. Hãy kiểm tra backend đang chạy ở cổng 8080.',
-          });
-        }
-      });
-    return () => controller.abort();
-  }, [attempt]);
-
-  const formSchema = issueSchema.omit({ category: true, issueTypeId: true }).extend({
-    issueTypeId: z
-      .string()
-      .refine(
-        (id) => catalog.items.some((item) => String(item.id) === id),
-        'Vui lòng chọn loại sự cố hợp lệ',
-      ),
+  const [catalog, setCatalog] = useState({
+    rooms: [],
+    types: [],
+    context: null,
+    loading: true,
+    error: null,
   });
   const {
     register,
@@ -49,148 +31,201 @@ const ReportIssueForm = () => {
     formState: { errors, isSubmitting },
     reset,
   } = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: { roomNumber: '', issueTypeId: '', description: '' },
+    resolver: zodResolver(issueReportSchema),
+    defaultValues: defaults,
   });
 
-  const onSubmit = (data) => {
-    setSubmitted(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([
+      getIssueRooms(controller.signal),
+      getIssueTypes(controller.signal),
+      getIssueReportingContext(controller.signal),
+    ])
+      .then(([rooms, types, context]) => {
+        if (!controller.signal.aborted)
+          setCatalog({ rooms, types, context, loading: false, error: null });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setCatalog({
+            rooms: [],
+            types: [],
+            context: null,
+            loading: false,
+            error:
+              'Không tải được dữ liệu form. Kiểm tra backend đã cập nhật và đang chạy, rồi thử lại.',
+          });
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  const disabled =
+    catalog.loading ||
+    !!catalog.error ||
+    !catalog.context?.enabled ||
+    !catalog.rooms.length ||
+    !catalog.types.length;
+  const onSubmit = async (data) => {
+    if (saving.current || disabled) return;
+    setCreated(null);
     setSaveError(null);
-    try {
-      const selectedType = catalog.items.find((item) => String(item.id) === data.issueTypeId);
-      if (!selectedType) throw new Error('Invalid issue type');
-      createDemoIssue(
-        { ...data, issueTypeId: selectedType.id, category: selectedType.name },
-        user?.fullName || user?.name || user?.email,
-      );
-      setSubmitted(true);
-      reset();
-    } catch {
-      setSaveError('Không thể lưu báo cáo demo. Hãy kiểm tra bộ nhớ trình duyệt và thử lại.');
+    if (
+      !catalog.rooms.some((room) => room.id === data.roomId) ||
+      !catalog.types.some((type) => type.id === data.issueTypeId)
+    ) {
+      setSaveError('Phòng hoặc danh mục không hợp lệ. Vui lòng tải lại form.');
+      return;
     }
+    saving.current = true;
+    try {
+      const result = await createDatabaseIssue(data);
+      setCreated(result);
+      reset(defaults);
+    } catch (error) {
+      const status = error.response?.status;
+      setSaveError(
+        status === 400
+          ? 'Dữ liệu không hợp lệ hoặc phòng/danh mục không còn hoạt động. Vui lòng tải lại form.'
+          : status === 503
+            ? 'Backend chưa bật local-demo hoặc người báo cáo cấu hình không hoạt động.'
+            : 'Chưa xác nhận được kết quả lưu. Kiểm tra bảng sự cố trước khi gửi lại để tránh tạo trùng.',
+      );
+    } finally {
+      saving.current = false;
+    }
+  };
+  const retry = () => {
+    setCreated(null);
+    setSaveError(null);
+    setCatalog({ rooms: [], types: [], context: null, loading: true, error: null });
+    setAttempt((value) => value + 1);
   };
 
   return (
-    <Container className="mt-4" style={{ maxWidth: '650px' }}>
-      {/* Nút quay lại */}
-      <Button
-        variant="link"
-        className="text-decoration-none px-0 mb-3 text-secondary fw-semibold"
-        onClick={() => navigate(-1)}
-      >
-        &larr; Quay lại
+    <Container className="mt-4" style={{ maxWidth: 700 }}>
+      <Button variant="link" className="px-0 mb-3" onClick={() => navigate(-1)}>
+        ← Quay lại
       </Button>
-
-      {/* Tiêu đề và mô tả */}
-      <h2 className="mb-2 fw-bold">Báo cáo sự cố</h2>
-      <p className="text-muted mb-4">
-        Vui lòng điền thông tin chi tiết về sự cố tại phòng. Hiện báo cáo được lưu demo trên trình
-        duyệt này.
-      </p>
-
-      {/* Thông báo thành công */}
-      {submitted && (
-        <Alert variant="success" className="shadow-sm">
-          Đã lưu báo cáo demo trên trình duyệt. Báo cáo này chưa được gửi vào database và chưa xuất
-          hiện trên bảng quản lý.{' '}
-          <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
-            Xem danh sách từ database
-          </Button>
+      <h2 className="fw-bold">Báo cáo sự cố</h2>
+      <p className="text-muted">Chọn phòng và nhập thông tin để gửi báo cáo vào hệ thống.</p>
+      {catalog.loading && (
+        <Alert variant="info" role="status">
+          Đang tải phòng, danh mục và cấu hình báo cáo...
         </Alert>
       )}
-
-      {saveError && <Alert variant="danger">{saveError}</Alert>}
       {catalog.error && (
         <Alert variant="danger">
           {catalog.error}{' '}
-          <Button
-            variant="outline-danger"
-            size="sm"
-            onClick={() => {
-              setCatalog({ items: [], loading: true, error: null });
-              setAttempt((value) => value + 1);
-            }}
-          >
+          <Button size="sm" variant="outline-danger" onClick={retry}>
             Thử lại
           </Button>
         </Alert>
       )}
-      {!catalog.loading && !catalog.error && catalog.items.length === 0 && (
-        <Alert variant="warning">Chưa có loại sự cố đang hoạt động trong database.</Alert>
+      {catalog.context && (
+        <Alert variant={catalog.context.enabled ? 'info' : 'warning'}>
+          {catalog.context.message}
+          {catalog.context.enabled && (
+            <div>
+              Người báo cáo thử nghiệm: <strong>{catalog.context.reporterName}</strong>. Đây là danh
+              tính cấu hình local, chưa phải tài khoản đăng nhập React.
+            </div>
+          )}
+          {!catalog.context.enabled && (
+            <Button variant="link" onClick={retry}>
+              Tải lại cấu hình
+            </Button>
+          )}
+        </Alert>
       )}
-
-      {/* Form nhập liệu */}
+      {!catalog.loading && !catalog.error && (!catalog.rooms.length || !catalog.types.length) && (
+        <Alert variant="warning">Chưa có phòng hoặc loại sự cố đang hoạt động.</Alert>
+      )}
+      {created && (
+        <Alert variant="success">
+          Đã lưu sự cố #{created.id} vào database, trạng thái Mới báo cáo.{' '}
+          <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
+            Xem danh sách sự cố
+          </Button>
+        </Alert>
+      )}
+      {saveError && <Alert variant="danger">{saveError}</Alert>}
       <Form
-        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        onSubmit={(event) => handleSubmit(onSubmit)(event)}
         className="bg-white p-4 rounded shadow-sm border mb-5"
       >
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-semibold">Số phòng</Form.Label>
-          <Form.Control
-            type="text"
-            placeholder="VD: 102"
-            {...register('roomNumber')}
-            isInvalid={!!errors.roomNumber}
-          />
-          <Form.Control.Feedback type="invalid">{errors.roomNumber?.message}</Form.Control.Feedback>
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-semibold">Danh mục sự cố</Form.Label>
-          <Form.Select
-            {...register('issueTypeId')}
-            isInvalid={!!errors.issueTypeId}
-            disabled={catalog.loading || !!catalog.error || catalog.items.length === 0}
-          >
-            <option value="">
-              {catalog.loading ? 'Đang tải danh mục...' : '-- Chọn danh mục --'}
-            </option>
-            {catalog.items.map((item) => (
-              <option key={item.id} value={String(item.id)}>
-                {item.name}
-              </option>
-            ))}
-          </Form.Select>
-          <Form.Control.Feedback type="invalid">
-            {errors.issueTypeId?.message}
-          </Form.Control.Feedback>
-          <Form.Text>
-            Danh mục lấy từ database; báo cáo vẫn được lưu demo trên trình duyệt.
-          </Form.Text>
-        </Form.Group>
-
-        <Form.Group className="mb-4">
-          <Form.Label className="fw-semibold">Mô tả chi tiết</Form.Label>
-          <Form.Control
-            as="textarea"
-            rows={4}
-            placeholder="Mô tả cụ thể tình trạng sự cố..."
-            {...register('description')}
-            isInvalid={!!errors.description}
-          />
-          <Form.Control.Feedback type="invalid">
-            {errors.description?.message}
-          </Form.Control.Feedback>
-        </Form.Group>
-
-        {/* Nút gửi / Hủy */}
-        <div className="d-flex justify-content-end gap-2">
-          <Button variant="outline-secondary" type="button" onClick={() => navigate(-1)}>
-            Hủy
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={
-              isSubmitting || catalog.loading || !!catalog.error || catalog.items.length === 0
-            }
-          >
-            Gửi báo cáo
-          </Button>
-        </div>
+        <fieldset disabled={disabled || isSubmitting}>
+          <Form.Group controlId="issue-room" className="mb-3">
+            <Form.Label>Phòng</Form.Label>
+            <Form.Select {...register('roomId')} isInvalid={!!errors.roomId}>
+              <option value="">-- Chọn phòng --</option>
+              {catalog.rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.hotelName} — Phòng {room.roomNumber}
+                </option>
+              ))}
+            </Form.Select>
+            <Form.Control.Feedback type="invalid">{errors.roomId?.message}</Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group controlId="issue-type" className="mb-3">
+            <Form.Label>Danh mục sự cố</Form.Label>
+            <Form.Select {...register('issueTypeId')} isInvalid={!!errors.issueTypeId}>
+              <option value="">-- Chọn danh mục --</option>
+              {catalog.types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </Form.Select>
+            <Form.Control.Feedback type="invalid">
+              {errors.issueTypeId?.message}
+            </Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group controlId="issue-title" className="mb-3">
+            <Form.Label>Tiêu đề</Form.Label>
+            <Form.Control
+              {...register('title')}
+              maxLength={200}
+              placeholder="VD: Điều hòa không hoạt động"
+              isInvalid={!!errors.title}
+            />
+            <Form.Control.Feedback type="invalid">{errors.title?.message}</Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group controlId="issue-priority" className="mb-3">
+            <Form.Label>Độ ưu tiên</Form.Label>
+            <Form.Select {...register('priority')} isInvalid={!!errors.priority}>
+              <option value="LOW">Thấp</option>
+              <option value="NORMAL">Bình thường</option>
+              <option value="HIGH">Cao</option>
+              <option value="URGENT">Khẩn cấp</option>
+            </Form.Select>
+            <Form.Control.Feedback type="invalid">{errors.priority?.message}</Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group controlId="issue-description" className="mb-4">
+            <Form.Label>Mô tả chi tiết</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              maxLength={2000}
+              {...register('description')}
+              isInvalid={!!errors.description}
+            />
+            <Form.Control.Feedback type="invalid">
+              {errors.description?.message}
+            </Form.Control.Feedback>
+          </Form.Group>
+          <Button type="submit">{isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}</Button>
+        </fieldset>
+        <Button
+          className="mt-3"
+          variant="outline-secondary"
+          disabled={isSubmitting}
+          onClick={() => navigate(-1)}
+        >
+          Hủy
+        </Button>
       </Form>
     </Container>
   );
-};
-
-export default ReportIssueForm;
+}

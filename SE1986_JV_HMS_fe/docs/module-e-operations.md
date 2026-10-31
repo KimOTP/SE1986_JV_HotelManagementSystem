@@ -65,3 +65,20 @@ Commit gợi ý: `feat(operations): load issue types from backend in report form
 6. Bộ lọc mới kiểm tra trực tiếp bằng `/api/operations/issues?room=103&status=ASSIGNED`.
 
 Commit gợi ý: `feat(operations): display database issues with server-side filters`
+
+## Bước 5: Tạo báo cáo vào SQL Server (local-demo)
+
+Đã đồng bộ main mới nhất, giữ shared axiosClient và phân quyền route của Module A.
+Form chọn phòng/danh mục API, thêm title/priority, validate React Hook Form + Zod và POST `/operations/issues`.
+Không còn lưu localStorage; thành công chỉ hiển thị sau HTTP 201 và có link tới bảng database.
+
+Backend chưa có JWT thật. Tính năng ghi mặc định tắt. Để thử local xem README backend:
+Active profiles = `local-demo`, thêm biến `OPERATIONS_DEMO_REPORTER_EMAIL=reception@sba.example` rồi khởi động lại.
+Reporter do backend cấu hình từ tài khoản database hoạt động và hiển thị rõ trên form;
+chưa phải tài khoản React đang đăng nhập. Không triển khai chia sẻ chế độ này.
+Khi có JWT cần tích hợp principal và quyền ở backend trước khi mở ghi thực tế.
+
+Kiểm tra gửi form hợp lệ: bảng phải xuất hiện sự cố OPEN mới và giữ lại sau tải trang.
+Báo cáo localStorage cũ không tự migrate vào database.
+
+Commit: `feat(operations): create database issue reports in explicit local demo mode`
