@@ -146,3 +146,46 @@ backend kiểm tra manager theo cấu hình local, cần thay bằng principal J
 
 Kiểm thử unit: `./mvnw.cmd -Dtest=IssueAssignmentServiceTests,IssueReportServiceTests test`.
 11 test phân công và 7 test tạo báo cáo dùng JDBC giả lập; không thay thế kiểm thử trên SQL Server thật.
+
+## Nhân viên nhận xử lý và hoàn tất sự cố (Module E)
+
+Giữ profile `local-demo` và thêm biến môi trường IntelliJ:
+`OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example` (user seed Housekeeper Demo, staff ID 3).
+Khởi động lại backend. Cấu hình reporter/manager vẫn riêng, không thay thế bằng staff email.
+Danh tính nhân viên local phải là user/staff/hotel active và role STAFF active.
+Không thay đổi đăng nhập, JWT hay module của thành viên khác.
+
+| Method | Endpoint | Nghiệp vụ |
+| --- | --- | --- |
+| GET | `/api/operations/issue-work-context` | Trạng thái bật xử lý và danh tính staff local |
+| PATCH | `/api/operations/issues/{id}/start` | ASSIGNED → IN_PROGRESS, body rỗng |
+| PATCH | `/api/operations/issues/{id}/resolve` | IN_PROGRESS → RESOLVED, body `{ "resolutionNote": "Đã sửa xong điều hòa" }` |
+
+Chỉ staff đang được giao sự cố và cùng khách sạn được cập nhật. Manager không được dùng thao tác này để bỏ qua bước nhận việc.
+Backend không nhận staffId/status từ request. Ghi chú xử lý bắt buộc 5–2000 ký tự sau trim.
+Ghi chú lưu NVARCHAR bằng setNString; resolved_at/updated_at do SQL Server cấp UTC.
+Không ghi vào các bảng Module A/B; chỉ đọc dữ liệu tham chiếu. Không đổi schema và không tự tạo/cập nhật housekeeping tasks.
+
+Conditional UPDATE kiểm tra ID, assignee và trạng thái nguồn; thao tác tới sau khi dữ liệu đổi trả 409.
+Lỗi 403: khác assignee/khách sạn. 404: không có sự cố hoặc phòng/khách sạn đã ngừng hoạt động.
+503: chưa bật staff local hợp lệ. Ghi chú không hợp lệ: 400. Không hỗ trợ đi lùi trạng thái/mở lại sự cố.
+GET danh sách bổ sung assignedStaffId, resolutionNote và resolvedAt để frontend hiển thị chi tiết.
+
+### Chạy thử local
+
+1. Cấu hình staff như trên rồi khởi động lại backend; chạy frontend.
+2. Đăng nhập React bằng tài khoản nhân viên (ví dụ housekeeper@hotel.com của mock), có quyền UC-E5.
+3. Vào Quản lý sự cố. Chọn sự cố ASSIGNED cho Housekeeper Demo (bản ghi seed #1 nếu chưa thay đổi).
+4. Bấm Nhận xử lý, kiểm tra danh tính local, xác nhận: trạng thái IN_PROGRESS.
+5. Bấm Hoàn tất, thử ghi chú trống/ngắn: bị chặn. Nhập ghi chú hợp lệ: RESOLVED.
+6. Mở Chi tiết: thấy ghi chú và thời gian hoàn tất; tải lại trang vẫn còn.
+7. Thử sự cố giao cho người khác: modal khóa thao tác/backend 403. Thử hai cửa sổ cùng thao tác: cửa sổ cập nhật sau nhận 409.
+8. Nếu đang lọc trạng thái cũ, bản ghi cập nhật có thể biến mất theo bộ lọc; Đặt lại để xem.
+
+Frontend chỉ hiển thị thao tác cho role STAFF + UC-E5; backend dùng danh tính cấu hình local và kiểm tra assignee.
+Đây chưa phải xác thực JWT. Mọi hành động trong local-demo chạy dưới staff cấu hình, không phải phiên React.
+Không triển khai chia sẻ chế độ này. Phần JWT để Module A tích hợp sau.
+
+Unit tests: `./mvnw.cmd -Dtest=IssueProgressServiceTests,IssueAssignmentServiceTests,IssueReportServiceTests test`.
+Có 30 unit test (12 tiến độ, 11 phân công, 7 tạo) dùng JDBC giả lập, không ghi SQL Server thật.
+Cần thực hiện các bước chạy thử ở trên để kiểm tra tích hợp SQL Server.

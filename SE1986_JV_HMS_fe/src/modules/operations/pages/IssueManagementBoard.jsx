@@ -15,8 +15,9 @@ import {
 import { getDatabaseIssues } from '../api/issuesApi';
 import { getIssueTypes } from '../api/issueTypesApi';
 import AssignIssueModal from '../components/AssignIssueModal';
+import IssueProgressModal from '../components/IssueProgressModal';
 import { useAuth } from '../../../app/provider/AuthsContext';
-import { PERMISSIONS } from '../../auths/constants/authConstants';
+import { PERMISSIONS, ROLES } from '../../auths/constants/authConstants';
 
 const statuses = {
   OPEN: { label: 'Mới báo cáo', color: 'danger' },
@@ -42,7 +43,7 @@ const formatDate = (value) =>
 
 export default function IssueManagementBoard() {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasRole } = useAuth();
   const [formData, setFormData] = useState(emptyFilters);
   const [filters, setFilters] = useState(emptyFilters);
   const [page, setPage] = useState(0);
@@ -52,6 +53,8 @@ export default function IssueManagementBoard() {
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [assigningIssue, setAssigningIssue] = useState(null);
   const [assignmentSuccess, setAssignmentSuccess] = useState(null);
+  const [workingIssue, setWorkingIssue] = useState(null);
+  const [progressSuccess, setProgressSuccess] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -121,12 +124,19 @@ export default function IssueManagementBoard() {
       </div>
       <Alert variant="info">
         Danh sách lấy từ database. Báo cáo mới được lưu vào SQL Server khi backend bật chế độ
-        local-demo. Manager/Admin có thể phân công sự cố mới khi cấu hình manager local hợp lệ.
+        local-demo. Manager/Admin phân công sự cố mới; nhân viên được giao có thể nhận xử lý và hoàn
+        tất.
       </Alert>
       {assignmentSuccess && (
         <Alert variant="success" dismissible onClose={() => setAssignmentSuccess(null)}>
           Đã phân công sự cố #{assignmentSuccess.id}, trạng thái Đã phân công. Bộ lọc hiện tại vẫn
           được giữ nguyên.
+        </Alert>
+      )}
+      {progressSuccess && (
+        <Alert variant="success" dismissible onClose={() => setProgressSuccess(null)}>
+          Đã cập nhật sự cố #{progressSuccess.id}: {statuses[progressSuccess.status].label}. Bộ lọc
+          hiện tại vẫn được giữ nguyên.
         </Alert>
       )}
       {result.error && (
@@ -261,6 +271,21 @@ export default function IssueManagementBoard() {
                       Phân công
                     </Button>
                   )}
+                  {hasRole(ROLES.STAFF) &&
+                    hasPermission('UC-E5') &&
+                    ['ASSIGNED', 'IN_PROGRESS'].includes(issue.status) && (
+                      <Button
+                        size="sm"
+                        variant="outline-success"
+                        className="ms-2"
+                        onClick={() => {
+                          setProgressSuccess(null);
+                          setWorkingIssue(issue);
+                        }}
+                      >
+                        {issue.status === 'ASSIGNED' ? 'Nhận xử lý' : 'Hoàn tất'}
+                      </Button>
+                    )}
                 </td>
               </tr>
             ))
@@ -311,6 +336,16 @@ export default function IssueManagementBoard() {
               <ListGroup.Item>
                 <strong>Trạng thái:</strong> <StatusBadge status={selectedIssue.status} />
               </ListGroup.Item>
+              {selectedIssue.resolutionNote && (
+                <ListGroup.Item className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                  <strong>Ghi chú xử lý:</strong> {selectedIssue.resolutionNote}
+                </ListGroup.Item>
+              )}
+              {selectedIssue.resolvedAt && (
+                <ListGroup.Item>
+                  <strong>Thời gian xử lý xong:</strong> {formatDate(selectedIssue.resolvedAt)}
+                </ListGroup.Item>
+              )}
             </ListGroup>
           )}
         </Modal.Body>
@@ -320,6 +355,18 @@ export default function IssueManagementBoard() {
           </Button>
         </Modal.Footer>
       </Modal>
+      {workingIssue && (
+        <IssueProgressModal
+          key={workingIssue.id}
+          issue={workingIssue}
+          onClose={() => setWorkingIssue(null)}
+          onUpdated={(response) => {
+            setWorkingIssue(null);
+            setProgressSuccess(response);
+            refresh();
+          }}
+        />
+      )}
       {assigningIssue && (
         <AssignIssueModal
           key={assigningIssue.id}

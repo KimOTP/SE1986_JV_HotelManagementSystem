@@ -92,3 +92,14 @@ Commit: `feat(operations): create database issue reports in explicit local demo 
 - Xem README backend để cấu hình `OPERATIONS_DEMO_MANAGER_EMAIL=manager@sba.example` và profile `local-demo`.
 - Chưa tái phân công/cập nhật tiến độ, chưa tự tạo housekeeping task, chưa có JWT thật.
 - Build frontend, lint file sửa và 18 unit test backend đạt; cần kiểm tra tích hợp SQL Server trên máy local.
+
+## Bước 7: Nhận xử lý và hoàn tất sự cố — Module E
+
+- Staff có UC-E5 thấy nút Nhận xử lý cho ASSIGNED và Hoàn tất cho IN_PROGRESS.
+- Modal kiểm tra staff local được backend cấu hình có đúng assignee của sự cố.
+- Hoàn tất bắt buộc ghi chú 5–2000 ký tự; SQL lưu resolution_note và resolved_at UTC.
+- Chi tiết hiển thị ghi chú và thời gian sau khi hoàn tất; bảng tự tải lại giữ bộ lọc.
+- Backend chặn sai nhân viên/khách sạn, sai trạng thái và thao tác xung đột.
+- Cấu hình thêm OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example, giữ profile local-demo rồi restart backend.
+- Không sửa đăng nhập/JWT hay module khác; staff identity còn là danh tính cấu hình local rõ ràng trên modal.
+- Build, lint file sửa và 30 unit test backend đạt. Xem README backend để chạy thử tích hợp SQL Server.

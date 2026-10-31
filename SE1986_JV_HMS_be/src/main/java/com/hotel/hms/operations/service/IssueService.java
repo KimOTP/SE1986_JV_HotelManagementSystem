@@ -24,7 +24,7 @@ public class IssueService {
                     issue.getReporter().getId(), issue.getReporter().getFullName(),
                     staff == null ? null : staff.getId(),
                     staff == null ? null : staff.getUser().getFullName(),
-                    issue.getCreatedAt()
+                    issue.getCreatedAt(), issue.getResolutionNote(), issue.getResolvedAt()
             );
         }).toList();
     }
