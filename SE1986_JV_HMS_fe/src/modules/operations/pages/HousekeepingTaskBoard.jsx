@@ -1,115 +1,317 @@
-import { useState } from 'react';
-import { Container, Row, Col, Card, Badge, Button } from 'react-bootstrap';
-import { mockTasks } from '../mocks/mockData';
+import { useEffect, useState } from 'react';
+import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row } from 'react-bootstrap';
+import { getAssignmentContext } from '../api/issueAssignmentsApi';
+import { getManagedTasks } from '../api/taskManagementApi';
+import CreateTaskModal from '../components/CreateTaskModal';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
+import { PERMISSIONS } from '../../auths/constants/authConstants';
 
-const HousekeepingTaskBoard = () => {
-  const columns = [
-    { key: 'TODO', title: 'Chờ xử lý', bg: 'secondary' },
-    { key: 'IN_PROGRESS', title: 'Đang thực hiện', bg: 'warning' },
-    { key: 'DONE', title: 'Đã hoàn thành', bg: 'success' },
-  ];
+const columns = {
+  PENDING: ['Chờ xử lý', 'secondary'],
+  IN_PROGRESS: ['Đang thực hiện', 'warning'],
+  COMPLETED: ['Đã hoàn thành', 'success'],
+  CANCELLED: ['Đã hủy', 'dark'],
+};
+const priorities = { LOW: 'Thấp', NORMAL: 'Bình thường', HIGH: 'Cao', URGENT: 'Khẩn cấp' };
+const types = { CLEANING: 'Dọn phòng', MAINTENANCE: 'Bảo trì' };
+const empty = { room: '', status: '', type: '' };
+const size = 12;
+const formatDate = (value) =>
+  new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`).toLocaleString('vi-VN');
 
-  const INITIAL_LIMIT = 3;
-  const LOAD_STEP = 3;
-
-  const [visibleCount, setVisibleCount] = useState(INITIAL_LIMIT);
-
-  const handleLoadMore = () => {
-    setVisibleCount((prev) => prev + LOAD_STEP);
+export default function HousekeepingTaskBoard() {
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission(PERMISSIONS.HOUSEKEEPING_MANAGE) && hasPermission('UC-E1');
+  const [draft, setDraft] = useState(empty);
+  const [filters, setFilters] = useState(empty);
+  const [page, setPage] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  const [result, setResult] = useState({ loading: true, items: [], context: null, error: null });
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState(null);
+  const [detail, setDetail] = useState(null);
+  useEffect(() => {
+    if (!canManage) return;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const context = await getAssignmentContext(controller.signal);
+        const items = context.enabled
+          ? await getManagedTasks({ ...filters, page, size }, controller.signal)
+          : [];
+        if (!controller.signal.aborted) setResult({ loading: false, items, context, error: null });
+      } catch {
+        if (!controller.signal.aborted)
+          setResult({
+            loading: false,
+            items: [],
+            context: null,
+            error:
+              'Không tải được bảng công việc. Kiểm tra backend và cấu hình manager local rồi thử lại.',
+          });
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [canManage, filters, page, attempt]);
+  const loading = () => {
+    setResult({ loading: true, items: [], context: null, error: null });
+    setDetail(null);
   };
-
-  const handleShowLess = () => {
-    setVisibleCount(INITIAL_LIMIT);
+  const refresh = () => {
+    loading();
+    setAttempt((value) => value + 1);
   };
-
-  const hasMoreData = columns.some((col) => {
-    const totalTasksInCol = mockTasks.filter((t) => t.status === col.key).length;
-    return totalTasksInCol > visibleCount;
-  });
-
-  const isExpanded = visibleCount > INITIAL_LIMIT;
+  const apply = (values) => {
+    loading();
+    setFilters({ ...values, room: values.room.trim() });
+    setPage(0);
+  };
+  const changePage = (next) => {
+    loading();
+    setPage(next);
+  };
+  const handleChange = (event) =>
+    setDraft((value) => ({ ...value, [event.target.name]: event.target.value }));
+  if (!canManage)
+    return (
+      <Alert variant="warning">
+        Bảng giao việc dành cho tài khoản có quyền quản lý housekeeping và UC-E1. Nhân viên xem phần
+        Công việc của tôi.
+      </Alert>
+    );
 
   return (
-    <Container fluid className="p-4">
-      <div className="text-center mb-4">
-        <h5 className="text-primary fw-bold mb-0">Ban công tác dọn phòng</h5>
-        <h2 className="mb-0">Bảng công việc</h2>
+    <div>
+      <div className="d-flex justify-content-between gap-2 mb-3">
+        <h2>Bảng công việc</h2>
+        <div className="d-flex gap-2">
+          <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
+            Tải lại
+          </Button>
+          <Button
+            disabled={result.loading || !result.context?.enabled}
+            onClick={() => {
+              setCreated(null);
+              setCreating(true);
+            }}
+          >
+            + Tạo và giao việc
+          </Button>
+        </div>
       </div>
-
-      <Row>
-        {columns.map((col) => {
-          const columnTasks = mockTasks.filter((t) => t.status === col.key);
-          const visibleTasks = columnTasks.slice(0, visibleCount);
-
-          return (
-            <Col md={4} key={col.key} className="mb-4">
-              <div className={`bg-${col.bg} bg-opacity-10 p-3 rounded h-100`}>
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="mb-0 fw-bold text-dark">{col.title}</h5>
-                  <Badge bg="dark" pill>
-                    {columnTasks.length}
-                  </Badge>
-                </div>
-
-                {visibleTasks.map((task) => (
-                  <Card key={task.id} className="mb-3 shadow-sm border-0">
-                    <Card.Body>
-                      <div className="d-flex justify-content-between">
-                        <Card.Title className="fw-bold">Phòng {task.roomNumber}</Card.Title>
-                        <Badge
-                          bg={
-                            task.priority === 'High'
-                              ? 'danger'
-                              : task.priority === 'Medium'
-                                ? 'warning'
-                                : 'secondary'
-                          }
-                        >
-                          {task.priority === 'High' ? 'Cao' : task.priority === 'Medium' ? 'Trung bình' : 'Thấp'}
-                        </Badge>
-                      </div>
-                      <Card.Text className="small text-muted mb-1">{task.type}</Card.Text>
-                      {task.assignedTo && (
-                        <small className="text-secondary">NV: {task.assignedTo}</small>
-                      )}
-                    </Card.Body>
-                  </Card>
+      <Alert variant="info">
+        Công việc lấy từ SQL Server theo phạm vi manager local. Các số đếm dưới đây chỉ tính trong
+        trang hiện tại, không phải tổng thống kê.
+      </Alert>
+      {result.context && (
+        <Alert variant={result.context.enabled ? 'info' : 'warning'}>
+          {result.context.enabled ? (
+            <>
+              Manager local: <strong>{result.context.managerName}</strong>, do backend cấu hình,
+              chưa phải phiên JWT.
+            </>
+          ) : (
+            result.context.message
+          )}
+        </Alert>
+      )}
+      {created && (
+        <Alert variant="success" dismissible onClose={() => setCreated(null)}>
+          Đã tạo và giao công việc #{created.id}, trạng thái Chờ xử lý. Bộ lọc đã được đặt lại để
+          xem công việc mới.
+        </Alert>
+      )}
+      {result.error && (
+        <Alert variant="danger">
+          {result.error}{' '}
+          <Button variant="outline-danger" size="sm" onClick={refresh}>
+            Thử lại
+          </Button>
+        </Alert>
+      )}
+      <Form
+        className="p-3 mb-3 bg-light border rounded"
+        onSubmit={(event) => {
+          event.preventDefault();
+          apply(draft);
+        }}
+      >
+        <Row className="g-2 align-items-end">
+          <Col md={3}>
+            <Form.Group controlId="task-board-room">
+              <Form.Label>Phòng</Form.Label>
+              <Form.Control
+                name="room"
+                value={draft.room}
+                onChange={handleChange}
+                placeholder="VD: 103"
+              />
+            </Form.Group>
+          </Col>
+          <Col md={3}>
+            <Form.Group controlId="task-board-status">
+              <Form.Label>Trạng thái</Form.Label>
+              <Form.Select name="status" value={draft.status} onChange={handleChange}>
+                <option value="">Tất cả</option>
+                {Object.entries(columns).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value[0]}
+                  </option>
                 ))}
-
-                {columnTasks.length === 0 && (
-                  <div className="text-center text-muted py-4 bg-white rounded border">
-                    Chưa có công việc
-                  </div>
-                )}
-              </div>
-            </Col>
-          );
-        })}
-      </Row>
-
-      <div className="text-center mt-3 mb-5 d-flex justify-content-center gap-3">
-        {hasMoreData && (
-          <Button
-            variant="primary"
-            className="px-5 py-2 rounded-pill shadow-sm"
-            onClick={handleLoadMore}
-          >
-            Xem thêm công việc
-          </Button>
-        )}
-
-        {isExpanded && (
-          <Button
-            variant="outline-secondary"
-            className="px-5 py-2 rounded-pill shadow-sm"
-            onClick={handleShowLess}
-          >
-            Thu gọn
-          </Button>
-        )}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          <Col md={3}>
+            <Form.Group controlId="task-board-type">
+              <Form.Label>Loại việc</Form.Label>
+              <Form.Select name="type" value={draft.type} onChange={handleChange}>
+                <option value="">Tất cả</option>
+                {Object.entries(types).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Col>
+          <Col md={3} className="d-flex gap-2">
+            <Button type="submit" disabled={result.loading}>
+              Tìm kiếm
+            </Button>
+            <Button
+              variant="outline-secondary"
+              disabled={result.loading}
+              onClick={() => {
+                setDraft(empty);
+                apply(empty);
+              }}
+            >
+              Đặt lại
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+      {result.loading ? (
+        <Alert variant="info" role="status">
+          Đang tải công việc...
+        </Alert>
+      ) : (
+        !result.error &&
+        result.context?.enabled && (
+          <>
+            {!result.items.length && (
+              <Alert variant="secondary">
+                Không có công việc trong trang này hoặc phù hợp bộ lọc.
+              </Alert>
+            )}
+            <Row className="g-3">
+              {Object.entries(columns).map(([status, [label, color]]) => {
+                const items = result.items.filter((task) => task.status === status);
+                return (
+                  <Col md={6} xl={3} key={status}>
+                    <div className="bg-light border rounded p-3 h-100">
+                      <h5>
+                        {label}{' '}
+                        <Badge bg={color} text={status === 'IN_PROGRESS' ? 'dark' : 'white'}>
+                          {items.length}
+                        </Badge>
+                      </h5>
+                      {items.map((task) => (
+                        <Card className="mb-3" key={task.id}>
+                          <Card.Body>
+                            <Card.Title className="text-break">{task.title}</Card.Title>
+                            <Card.Text>
+                              {task.hotelName} — Phòng {task.roomNumber}
+                              <br />
+                              {types[task.taskType]} · {priorities[task.priority]}
+                              <br />
+                              Nhân viên: {task.assignedTo}
+                              <br />
+                              Lịch: {formatDate(task.scheduledAt)}
+                            </Card.Text>
+                            <Button
+                              size="sm"
+                              variant="outline-primary"
+                              onClick={() => setDetail(task)}
+                            >
+                              Chi tiết
+                            </Button>
+                          </Card.Body>
+                        </Card>
+                      ))}
+                      {!items.length && (
+                        <p className="text-muted small">Không có trong trang này.</p>
+                      )}
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
+          </>
+        )
+      )}
+      <div className="d-flex justify-content-between mt-3">
+        <span>Trang {page + 1}</span>
+        <Pagination>
+          <Pagination.Prev
+            disabled={page === 0 || result.loading}
+            onClick={() => changePage(page - 1)}
+          />
+          <Pagination.Next
+            disabled={result.loading || !!result.error || result.items.length < size}
+            onClick={() => changePage(page + 1)}
+          />
+        </Pagination>
       </div>
-    </Container>
+      {creating && (
+        <CreateTaskModal
+          managerName={result.context?.managerName}
+          onClose={() => setCreating(false)}
+          onCreated={(response) => {
+            setCreating(false);
+            setCreated(response);
+            setDraft(empty);
+            apply(empty);
+          }}
+        />
+      )}
+      <Modal show={!!detail} onHide={() => setDetail(null)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Công việc #{detail?.id}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {detail && (
+            <>
+              <h5 className="text-break">{detail.title}</h5>
+              <p>
+                {detail.hotelName} — Phòng {detail.roomNumber}
+              </p>
+              <p className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                {detail.description || 'Chưa có mô tả'}
+              </p>
+              <p>
+                Loại: {types[detail.taskType]} · Ưu tiên: {priorities[detail.priority]}
+              </p>
+              <p>
+                Nhân viên: {detail.assignedTo}
+                <br />
+                Người giao việc: {detail.assignedBy}
+              </p>
+              <p>
+                Lịch: {formatDate(detail.scheduledAt)}
+                <br />
+                Trạng thái: {columns[detail.status][0]}
+              </p>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setDetail(null)}>
+            Đóng
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
   );
-};
-
-export default HousekeepingTaskBoard;
+}

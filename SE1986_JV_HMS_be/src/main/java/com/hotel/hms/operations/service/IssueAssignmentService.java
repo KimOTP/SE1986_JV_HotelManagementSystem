@@ -42,7 +42,8 @@ public class IssueAssignmentService {
                 """, (rs, row) -> new Manager(rs.getLong("user_id"), rs.getString("full_name"), rs.getBoolean("is_admin")), email);
         return managers.isEmpty() ? null : managers.getFirst();
     }
-    private Manager requireManager() {
+    // Shared local identity within Module E; replace with verified principal when Module A is ready.
+    public Manager requireManager() {
         Manager manager = configuredManager();
         if (manager == null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                 "Configure an active local-demo manager before assigning issues");
@@ -65,7 +66,7 @@ public class IssueAssignmentService {
         }
         return issue;
     }
-    private void assertScope(Manager manager, Long hotelId) {
+    public void assertScope(Manager manager, Long hotelId) {
         if (manager.admin()) return;
         Integer count = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM identity_access.staff

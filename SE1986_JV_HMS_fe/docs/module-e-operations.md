@@ -115,3 +115,14 @@ Commit: `feat(operations): create database issue reports in explicit local demo 
 - Với seed ban đầu có 2 task của Housekeeper Demo. Bảng công việc Manager/Dashboard vẫn dùng mock, sẽ tích hợp riêng.
 - Build frontend, lint file sửa và 40 unit test Module E đạt. Chưa thử ghi thật trên SQL Server trong phiên này.
 - Thay đổi đã được người dùng duyệt; xem README backend để chạy thử tích hợp.
+
+## Bước 9: UC-E1 Manager tạo và giao task
+
+- UC-E2 đã được duyệt và push ở commit 50fe3ce.
+- Bảng công việc Manager đã đọc database theo phạm vi khách sạn, lọc/phân trang và gom trạng thái trong trang.
+- Form React Hook Form + Zod chọn phòng, STAFF cùng khách sạn, title/description/type/priority/scheduledAt.
+- Lịch nhập theo giờ địa phương, chuyển UTC trước gửi; backend lưu assigned_by từ manager local và trạng thái PENDING.
+- Task mới có thể xem và cập nhật trong Công việc của tôi của nhân viên local được giao.
+- Giữ local-demo và OPERATIONS_DEMO_MANAGER_EMAIL; không sửa module khác hoặc cơ chế đăng nhập.
+- Build frontend, lint, validation ngày giờ và 50 unit test Module E đạt; cần thử tích hợp SQL Server theo README backend.
+- UC-E1 đã được người dùng duyệt để commit/push. Dashboard/Feedback vẫn chưa tích hợp dữ liệu thật ở bước này.

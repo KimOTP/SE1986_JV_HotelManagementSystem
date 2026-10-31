@@ -232,3 +232,51 @@ Các thao tác sự cố và task hiện tách riêng; Bảng công việc của
 Unit tests không ghi database thật:
 `./mvnw.cmd -Dtest=MyTaskServiceTests,IssueProgressServiceTests,IssueAssignmentServiceTests,IssueReportServiceTests test`.
 40 test đạt (10 task + 30 sự cố); kiểm tra tích hợp SQL Server cần chạy các bước trên.
+
+## UC-E1: Manager tạo và giao công việc — bản local mới nhất
+
+Bảng `/operations/tasks` đã chuyển từ mock sang SQL Server; nội dung cũ ghi bảng Manager còn mock là lịch sử trước bước này.
+Manager/Admin có HOUSEKEEPING_MANAGE và UC-E1 trên React xem bảng và mở form Tạo và giao việc.
+Backend vẫn dùng `local-demo`, `OPERATIONS_DEMO_MANAGER_EMAIL=manager@sba.example` như bước phân công sự cố.
+Không sửa đăng nhập/JWT hoặc module của người khác.
+
+| Method | URL | Nội dung |
+| --- | --- | --- |
+| GET | `/api/operations/tasks?page=0&size=12&room=&status=&type=` | Bảng task theo phạm vi manager local |
+| GET | `/api/operations/task-rooms` | Phòng active trong khách sạn manager quản lý |
+| GET | `/api/operations/task-assignees?roomId=3` | STAFF active cùng khách sạn với phòng |
+| POST | `/api/operations/tasks` | Tạo task và giao nhân viên, trạng thái PENDING |
+
+Payload POST: roomId, staffId, taskType (CLEANING/MAINTENANCE), title (1–200 sau trim),
+description (tùy chọn, tối đa 2000), priority (LOW/NORMAL/HIGH/URGENT), scheduledAt (bắt buộc).
+Frontend nhập lịch theo giờ máy người dùng, chuyển sang UTC; backend nhận LocalDateTime UTC không có offset.
+Ví dụ 31/10/2026 19:00 Bangkok gửi `2026-10-31T12:00:00.000`. SQL Server lưu DATETIME2 UTC.
+Có thể ghi nhận lịch đã qua; không tự động chạy task theo lịch. Năm phải trong phạm vi DATETIME2 1–9999.
+
+Backend lấy assigned_by từ manager local, không nhận ID người giao việc từ payload.
+MANAGER chỉ chọn phòng thuộc khách sạn có staff membership active; ADMIN quản lý khách sạn active.
+Phòng/room type/hotel active; staff/user/role STAFF active cùng khách sạn phòng. SQL insert dùng prepared statement,
+setNString cho tiếng Việt và transaction; DB cấp ID/timestamps/row_version.
+POST trả 201 với id và status PENDING; 400 dữ liệu/phòng/nhân viên sai, 403 khác phạm vi, 503 manager chưa cấu hình hợp lệ.
+Chưa tạo liên kết issue_id trong form mới (để null), chưa sửa/hủy/tái phân công task có sẵn.
+Không tự cập nhật phòng hay sự cố.
+
+Bảng hiển thị các cột PENDING, IN_PROGRESS, COMPLETED, CANCELLED theo 12 task trong trang.
+Số đếm trên cột chỉ tính trang hiện tại; không phải tổng thống kê Dashboard.
+Lọc thực hiện trước phân trang; sau tạo thành công quay trang đầu và xóa bộ lọc để thấy task mới nhất.
+API chưa có tổng số; Trước/Sau có thể mở thêm một trang rỗng nếu trang cuối đủ đúng size bản ghi.
+
+### Chạy thử UC-E1 → UC-E2
+
+1. Giữ profile local-demo và cả OPERATIONS_DEMO_MANAGER_EMAIL, OPERATIONS_DEMO_STAFF_EMAIL như trước; restart backend.
+2. Đăng nhập React bằng Manager/Admin, mở Bảng công việc → Tạo và giao việc.
+3. Chọn phòng, chọn Housekeeper Demo, tiêu đề, loại việc, ưu tiên và lịch thực hiện; gửi.
+4. Kiểm tra thẻ PENDING mới, đúng nhân viên, người giao việc và giờ hiển thị trong Chi tiết; reload vẫn còn.
+5. Đăng nhập React bằng nhân viên có UC-E2, vào Công việc của tôi: tìm task mới theo phòng/loại hoặc chuyển trang.
+6. Bắt đầu và hoàn thành task; quay lại bảng Manager, bấm Tải lại để thấy IN_PROGRESS/COMPLETED.
+7. Thử title trắng/quá dài, thiếu lịch, không chọn nhân viên: bị chặn; đổi phòng phải chọn lại nhân viên.
+8. Tắt backend: form/bảng báo lỗi, không dùng mock thay thế. Nếu mất kết nối khi gửi, kiểm tra bảng trước khi gửi lại để tránh trùng.
+
+50 unit test Module E đạt, gồm 10 test TaskManagementServiceTests mới. Các test dùng JDBC giả lập, không ghi SQL Server thật.
+Chưa thực hiện kiểm thử tích hợp SQL Server trong phiên này; cần chạy các bước trên.
+UC-E1 đã được người dùng duyệt để commit/push lên DucHM.
