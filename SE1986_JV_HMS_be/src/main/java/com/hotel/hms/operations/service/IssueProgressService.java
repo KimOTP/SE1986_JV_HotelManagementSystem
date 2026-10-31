@@ -46,7 +46,8 @@ public class IssueProgressService {
                 ? new IssueWorkContext(false, null, null, "Chưa bật local-demo hoặc staff cấu hình không hoạt động/không có vai trò STAFF.")
                 : new IssueWorkContext(true, worker.staffId(), worker.name(), "Xử lý sự cố bằng nhân viên cấu hình tại backend, chưa phải phiên JWT.");
     }
-    private Worker requireWorker() {
+    // Shared only within Module E until the identity module supplies a verified principal.
+    public Worker requireWorker() {
         var worker = configuredWorker();
         if (worker == null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                 "Configure an active local-demo staff member before updating issue progress");

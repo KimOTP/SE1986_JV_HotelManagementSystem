@@ -189,3 +189,46 @@ Không triển khai chia sẻ chế độ này. Phần JWT để Module A tích 
 Unit tests: `./mvnw.cmd -Dtest=IssueProgressServiceTests,IssueAssignmentServiceTests,IssueReportServiceTests test`.
 Có 30 unit test (12 tiến độ, 11 phân công, 7 tạo) dùng JDBC giả lập, không ghi SQL Server thật.
 Cần thực hiện các bước chạy thử ở trên để kiểm tra tích hợp SQL Server.
+
+## UC-E2: Công việc của tôi từ SQL Server
+
+Màn hình `/operations/my-tasks` đã thay danh sách mock bằng database.
+Dùng lại staff context trong Module E, giữ `local-demo` và biến
+`OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example` trong cấu hình Run backend.
+Danh tính này vẫn do backend cấu hình, không phải phiên JWT hay tên hiển thị React.
+Không sửa module đăng nhập, Inventory hoặc Booking/Billing.
+
+| Method | Endpoint | Nội dung |
+| --- | --- | --- |
+| GET | `/api/operations/my-tasks?page=0&size=5&room=&status=&type=` | Task được giao cho staff local, cùng khách sạn |
+| PATCH | `/api/operations/my-tasks/{id}/start` | PENDING → IN_PROGRESS |
+| PATCH | `/api/operations/my-tasks/{id}/complete` | IN_PROGRESS → COMPLETED |
+
+Không nhận staffId từ frontend; backend lấy staff ID và hotel ID từ context local đã kiểm tra active/role.
+Bộ lọc phòng chứa chuỗi; status: PENDING/IN_PROGRESS/COMPLETED/CANCELLED, type: CLEANING/MAINTENANCE.
+Lọc trước phân trang, page từ 0, size 1–100. Sắp theo lịch thực hiện rồi task ID. API trả array, chưa có tổng số.
+Trước/Sau có thể mở thêm một trang rỗng nếu trang cuối có đúng size bản ghi.
+Chỉ hiện task có phòng/room type/khách sạn active. Staff không còn hợp lệ hoặc profile chưa bật: 503.
+
+Bắt đầu lưu started_at; hoàn thành lưu completed_at; updated_at do SQL Server cấp UTC.
+Chỉ nhân viên được giao và cùng khách sạn được thao tác (403 nếu sai); 404 nếu không còn task active.
+Sai trạng thái hoặc cập nhật đồng thời trả 409; không cho mở lại task đã COMPLETED/CANCELLED.
+Conditional update kiểm tra cả staff, trạng thái và timestamps để không ghi đè lịch sử.
+Chỉ ghi operations.tasks; không tự sửa trạng thái phòng hoặc sự cố liên kết.
+Các thao tác sự cố và task hiện tách riêng; Bảng công việc của Manager/Dashboard vẫn chưa nối database.
+
+### Kiểm tra UC-E2
+
+1. Restart backend với local-demo/staff email như trên, chạy frontend.
+2. Đăng nhập React bằng tài khoản nhân viên có UC-E2, mở Công việc của tôi.
+3. Với seed ban đầu, Housekeeper Demo có hai task: Kiểm tra phòng 103 và Dọn phòng 202.
+4. Thử lọc phòng, loại, trạng thái; Đặt lại để thấy tất cả task của nhân viên local.
+5. Bắt đầu một task PENDING: IN_PROGRESS, Chi tiết có thời gian bắt đầu.
+6. Hoàn thành task đó: COMPLETED, Chi tiết có thời gian hoàn thành; reload vẫn giữ.
+7. Nếu lọc trạng thái cũ, task có thể biến mất theo bộ lọc sau khi cập nhật.
+8. Hai cửa sổ thao tác cùng task: thao tác cập nhật sau phải nhận 409.
+9. Thử tài khoản DB khác có role STAFF hoặc bỏ profile để kiểm tra dữ liệu theo danh tính/khóa thao tác.
+
+Unit tests không ghi database thật:
+`./mvnw.cmd -Dtest=MyTaskServiceTests,IssueProgressServiceTests,IssueAssignmentServiceTests,IssueReportServiceTests test`.
+40 test đạt (10 task + 30 sự cố); kiểm tra tích hợp SQL Server cần chạy các bước trên.

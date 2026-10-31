@@ -103,3 +103,15 @@ Commit: `feat(operations): create database issue reports in explicit local demo 
 - Cấu hình thêm OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example, giữ profile local-demo rồi restart backend.
 - Không sửa đăng nhập/JWT hay module khác; staff identity còn là danh tính cấu hình local rõ ràng trên modal.
 - Build, lint file sửa và 30 unit test backend đạt. Xem README backend để chạy thử tích hợp SQL Server.
+
+## Bước 8: UC-E2 Công việc của tôi dùng database
+
+- Bỏ mockTasks và lọc bằng tên hiển thị React; backend lọc theo staff ID và hotel ID của local context.
+- Có lọc/phân trang SQL, loading/lỗi/thử lại và modal Chi tiết với scheduledAt/startedAt/completedAt.
+- Bắt đầu PENDING → IN_PROGRESS; Hoàn thành IN_PROGRESS → COMPLETED; lưu timestamps UTC.
+- Xác nhận trước khi ghi, tự tải lại giữ bộ lọc, chặn thao tác trùng/sai người/sai trạng thái ở backend.
+- Không sửa module khác. Chỉ cập nhật operations.tasks, không tự đổi phòng hoặc issue liên quan.
+- Giữ local-demo + OPERATIONS_DEMO_STAFF_EMAIL hiện tại, restart backend trước khi thử.
+- Với seed ban đầu có 2 task của Housekeeper Demo. Bảng công việc Manager/Dashboard vẫn dùng mock, sẽ tích hợp riêng.
+- Build frontend, lint file sửa và 40 unit test Module E đạt. Chưa thử ghi thật trên SQL Server trong phiên này.
+- Thay đổi đã được người dùng duyệt; xem README backend để chạy thử tích hợp.
