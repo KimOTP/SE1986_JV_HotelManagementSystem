@@ -30,7 +30,12 @@ import {
   CreateBookingPage,
   DepositPaymentPage,
   ManageBookingsPage,
+<<<<<<< Updated upstream
 } from './modules/bookings/pages/BookingPages';
+=======
+} from './modules/bookings/pages';
+
+>>>>>>> Stashed changes
 const Internal = ({ children }) => <MainLayout>{children}</MainLayout>;
 const Guard = ({ children, mapOnly = false }) => (
   <RoomRouteGuard mapOnly={mapOnly}>{children}</RoomRouteGuard>
