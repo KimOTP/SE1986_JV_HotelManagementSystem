@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Col, Form, Modal, Row, Table } from 'react-bootstrap';
 import { Eye, Pencil, PlusLg, Trash } from 'react-bootstrap-icons';
 import { roomsApi } from '../api/roomsApi';
@@ -33,21 +33,21 @@ export default function CatalogManagementPage({ kind }) {
     [saving, setSaving] = useState(false),
     [saveError, setSaveError] = useState(''),
     [notice, setNotice] = useState(null);
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      setAll(await roomsApi.getAll());
+      setAll(await roomsApi.getAll(kind));
     } catch (e) {
       setError(e?.response?.data?.message || e.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [kind]);
   // Load/reload is intentionally imperative because the repository may be mock or HTTP.
   useEffect(() => {
     load();
-  }, [kind]);
+  }, [load]);
   const values = useMemo(() => {
     if (!all) return [];
     return all[kind].filter((x) => {
@@ -85,7 +85,7 @@ export default function CatalogManagementPage({ kind }) {
       setNotice({ type: 'success', text: `Đã lưu ${meta.singular}.` });
       await load();
     } catch (e) {
-      setSaveError(e.message);
+      setSaveError(e?.response?.data?.message || e.message);
     } finally {
       setSaving(false);
     }
@@ -99,7 +99,7 @@ export default function CatalogManagementPage({ kind }) {
       setNotice({ type: 'success', text: `Đã xóa ${meta.singular}.` });
       await load();
     } catch (e) {
-      setSaveError(e.message);
+      setSaveError(e?.response?.data?.message || e.message);
     } finally {
       setSaving(false);
     }
