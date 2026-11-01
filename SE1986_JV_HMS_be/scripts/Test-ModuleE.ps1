@@ -10,7 +10,9 @@ $ErrorActionPreference = 'Stop'
 $apiRoot = $BaseUrl.TrimEnd('/') + '/api/operations'
 if (-not ([uri]$BaseUrl).IsLoopback) { throw 'This test script only supports a local backend.' }
 function Read-Api([string]$Path) {
-    Invoke-RestMethod -Uri ($apiRoot + $Path) -Headers $script:headers -TimeoutSec 20
+    $response = Invoke-RestMethod -Uri ($apiRoot + $Path) -Headers $script:headers -TimeoutSec 20
+    # Explicitly enumerate JSON arrays: [] must yield zero rows, not one nested array.
+    foreach ($item in $response) { Write-Output $item }
 }
 function Send-Api([string]$Method, [string]$Path, $Body) {
     $json = ConvertTo-Json -InputObject $Body -Depth 5 -Compress
