@@ -1,8 +1,7 @@
 package com.hotel.hms.operations.service;
 
 import com.hotel.hms.operations.dto.*;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import com.hotel.hms.operations.security.OperationsIdentity;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -15,19 +14,17 @@ import java.util.List;
 @Service
 public class IssueReportService {
     private final JdbcTemplate jdbc;
-    private final Environment environment;
+    private final OperationsIdentity identity;
 
-    public IssueReportService(JdbcTemplate jdbc, Environment environment) {
+    public IssueReportService(JdbcTemplate jdbc, OperationsIdentity identity) {
         this.jdbc = jdbc;
-        this.environment = environment;
+        this.identity = identity;
     }
 
     public record Reporter(Long id, String name) {}
 
-    private Reporter configuredReporter() {
-        if (!environment.acceptsProfiles(Profiles.of("local-demo"))) return null;
-        String email = environment.getProperty("operations.demo-reporter-email", "").trim();
-        if (email.isEmpty()) return null;
+    private Reporter currentReporter() {
+        String email = identity.email();
         var reporters = jdbc.query("""
                 SELECT user_id, full_name FROM identity_access.users
                 WHERE email = ? AND is_active = 1
@@ -37,32 +34,40 @@ public class IssueReportService {
 
     @Transactional(readOnly = true)
     public IssueReportingContext getContext() {
-        Reporter reporter = configuredReporter();
+        Reporter reporter = currentReporter();
         return reporter == null
                 ? new IssueReportingContext(false, null,
-                    "Chưa bật ghi dữ liệu local-demo hoặc người báo cáo cấu hình không hoạt động.")
+                    "Người báo cáo không hoạt động.")
                 : new IssueReportingContext(true, reporter.name(),
-                    "Chế độ local-demo: báo cáo ghi vào SQL Server dưới tên người báo cáo cấu hình tại backend.");
+                    "Báo cáo được lưu bằng tài khoản đang đăng nhập.");
     }
 
     @Transactional(readOnly = true)
     public List<IssueRoomResponse> getRooms() {
+        var user = identity.requireUser();
         return jdbc.query("""
                 SELECT r.room_id, r.room_number, h.name AS hotel_name
                 FROM inventory.rooms r
                 JOIN inventory.room_types rt ON rt.room_type_id = r.room_type_id
                 JOIN identity_access.hotels h ON h.hotel_id = rt.hotel_id
                 WHERE r.is_active = 1 AND rt.is_active = 1 AND h.is_active = 1
+                  AND (? = 1 OR EXISTS (
+                    SELECT 1 FROM identity_access.staff st WHERE st.user_id = ?
+                      AND st.hotel_id = h.hotel_id AND st.is_active = 1
+                  ) OR EXISTS (
+                    SELECT 1 FROM booking.bookings b JOIN booking.booking_rooms br ON br.booking_id = b.booking_id
+                    WHERE b.customer_id = ? AND br.room_id = r.room_id AND b.status = 'CHECKED_IN'
+                  ))
                 ORDER BY h.hotel_id, r.room_number, r.room_id
                 """, (rs, row) -> new IssueRoomResponse(rs.getLong("room_id"),
-                rs.getString("room_number"), rs.getString("hotel_name")));
+                rs.getString("room_number"), rs.getString("hotel_name")), user.getRoles().contains("ADMIN") ? 1 : 0, user.getId(), user.getId());
     }
 
     @Transactional
     public CreatedIssueResponse create(CreateIssueRequest request) {
-        Reporter reporter = configuredReporter();
-        if (reporter == null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Issue reporting requires a configured local-demo reporter until JWT is integrated");
+        Reporter reporter = currentReporter();
+        if (reporter == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Tài khoản người báo cáo không hoạt động.");
         boolean validRoom = getRooms().stream().anyMatch(room -> room.id().equals(request.roomId()));
         if (!validRoom) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not active or does not exist");
         Integer typeCount = jdbc.queryForObject("""

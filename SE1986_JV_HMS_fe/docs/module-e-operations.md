@@ -1,3 +1,5 @@
+> Cập nhật hiện tại: Module E đã dùng JWT, bỏ danh tính local-demo. Xem [hướng dẫn test JWT](../../SE1986_JV_HMS_be/docs/module-e-jwt-test.md). Các ghi chú local-demo bên dưới là lịch sử và không còn áp dụng.
+
 # Module E — Hoàng Minh Đức
 
 ## Bước 1: Báo cáo sự cố (UC-E4)
@@ -126,3 +128,17 @@ Commit: `feat(operations): create database issue reports in explicit local demo 
 - Giữ local-demo và OPERATIONS_DEMO_MANAGER_EMAIL; không sửa module khác hoặc cơ chế đăng nhập.
 - Build frontend, lint, validation ngày giờ và 50 unit test Module E đạt; cần thử tích hợp SQL Server theo README backend.
 - UC-E1 đã được người dùng duyệt để commit/push. Dashboard/Feedback vẫn chưa tích hợp dữ liệu thật ở bước này.
+
+## Bản hoàn thiện nghiệp vụ — UC-E3 và UC-E6
+
+- Cả 6 trang Operations dùng API SQL Server, không import dữ liệu mock/localStorage.
+- Dashboard theo ngày/múi giờ, tổng trạng thái/task quá hạn, workload staff và polling 30 giây.
+- Feedback Customer cho booking CHECKED_OUT của mình, 1 review/booking; Manager lọc và phản hồi theo khách sạn.
+- Form dùng React Hook Form + Zod; backend validation/transaction/Unicode/conditional writes.
+- Route/menu 6 trang sử dụng UC-E1…UC-E6 để Customer dùng được E4/E6, không sửa logic đăng nhập.
+- Profile local-demo có mặc định email seed cho reporter/manager/staff/customer; chỉ cần DB_USERNAME/DB_PASSWORD và bật profile để thử.
+- Hướng dẫn và giới hạn kiểm chứng: [Tài liệu bàn giao](../../SE1986_JV_HMS_be/docs/module-e-final.md).
+- Build/lint frontend và 69 unit test backend đạt. Truy vấn SQL Server dashboard/feedback và task/issue rollback test đạt.
+- Chưa commit/push phần hoàn thiện; chờ người dùng duyệt.
+
+Cập nhật trải nghiệm sử dụng: dashboard mặc định Tất cả thời gian, có chọn Theo ngày; bỏ banner thuật ngữ kỹ thuật khỏi luồng thông thường, vẫn hiện người thực hiện/chế độ kiểm thử. Sự cố thêm cột Người xử lý. SQL Server đối chiếu allTime trả đúng 2 task (1 PENDING, 1 COMPLETED), trong khi ngày trên ảnh trả 0. Sau cập nhật: build/lint và 70 unit test đạt. Chưa push.

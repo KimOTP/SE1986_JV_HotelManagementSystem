@@ -1,8 +1,7 @@
 package com.hotel.hms.operations.service;
 
 import com.hotel.hms.operations.dto.*;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import com.hotel.hms.operations.security.OperationsIdentity;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,18 +13,16 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class IssueAssignmentService {
     private final JdbcTemplate jdbc;
-    private final Environment environment;
-    public IssueAssignmentService(JdbcTemplate jdbc, Environment environment) {
+    private final OperationsIdentity identity;
+    public IssueAssignmentService(JdbcTemplate jdbc, OperationsIdentity identity) {
         this.jdbc = jdbc;
-        this.environment = environment;
+        this.identity = identity;
     }
     public record Manager(Long id, String name, boolean admin) {}
     public record IssueState(Long id, Long hotelId, String status, Long assignedStaffId) {}
 
-    private Manager configuredManager() {
-        if (!environment.acceptsProfiles(Profiles.of("local-demo"))) return null;
-        String email = environment.getProperty("operations.demo-manager-email", "").trim();
-        if (email.isEmpty()) return null;
+    private Manager currentManager() {
+        String email = identity.email();
         var managers = jdbc.query("""
                 SELECT u.user_id, u.full_name,
                        CASE WHEN EXISTS (
@@ -42,11 +39,11 @@ public class IssueAssignmentService {
                 """, (rs, row) -> new Manager(rs.getLong("user_id"), rs.getString("full_name"), rs.getBoolean("is_admin")), email);
         return managers.isEmpty() ? null : managers.getFirst();
     }
-    // Shared local identity within Module E; replace with verified principal when Module A is ready.
+    // Identity comes from the verified JWT; hotel membership is checked in SQL.
     public Manager requireManager() {
-        Manager manager = configuredManager();
-        if (manager == null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Configure an active local-demo manager before assigning issues");
+        Manager manager = currentManager();
+        if (manager == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Tài khoản hiện tại cần vai trò ADMIN hoặc MANAGER đang hoạt động.");
         return manager;
     }
     private IssueState requireOpenIssue(Long id) {
@@ -77,10 +74,10 @@ public class IssueAssignmentService {
     }
     @Transactional(readOnly = true)
     public IssueAssignmentContext getContext() {
-        var manager = configuredManager();
+        var manager = currentManager();
         return manager == null
-                ? new IssueAssignmentContext(false, null, "Chưa bật local-demo hoặc manager cấu hình không có vai trò ADMIN/MANAGER đang hoạt động.")
-                : new IssueAssignmentContext(true, manager.name(), "Phân công thử nghiệm dưới danh tính cấu hình tại backend, chưa phải phiên JWT.");
+                ? new IssueAssignmentContext(false, null, "Tài khoản hiện tại không có vai trò ADMIN/MANAGER đang hoạt động.")
+                : new IssueAssignmentContext(true, manager.name(), "Phân công bằng tài khoản đang đăng nhập.");
     }
     public List<IssueAssigneeResponse> getAssignees(Long issueId) {
         var manager = requireManager();

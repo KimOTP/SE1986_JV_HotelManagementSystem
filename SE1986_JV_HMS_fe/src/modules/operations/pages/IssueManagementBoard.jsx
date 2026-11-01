@@ -17,7 +17,7 @@ import { getIssueTypes } from '../api/issueTypesApi';
 import AssignIssueModal from '../components/AssignIssueModal';
 import IssueProgressModal from '../components/IssueProgressModal';
 import { useAuth } from '../../../app/provider/AuthsContext';
-import { PERMISSIONS, ROLES } from '../../auths/constants/authConstants';
+import { ROLES } from '../../auths/constants/authConstants';
 
 const statuses = {
   OPEN: { label: 'Mới báo cáo', color: 'danger' },
@@ -265,7 +265,7 @@ export default function IssueManagementBoard() {
                   >
                     Chi tiết
                   </Button>
-                  {hasPermission(PERMISSIONS.HOUSEKEEPING_MANAGE) && issue.status === 'OPEN' && (
+                  {(hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER)) && issue.status === 'OPEN' && (
                     <Button
                       className="ms-2"
                       size="sm"

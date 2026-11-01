@@ -5,7 +5,8 @@ import com.hotel.hms.operations.service.IssueProgressService;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.*;
 import org.springframework.jdbc.core.*;
-import org.springframework.mock.env.MockEnvironment;
+import com.hotel.hms.operations.security.OperationsIdentity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 import java.sql.*;
 import java.util.List;
@@ -15,16 +16,17 @@ import static org.mockito.ArgumentMatchers.*;
 
 class IssueProgressServiceTests {
     private JdbcTemplate jdbc;
-    private MockEnvironment environment;
+    private OperationsIdentity environment;
     private IssueProgressService service;
+    @AfterEach void clearAuthentication() { SecurityContextHolder.clearContext(); }
     @BeforeEach void setup() {
         jdbc = mock(JdbcTemplate.class);
-        environment = new MockEnvironment();
+        environment = new OperationsIdentity();
+        SecurityContextHolder.clearContext();
         service = new IssueProgressService(jdbc, environment);
     }
     private void worker() {
-        environment.setActiveProfiles("local-demo");
-        environment.setProperty("operations.demo-staff-email", "housekeeper@sba.example");
+        JwtTestUser.signIn("housekeeper@sba.example");
         when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressService.Worker>>any(), eq("housekeeper@sba.example")))
                 .thenReturn(List.of(new IssueProgressService.Worker(3L, 1L, "Housekeeper Demo")));
     }
@@ -36,24 +38,20 @@ class IssueProgressServiceTests {
         verify(jdbc, never()).update(any(PreparedStatementCreator.class));
         verify(jdbc, never()).update(anyString(), eq(1L), eq(3L));
     }
-    @Test void disabledWithoutLocalProfileEvenIfEmailExists() {
-        environment.setProperty("operations.demo-staff-email", "housekeeper@sba.example");
-        assertFalse(service.getContext().enabled());
-        assertEquals(503, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
+    @Test void disabledWithoutJwt() {
+        assertEquals(401, assertThrows(ResponseStatusException.class, () -> service.getContext()).getStatusCode().value());
         verifyNoInteractions(jdbc);
     }
     @Test void disabledForMissingEmail() {
-        environment.setActiveProfiles("local-demo");
-        assertFalse(service.getContext().enabled());
-        assertEquals(503, assertThrows(ResponseStatusException.class, () -> service.resolve(1L, new ResolveIssueRequest("Đã sửa vòi nước"))).getStatusCode().value());
+        assertEquals(401, assertThrows(ResponseStatusException.class, () -> service.getContext()).getStatusCode().value());
         verifyNoInteractions(jdbc);
     }
     @Test void inactiveOrMissingStaffCannotStartOrResolve() {
         worker();
         when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressService.Worker>>any(), eq("housekeeper@sba.example"))).thenReturn(List.of());
         assertFalse(service.getContext().enabled());
-        assertEquals(503, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
-        assertEquals(503, assertThrows(ResponseStatusException.class, () -> service.resolve(1L, new ResolveIssueRequest("Đã sửa vòi nước"))).getStatusCode().value());
+        assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
+        assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.resolve(1L, new ResolveIssueRequest("Đã sửa vòi nước"))).getStatusCode().value());
         noWrite();
     }
     @Test void contextUsesDatabaseStaffIdentity() {

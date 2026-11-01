@@ -4,7 +4,7 @@ import { getAssignmentContext } from '../api/issueAssignmentsApi';
 import { getManagedTasks } from '../api/taskManagementApi';
 import CreateTaskModal from '../components/CreateTaskModal';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
-import { PERMISSIONS } from '../../auths/constants/authConstants';
+import { ROLES } from '../../auths/constants/authConstants';
 
 const columns = {
   PENDING: ['Chờ xử lý', 'secondary'],
@@ -20,8 +20,8 @@ const formatDate = (value) =>
   new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`).toLocaleString('vi-VN');
 
 export default function HousekeepingTaskBoard() {
-  const { hasPermission } = useAuth();
-  const canManage = hasPermission(PERMISSIONS.HOUSEKEEPING_MANAGE) && hasPermission('UC-E1');
+  const { hasPermission, hasRole } = useAuth();
+  const canManage = (hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER)) && hasPermission('UC-E1');
   const [draft, setDraft] = useState(empty);
   const [filters, setFilters] = useState(empty);
   const [page, setPage] = useState(0);
@@ -47,7 +47,7 @@ export default function HousekeepingTaskBoard() {
             items: [],
             context: null,
             error:
-              'Không tải được bảng công việc. Kiểm tra backend và cấu hình manager local rồi thử lại.',
+              'Không tải được bảng công việc. Kiểm tra backend và quyền của quản lý đang đăng nhập rồi thử lại.',
           });
       }
     };
@@ -100,16 +100,16 @@ export default function HousekeepingTaskBoard() {
           </Button>
         </div>
       </div>
-      <Alert variant="info">
-        Công việc lấy từ SQL Server theo phạm vi manager local. Các số đếm dưới đây chỉ tính trong
-        trang hiện tại, không phải tổng thống kê.
-      </Alert>
+      <p className="text-muted">
+        Giao công việc cho nhân viên và theo dõi tiến độ. Số đếm trên mỗi cột chỉ tính các công việc
+        trong trang hiện tại.
+      </p>
       {result.context && (
         <Alert variant={result.context.enabled ? 'info' : 'warning'}>
           {result.context.enabled ? (
             <>
-              Manager local: <strong>{result.context.managerName}</strong>, do backend cấu hình,
-              chưa phải phiên JWT.
+              Người giao việc: <strong>{result.context.managerName}</strong>.
+              <Badge bg="secondary">Phiên đăng nhập hiện tại</Badge>
             </>
           ) : (
             result.context.message

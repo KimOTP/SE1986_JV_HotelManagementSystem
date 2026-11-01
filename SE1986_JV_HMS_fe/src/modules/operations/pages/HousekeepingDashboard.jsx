@@ -1,153 +1,257 @@
-import { Container, Row, Col, Card, Badge, Button, ListGroup, ProgressBar } from 'react-bootstrap';
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Col,
+  Form,
+  ListGroup,
+  ProgressBar,
+  Row,
+  Table,
+} from 'react-bootstrap';
 import { Link } from 'react-router';
-import { mockTasks, mockIssues } from '../mocks/mockData';
-
-const HousekeepingDashboard = () => {
-  const totalTasks = mockTasks.length;
-  const todoTasks = mockTasks.filter((t) => t.status === 'TODO').length;
-  const inProgressTasks = mockTasks.filter((t) => t.status === 'IN_PROGRESS').length;
-  const doneTasks = mockTasks.filter((t) => t.status === 'DONE').length;
-  const completionRate = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
-
-  const urgentTasks = mockTasks
-    .filter((t) => t.status !== 'DONE' && t.priority === 'High')
-    .slice(0, 4);
-
-  const recentIssues = mockIssues.filter((i) => i.status !== 'RESOLVED').slice(0, 4);
-
-  const stats = [
-    { label: 'Tổng công việc', value: totalTasks, color: 'primary' },
-    { label: 'Chờ xử lý', value: todoTasks, color: 'secondary' },
-    { label: 'Đang thực hiện', value: inProgressTasks, color: 'warning' },
-    { label: 'Đã hoàn thành', value: doneTasks, color: 'success' },
-  ];
-
-  return (
-    <Container fluid className="p-0">
-      <div className="mb-4">
-        <h2 className="fw-bold">Tổng quan Vận hành</h2>
-        <p className="text-muted">Chào buổi sáng, đây là tình hình hoạt động dọn phòng hôm nay.</p>
-      </div>
-
-      <Row className="mb-4">
-        {stats.map((s) => (
-          <Col md={3} key={s.label}>
-            <Card className={`border-0 shadow-sm border-start border-4 border-${s.color}`}>
-              <Card.Body>
-                <div className="text-muted small fw-semibold mb-1">{s.label}</div>
-                <h2 className={`mb-0 text-${s.color} fw-bold`}>{s.value}</h2>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <Row className="g-4">
-        <Col lg={7}>
-          <Card className="border-0 shadow-sm h-100">
-            <Card.Header className="bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-              <h5 className="fw-bold mb-0">Công việc ưu tiên cao</h5>
-              <Button
-                as={Link}
-                to="/operations/tasks"
-                variant="link"
-                className="text-decoration-none p-0"
-              >
-                Xem Bảng công việc
-              </Button>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4">
-              {urgentTasks.length === 0 ? (
-                <div className="text-center py-4 text-muted">
-                  Tuyệt vời! Không có công việc khẩn cấp nào.
-                </div>
-              ) : (
-                <ListGroup variant="flush">
-                  {urgentTasks.map((task) => (
-                    <ListGroup.Item
-                      key={task.id}
-                      className="px-0 py-3 border-bottom d-flex justify-content-between align-items-center"
-                    >
-                      <div>
-                        <h6 className="mb-1 fw-bold">
-                          Phòng {task.roomNumber} - {task.type}
-                        </h6>
-                        <small className="text-muted">
-                          Người thực hiện: {task.assignedTo || 'Chưa phân công'}
-                        </small>
-                      </div>
-                      <div className="text-end">
-                        <Badge bg="danger" className="mb-2">
-                          Cao
-                        </Badge>
-                        <br />
-                        <small className="text-secondary">
-                          {task.status === 'DONE' ? 'Đã hoàn thành' : task.status === 'IN_PROGRESS' ? 'Đang thực hiện' : 'Chờ xử lý'}
-                        </small>
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col lg={5}>
-          <Card className="border-0 shadow-sm mb-4">
-            <Card.Header className="bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
-              <h5 className="fw-bold mb-0">Sự cố đang chờ</h5>
-              <Button
-                as={Link}
-                to="/operations/issues"
-                variant="link"
-                className="text-decoration-none p-0"
-              >
-                Xem tất cả
-              </Button>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4">
-              <ListGroup variant="flush">
-                {recentIssues.map((issue) => (
-                  <ListGroup.Item
-                    key={issue.id}
-                    className="px-0 py-2 border-bottom d-flex justify-content-between align-items-center"
-                  >
-                    <div>
-                      <span className="fw-semibold text-danger me-2">Phòng {issue.roomNumber}</span>
-                      <small className="text-muted">{issue.category}</small>
-                    </div>
-                    <Badge bg="warning" text="dark">
-                      {issue.status === 'OPEN' ? 'Mới báo cáo' : 'Đang xử lý'}
-                    </Badge>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </Card.Body>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <Card.Body className="p-4">
-              <h5 className="fw-bold mb-3">Tiến độ công việc hôm nay</h5>
-              <div className="d-flex justify-content-between mb-1">
-                <span className="text-muted small">Đã hoàn thành</span>
-                <span className="fw-bold text-success small">{completionRate}%</span>
-              </div>
-              <ProgressBar
-                now={completionRate}
-                variant="success"
-                className="mb-3"
-                style={{ height: '10px' }}
-              />
-              <p className="text-muted small mb-0">
-                Đã hoàn thành {doneTasks} trên tổng số {totalTasks} công việc được giao.
-              </p>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
-  );
+import { getAssignmentContext } from '../api/issueAssignmentsApi';
+import { getHousekeepingDashboard } from '../api/dashboardApi';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
+import { ROLES } from '../../auths/constants/authConstants';
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-
-export default HousekeepingDashboard;
+export default function HousekeepingDashboard() {
+  const { hasPermission, hasRole } = useAuth();
+  const allowed = (hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER)) && hasPermission('UC-E3');
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Bangkok';
+  const [date, setDate] = useState(today);
+  const [allTime, setAllTime] = useState(true);
+  const [auto, setAuto] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState({ data: null, context: null, error: null, loading: true });
+  useEffect(() => {
+    if (!allowed) return;
+    const controller = new AbortController();
+    let timer;
+    const load = async () => {
+      try {
+        const context = await getAssignmentContext(controller.signal);
+        const data = context.enabled
+          ? await getHousekeepingDashboard(date, zone, controller.signal, allTime)
+          : null;
+        if (!controller.signal.aborted) setState({ data, context, error: null, loading: false });
+      } catch {
+        if (!controller.signal.aborted)
+          setState((previous) => ({
+            ...previous,
+            error: 'Không tải được dashboard. Dữ liệu cũ (nếu có) chưa được cập nhật.',
+            loading: false,
+          }));
+      } finally {
+        if (auto && !controller.signal.aborted) timer = setTimeout(load, 30000);
+      }
+    };
+    load();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [allowed, date, zone, auto, attempt, allTime]);
+  const refresh = () => {
+    setState((previous) => ({ ...previous, loading: true }));
+    setAttempt((value) => value + 1);
+  };
+  if (!allowed)
+    return (
+      <Alert variant="warning">
+        Dashboard dành cho Manager/Admin có quyền UC-E3. Nhân viên xem Công việc của tôi.
+      </Alert>
+    );
+  const data = state.data;
+  const stats = data
+    ? [
+        ['Tổng công việc', data.summary.total],
+        ['Chờ xử lý', data.summary.pending],
+        ['Đang thực hiện', data.summary.inProgress],
+        ['Hoàn thành', data.summary.completed],
+        ['Đã hủy', data.summary.cancelled],
+        ['Quá hạn', data.summary.overdue],
+      ]
+    : [];
+  const effective = data ? data.summary.total - data.summary.cancelled : 0;
+  const rate = effective ? Math.round((data.summary.completed / effective) * 100) : 0;
+  return (
+    <div>
+      <h2>Tổng quan vận hành</h2>
+      <p className="text-muted">
+        Theo dõi công việc, tiến độ và khối lượng của nhân viên trong khách sạn.
+      </p>
+      <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
+        <Form.Group controlId="dashboard-scope">
+          <Form.Label>Phạm vi thống kê</Form.Label>
+          <Form.Select
+            value={allTime ? 'all' : 'day'}
+            onChange={(event) => {
+              setState({ data: null, context: null, error: null, loading: true });
+              setAllTime(event.target.value === 'all');
+            }}
+          >
+            <option value="all">Tất cả thời gian</option>
+            <option value="day">Theo ngày</option>
+          </Form.Select>
+        </Form.Group>
+        <Form.Group controlId="dashboard-date">
+          <Form.Label>Ngày ({zone})</Form.Label>
+          <Form.Control
+            type="date"
+            value={date}
+            disabled={allTime}
+            min="0002-01-01"
+            max="9998-12-31"
+            onChange={(event) => {
+              if (event.target.value) {
+                setState({ data: null, context: null, error: null, loading: true });
+                setDate(event.target.value);
+              }
+            }}
+          />
+        </Form.Group>
+        <Form.Check
+          id="dashboard-auto"
+          label="Tự cập nhật mỗi 30 giây"
+          checked={auto}
+          onChange={(event) => setAuto(event.target.checked)}
+        />
+        <Button disabled={state.loading} onClick={refresh}>
+          Tải lại
+        </Button>
+      </div>
+      {state.context && (
+        <Alert variant={state.context.enabled ? 'info' : 'warning'}>
+          {state.context.enabled ? (
+            <>
+              Người quản lý: <strong>{state.context.managerName}</strong>{' '}
+              <Badge bg="secondary">Phiên đăng nhập hiện tại</Badge>
+            </>
+          ) : (
+            state.context.message
+          )}
+        </Alert>
+      )}
+      {state.loading && <p role="status">Đang cập nhật...</p>}
+      {state.error && <Alert variant="danger">{state.error}</Alert>}
+      {data && (
+        <>
+          <small className="text-muted">
+            Phạm vi: {data.allTime ? 'Tất cả thời gian' : data.date} · Cập nhật:{' '}
+            {new Date(data.generatedAt).toLocaleString('vi-VN')}
+          </small>
+          <Row className="g-3 my-2">
+            {stats.map(([label, value]) => (
+              <Col xs={6} md={4} xl={2} key={label}>
+                <Card>
+                  <Card.Body>
+                    <div>{label}</div>
+                    <h3>{value}</h3>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+          <Card className="my-3">
+            <Card.Body>
+              <h5>Tiến độ: {rate}%</h5>
+              <ProgressBar now={rate} label={`${rate}%`} />
+              <small>
+                Hoàn thành {data.summary.completed}/{effective} công việc không bị hủy (
+                {data.allTime ? 'tất cả thời gian' : 'ngày đã chọn'}).
+              </small>
+            </Card.Body>
+          </Card>
+          <h4>Khối lượng công việc theo nhân viên</h4>
+          <Table responsive bordered striped>
+            <thead>
+              <tr>
+                <th>Nhân viên</th>
+                <th>Khách sạn</th>
+                <th>Chờ</th>
+                <th>Đang làm</th>
+                <th>Hoàn thành</th>
+                <th>Hủy</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.workload.length ? (
+                data.workload.map((staff) => (
+                  <tr key={staff.staffId}>
+                    <td>
+                      {staff.employeeCode} — {staff.fullName}{' '}
+                      {!staff.active && <Badge bg="secondary">Ngừng hoạt động</Badge>}
+                    </td>
+                    <td>{staff.hotelName}</td>
+                    <td>{staff.pending}</td>
+                    <td>{staff.inProgress}</td>
+                    <td>{staff.completed}</td>
+                    <td>{staff.cancelled}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6}>Chưa có nhân viên hoặc task.</td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+          <Row className="g-3">
+            <Col md={6}>
+              <Card>
+                <Card.Body>
+                  <h5>Ưu tiên cao chưa xong ({data.summary.highPriorityOpen})</h5>
+                  <small>Hiển thị tối đa 5 task trong phạm vi thống kê.</small>
+                  <ListGroup variant="flush">
+                    {data.urgentTasks.map((task) => (
+                      <ListGroup.Item key={task.id} className="text-break">
+                        Phòng {task.roomNumber}: {task.title}
+                        <br />
+                        <small>
+                          {task.assignedTo} · {task.priority}
+                        </small>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                  {!data.urgentTasks.length && <p>Không có task ưu tiên cao đang chờ.</p>}
+                  <Button as={Link} to="/operations/tasks" variant="link">
+                    Bảng công việc
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={6}>
+              <Card>
+                <Card.Body>
+                  <h5>Sự cố chưa hoàn tất</h5>
+                  <small>Hiển thị tối đa 5 sự cố.</small>
+                  <ListGroup variant="flush">
+                    {data.openIssues.map((issue) => (
+                      <ListGroup.Item key={issue.id} className="text-break">
+                        Phòng {issue.roomNumber}: {issue.title}
+                        <br />
+                        <small>{issue.status}</small>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                  {!data.openIssues.length && (
+                    <p>Không có sự cố đang chờ trong phạm vi thống kê.</p>
+                  )}
+                  <Button as={Link} to="/operations/issues" variant="link">
+                    Quản lý sự cố
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </>
+      )}
+    </div>
+  );
+}

@@ -10,13 +10,13 @@ const errorMessage = (error) => {
     case 400:
       return 'Ghi chú phải có 5–2000 ký tự sau khi bỏ khoảng trắng đầu/cuối.';
     case 403:
-      return 'Nhân viên cấu hình tại backend không phải người được giao sự cố này hoặc không cùng khách sạn.';
+      return 'Nhân viên đang đăng nhập không phải người được giao sự cố này hoặc không cùng khách sạn.';
     case 404:
       return 'Không tìm thấy sự cố hoặc phòng/khách sạn đã ngừng hoạt động.';
     case 409:
       return 'Sự cố đã đổi trạng thái hoặc phân công. Đóng hộp thoại và tải lại bảng trước khi tiếp tục.';
     case 503:
-      return 'Chưa bật local-demo hoặc nhân viên cấu hình không có vai trò STAFF đang hoạt động.';
+      return 'Tài khoản hiện tại chưa hợp lệ hoặc nhân viên đang đăng nhập không có vai trò STAFF đang hoạt động.';
     default:
       return 'Chưa xác nhận được kết quả. Kiểm tra lại bảng trước khi gửi lại.';
   }
@@ -97,18 +97,17 @@ export default function IssueProgressModal({ issue, onClose, onUpdated }) {
           {context.error && <Alert variant="danger">{context.error}</Alert>}
           {context.value && (
             <Alert variant={context.value.enabled ? 'info' : 'warning'}>
-              {context.value.message}
+              {!context.value.enabled && context.value.message}
               {context.value.enabled && (
                 <div>
-                  Nhân viên local: <strong>{context.value.staffName}</strong>. Chưa phải tài khoản
-                  React đang đăng nhập.
+                  Nhân viên thực hiện: <strong>{context.value.staffName}</strong>. Phiên đăng nhập hiện tại.
                 </div>
               )}
             </Alert>
           )}
           {context.value?.enabled && !isAssignee && (
             <Alert variant="warning">
-              Sự cố này không được giao cho nhân viên local đang cấu hình.
+              Sự cố này không được giao cho nhân viên đang đăng nhập.
             </Alert>
           )}
           {saveError && <Alert variant="danger">{saveError}</Alert>}

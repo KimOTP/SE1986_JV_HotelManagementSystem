@@ -92,7 +92,7 @@ export default function CreateTaskModal({ managerName, onClose, onCreated }) {
           : status === 403
             ? 'Manager không có quyền giao việc cho khách sạn này.'
             : status === 503
-              ? 'Chưa cấu hình manager local hợp lệ.'
+              ? 'Chưa quyền của quản lý đang đăng nhập hợp lệ.'
               : 'Chưa xác nhận được kết quả lưu. Kiểm tra bảng trước khi gửi lại để tránh tạo trùng.',
       );
     } finally {
@@ -123,8 +123,8 @@ export default function CreateTaskModal({ managerName, onClose, onCreated }) {
       <Form noValidate onSubmit={(event) => handleSubmit(submit)(event)}>
         <Modal.Body>
           <Alert variant="info">
-            Người giao việc local: <strong>{managerName}</strong>, do backend cấu hình, chưa phải
-            phiên JWT. Ngày giờ nhập theo giờ địa phương và lưu UTC.
+            Người giao việc: <strong>{managerName}</strong>. Phiên đăng nhập hiện tại. Nhập lịch theo giờ địa
+            phương.
           </Alert>
           {rooms.loading && (
             <Alert variant="info" role="status">

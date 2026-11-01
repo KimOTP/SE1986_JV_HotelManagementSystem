@@ -61,11 +61,7 @@ function NotFound() {
 }
 
 function PermissionRoute({ permission, children }) {
-  return (
-    <ProtectedRoute requiredPermission={permission}>
-      {children}
-    </ProtectedRoute>
-  );
+  return <ProtectedRoute requiredPermission={permission}>{children}</ProtectedRoute>;
 }
 
 function PublicPermission({ permission, children }) {

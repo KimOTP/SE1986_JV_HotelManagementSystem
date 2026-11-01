@@ -1,3 +1,5 @@
+> Cập nhật hiện tại: Module E đã dùng JWT, bỏ danh tính local-demo. Xem [hướng dẫn test JWT](docs/module-e-jwt-test.md). Các ghi chú local-demo bên dưới là lịch sử và không còn áp dụng.
+
 # Hotel Management Backend
 
 Java 21, Spring Boot 4, Maven, SQL Server.

@@ -35,13 +35,13 @@ const errorMessage = (error) => {
     case 400:
       return 'Bộ lọc hoặc tham số không hợp lệ.';
     case 403:
-      return 'Công việc không được giao cho nhân viên local này hoặc thuộc khách sạn khác.';
+      return 'Công việc không được giao cho nhân viên đang đăng nhập này hoặc thuộc khách sạn khác.';
     case 404:
       return 'Không tìm thấy công việc hoặc phòng/khách sạn đã ngừng hoạt động.';
     case 409:
       return 'Công việc đã đổi trạng thái hoặc được giao lại. Đóng hộp thoại và tải lại danh sách.';
     case 503:
-      return 'Chưa bật local-demo hoặc nhân viên local không còn hoạt động.';
+      return 'Tài khoản hiện tại chưa hợp lệ hoặc nhân viên đang đăng nhập không còn hoạt động.';
     default:
       return 'Chưa xác nhận được kết quả. Kiểm tra backend và tải lại danh sách trước khi thử lại.';
   }
@@ -250,7 +250,7 @@ export default function MyTasks() {
             </tr>
           ) : !result.context?.enabled ? (
             <tr>
-              <td colSpan={7}>Cần cấu hình nhân viên local trước khi xem công việc.</td>
+              <td colSpan={7}>Tài khoản hiện tại cần hồ sơ nhân viên đang hoạt động để xem công việc.</td>
             </tr>
           ) : !result.items.length ? (
             <tr>

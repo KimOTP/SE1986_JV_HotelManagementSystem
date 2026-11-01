@@ -7,7 +7,7 @@ export const sidebarMenu = [
   { groupLabel: 'SERVICES & FEEDBACK', items: [
     { label: 'Báo cáo sự cố', to: '/operations/report-issue', requiredPermission: 'UC-E4' },
     { label: 'Quản lý sự cố', to: '/operations/issues', requiredPermission: 'UC-E5' },
-    { label: 'Đánh giá của khách', to: '/operations/feedbacks', requiredPermission: 'UC-E6' },
+    { label: 'Đánh giá & phản hồi', to: '/operations/feedbacks', requiredPermission: 'UC-E6' },
   ] },
   { groupLabel: 'FRONT DESK', items: [
     { label: 'Check-in', to: '/frontdesk/check-in', requiredPermission: 'UC-D1' },

@@ -5,7 +5,8 @@ import com.hotel.hms.operations.service.IssueAssignmentService;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.*;
 import org.springframework.jdbc.core.*;
-import org.springframework.mock.env.MockEnvironment;
+import com.hotel.hms.operations.security.OperationsIdentity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
@@ -14,17 +15,18 @@ import static org.mockito.ArgumentMatchers.*;
 
 class IssueAssignmentServiceTests {
     private JdbcTemplate jdbc;
-    private MockEnvironment environment;
+    private OperationsIdentity environment;
     private IssueAssignmentService service;
 
+    @AfterEach void clearAuthentication() { SecurityContextHolder.clearContext(); }
     @BeforeEach void setup() {
         jdbc = mock(JdbcTemplate.class);
-        environment = new MockEnvironment();
+        environment = new OperationsIdentity();
+        SecurityContextHolder.clearContext();
         service = new IssueAssignmentService(jdbc, environment);
     }
     private void manager(boolean admin) {
-        environment.setActiveProfiles("local-demo");
-        environment.setProperty("operations.demo-manager-email", "manager@sba.example");
+        JwtTestUser.signIn("manager@sba.example");
         when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentService.Manager>>any(), eq("manager@sba.example")))
                 .thenReturn(List.of(new IssueAssignmentService.Manager(2L, "Manager Demo", admin)));
     }
@@ -42,17 +44,15 @@ class IssueAssignmentServiceTests {
     }
     private void noUpdate() { verify(jdbc, never()).update(anyString(), eq(3L), eq(2L), eq(1L)); }
 
-    @Test void disabledWithoutProfileEvenWhenEmailExists() {
-        environment.setProperty("operations.demo-manager-email", "manager@sba.example");
-        assertFalse(service.getContext().enabled());
-        assertEquals(503, assertThrows(ResponseStatusException.class, () -> service.assign(1L, new AssignIssueRequest(3L))).getStatusCode().value());
+    @Test void disabledWithoutJwt() {
+        assertEquals(401, assertThrows(ResponseStatusException.class, () -> service.getContext()).getStatusCode().value());
         verifyNoInteractions(jdbc);
     }
     @Test void disabledForMissingInactiveOrUnqualifiedManager() {
         manager(false);
         when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentService.Manager>>any(), eq("manager@sba.example"))).thenReturn(List.of());
         assertFalse(service.getContext().enabled());
-        assertEquals(503, assertThrows(ResponseStatusException.class, () -> service.assign(1L, new AssignIssueRequest(3L))).getStatusCode().value());
+        assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.assign(1L, new AssignIssueRequest(3L))).getStatusCode().value());
         noUpdate();
     }
     @Test void missingIssueReturns404() {
@@ -88,7 +88,7 @@ class IssueAssignmentServiceTests {
         staff(expected);
         assertEquals(expected, service.getAssignees(1L));
     }
-    @Test void savesConfiguredManagerAndStaffWithConditionalStateTransition() {
+    @Test void savesAuthenticatedManagerAndStaffWithConditionalStateTransition() {
         manager(false); issue("OPEN", null); scope(1);
         staff(List.of(new IssueAssigneeResponse(3L, "Housekeeper Demo", "H001")));
         when(jdbc.update(contains("status = 'OPEN' AND assigned_staff_id IS NULL"), eq(3L), eq(2L), eq(1L))).thenReturn(1);

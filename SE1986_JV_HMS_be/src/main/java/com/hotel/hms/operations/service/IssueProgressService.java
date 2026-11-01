@@ -1,8 +1,7 @@
 package com.hotel.hms.operations.service;
 
 import com.hotel.hms.operations.dto.*;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
+import com.hotel.hms.operations.security.OperationsIdentity;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,18 +13,16 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class IssueProgressService {
     private final JdbcTemplate jdbc;
-    private final Environment environment;
-    public IssueProgressService(JdbcTemplate jdbc, Environment environment) {
+    private final OperationsIdentity identity;
+    public IssueProgressService(JdbcTemplate jdbc, OperationsIdentity identity) {
         this.jdbc = jdbc;
-        this.environment = environment;
+        this.identity = identity;
     }
     public record Worker(Long staffId, Long hotelId, String name) {}
     public record IssueState(Long id, Long hotelId, Long assignedStaffId, String status) {}
 
-    private Worker configuredWorker() {
-        if (!environment.acceptsProfiles(Profiles.of("local-demo"))) return null;
-        String email = environment.getProperty("operations.demo-staff-email", "").trim();
-        if (email.isEmpty()) return null;
+    private Worker currentWorker() {
+        String email = identity.email();
         var workers = jdbc.query("""
                 SELECT s.staff_id, s.hotel_id, u.full_name
                 FROM identity_access.staff s
@@ -41,16 +38,16 @@ public class IssueProgressService {
         return workers.isEmpty() ? null : workers.getFirst();
     }
     public IssueWorkContext getContext() {
-        var worker = configuredWorker();
+        var worker = currentWorker();
         return worker == null
-                ? new IssueWorkContext(false, null, null, "Chưa bật local-demo hoặc staff cấu hình không hoạt động/không có vai trò STAFF.")
-                : new IssueWorkContext(true, worker.staffId(), worker.name(), "Xử lý sự cố bằng nhân viên cấu hình tại backend, chưa phải phiên JWT.");
+                ? new IssueWorkContext(false, null, null, "Tài khoản hiện tại không có hồ sơ nhân viên STAFF đang hoạt động.")
+                : new IssueWorkContext(true, worker.staffId(), worker.name(), "Xử lý bằng nhân viên đang đăng nhập.");
     }
-    // Shared only within Module E until the identity module supplies a verified principal.
+    // Revalidate the logged-in staff account and hotel membership in SQL.
     public Worker requireWorker() {
-        var worker = configuredWorker();
-        if (worker == null) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Configure an active local-demo staff member before updating issue progress");
+        var worker = currentWorker();
+        if (worker == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Tài khoản hiện tại cần hồ sơ nhân viên và vai trò STAFF đang hoạt động.");
         return worker;
     }
     private void assertAssignedIssue(Long issueId, Worker worker, String expectedStatus) {

@@ -17,13 +17,13 @@ const requestError = (error) => {
     case 400:
       return 'Nhân viên không còn hợp lệ. Vui lòng tải lại danh sách.';
     case 403:
-      return 'Manager cấu hình không quản lý khách sạn của sự cố này.';
+      return 'Quản lý đang đăng nhập không quản lý khách sạn của sự cố này.';
     case 404:
       return 'Không tìm thấy sự cố hoặc phòng/khách sạn đã ngừng hoạt động.';
     case 409:
       return 'Sự cố đã được phân công hoặc đã đổi trạng thái. Đóng hộp thoại và tải lại bảng.';
     case 503:
-      return 'Chưa bật local-demo hoặc manager cấu hình không hợp lệ.';
+      return 'Tài khoản hiện tại chưa hợp lệ hoặc quản lý đăng nhập không hợp lệ.';
     default:
       return 'Chưa xác nhận được kết quả. Kiểm tra lại bảng trước khi thử phân công lại.';
   }
@@ -107,11 +107,10 @@ export default function AssignIssueModal({ issue, onClose, onAssigned }) {
           )}
           {data.context && (
             <Alert variant={data.context.enabled ? 'info' : 'warning'}>
-              {data.context.message}
+              {!data.context.enabled && data.context.message}
               {data.context.enabled && (
                 <div>
-                  Người phân công local: <strong>{data.context.managerName}</strong>. Danh tính này
-                  do backend cấu hình, chưa phải tài khoản React.
+                  Người phân công: <strong>{data.context.managerName}</strong>. Phiên đăng nhập hiện tại.
                 </div>
               )}
             </Alert>

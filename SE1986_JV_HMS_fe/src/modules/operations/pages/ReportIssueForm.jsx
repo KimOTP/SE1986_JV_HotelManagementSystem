@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { issueReportSchema } from '../schemas/issueReportSchema';
 import { getIssueTypes } from '../api/issueTypesApi';
 import {
@@ -13,6 +14,7 @@ import {
 
 const defaults = { roomId: '', issueTypeId: '', title: '', description: '', priority: 'NORMAL' };
 export default function ReportIssueForm() {
+  const { hasPermission } = useAuth();
   const navigate = useNavigate();
   const saving = useRef(false);
   const [saveError, setSaveError] = useState(null);
@@ -88,7 +90,7 @@ export default function ReportIssueForm() {
         status === 400
           ? 'Dữ liệu không hợp lệ hoặc phòng/danh mục không còn hoạt động. Vui lòng tải lại form.'
           : status === 503
-            ? 'Backend chưa bật local-demo hoặc người báo cáo cấu hình không hoạt động.'
+            ? 'Tài khoản người báo cáo không hoạt động hoặc không có quyền.'
             : 'Chưa xác nhận được kết quả lưu. Kiểm tra bảng sự cố trước khi gửi lại để tránh tạo trùng.',
       );
     } finally {
@@ -111,7 +113,7 @@ export default function ReportIssueForm() {
       <p className="text-muted">Chọn phòng và nhập thông tin để gửi báo cáo vào hệ thống.</p>
       {catalog.loading && (
         <Alert variant="info" role="status">
-          Đang tải phòng, danh mục và cấu hình báo cáo...
+          Đang tải phòng, danh mục và tài khoản người báo cáo...
         </Alert>
       )}
       {catalog.error && (
@@ -124,29 +126,31 @@ export default function ReportIssueForm() {
       )}
       {catalog.context && (
         <Alert variant={catalog.context.enabled ? 'info' : 'warning'}>
-          {catalog.context.message}
+          {!catalog.context.enabled && catalog.context.message}
           {catalog.context.enabled && (
             <div>
-              Người báo cáo thử nghiệm: <strong>{catalog.context.reporterName}</strong>. Đây là danh
-              tính cấu hình local, chưa phải tài khoản đăng nhập React.
+              Người báo cáo: <strong>{catalog.context.reporterName}</strong>.{' '}
+              <small>Phiên đăng nhập hiện tại.</small>
             </div>
           )}
           {!catalog.context.enabled && (
             <Button variant="link" onClick={retry}>
-              Tải lại cấu hình
+              Tải lại
             </Button>
           )}
         </Alert>
       )}
       {!catalog.loading && !catalog.error && (!catalog.rooms.length || !catalog.types.length) && (
-        <Alert variant="warning">Chưa có phòng hoặc loại sự cố đang hoạt động.</Alert>
+        <Alert variant="warning">Chưa có phòng thuộc phạm vi tài khoản hoặc loại sự cố đang hoạt động. Khách hàng cần booking đã check-in để báo sự cố cho phòng đang lưu trú.</Alert>
       )}
       {created && (
         <Alert variant="success">
           Đã lưu sự cố #{created.id} vào database, trạng thái Mới báo cáo.{' '}
-          <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
-            Xem danh sách sự cố
-          </Button>
+          {hasPermission('UC-E5') && (
+            <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
+              Xem danh sách sự cố
+            </Button>
+          )}
         </Alert>
       )}
       {saveError && <Alert variant="danger">{saveError}</Alert>}
