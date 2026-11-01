@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { TODAY, checkInReservation, getReservations } from '../mocks/frontdeskStore';
 import { ReservationStatusBadge } from '../components/InvoiceSummary';
 import { currency } from '../utils/frontdeskUtils';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 const schema = z.object({
   roomNumber: z.string().trim().min(1, 'Vui lòng nhập số phòng'),
@@ -16,6 +17,8 @@ const schema = z.object({
 
 // UC-D1: Check-in Process
 export default function CheckInPage() {
+  const { hasPermission } = useAuth();
+  const canCheckIn = hasPermission('UC-D1');
   const [reservations, setReservations] = useState(getReservations);
   const [keyword, setKeyword] = useState('');
   const [onlyToday, setOnlyToday] = useState(true);
@@ -95,7 +98,7 @@ export default function CheckInPage() {
                 <td>{currency(r.deposit)}</td>
                 <td><ReservationStatusBadge status={r.status} /></td>
                 <td>
-                  <Button size="sm" variant="primary" onClick={() => open(r)}>
+                  <Button size="sm" variant="primary" onClick={() => open(r)} disabled={!canCheckIn}>
                     <BoxArrowInRight /> Check-in
                   </Button>
                 </td>
@@ -131,7 +134,7 @@ export default function CheckInPage() {
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setSelected(null)}>Hủy</Button>
-            <Button type="submit" variant="primary">Xác nhận check-in</Button>
+            <Button type="submit" variant="primary" disabled={!canCheckIn}>Xác nhận check-in</Button>
           </Modal.Footer>
         </Form>
       </Modal>

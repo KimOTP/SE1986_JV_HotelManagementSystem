@@ -117,16 +117,15 @@ export default function IssueManagementBoard() {
           <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
             Tải lại
           </Button>
-          {hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW) && (
+          {hasPermission('UC-E4') && (
             <Button onClick={() => navigate('/operations/report-issue')}>+ Báo cáo sự cố</Button>
           )}
         </div>
       </div>
-      <Alert variant="info">
-        Danh sách lấy từ database. Báo cáo mới được lưu vào SQL Server khi backend bật chế độ
-        local-demo. Manager/Admin phân công sự cố mới; nhân viên được giao có thể nhận xử lý và hoàn
-        tất.
-      </Alert>
+      <p className="text-muted">
+        Phân công sự cố mới cho nhân viên. Sự cố đã phân công sẽ do nhân viên được giao nhận xử lý
+        và hoàn tất.
+      </p>
       {assignmentSuccess && (
         <Alert variant="success" dismissible onClose={() => setAssignmentSuccess(null)}>
           Đã phân công sự cố #{assignmentSuccess.id}, trạng thái Đã phân công. Bộ lọc hiện tại vẫn
@@ -223,23 +222,24 @@ export default function IssueManagementBoard() {
             <th>Tiêu đề</th>
             <th>Danh mục</th>
             <th>Trạng thái</th>
+            <th>Người xử lý</th>
             <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
           {result.loading ? (
             <tr>
-              <td colSpan={6} role="status">
+              <td colSpan={7} role="status">
                 Đang tải sự cố...
               </td>
             </tr>
           ) : result.error ? (
             <tr>
-              <td colSpan={6}>Chưa tải được dữ liệu.</td>
+              <td colSpan={7}>Chưa tải được dữ liệu.</td>
             </tr>
           ) : result.items.length === 0 ? (
             <tr>
-              <td colSpan={6}>Không có sự cố trong trang này hoặc phù hợp bộ lọc.</td>
+              <td colSpan={7}>Không có sự cố trong trang này hoặc phù hợp bộ lọc.</td>
             </tr>
           ) : (
             result.items.map((issue, index) => (
@@ -250,6 +250,12 @@ export default function IssueManagementBoard() {
                 <td>{issue.category}</td>
                 <td>
                   <StatusBadge status={issue.status} />
+                </td>
+                <td>
+                  {issue.assignedTo || 'Chưa phân công'}
+                  {issue.status === 'ASSIGNED' && (
+                    <small className="d-block text-muted">Chờ nhân viên nhận xử lý</small>
+                  )}
                 </td>
                 <td>
                   <Button

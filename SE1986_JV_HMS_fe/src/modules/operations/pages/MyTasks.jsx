@@ -134,15 +134,15 @@ export default function MyTasks() {
         </Button>
       </div>
       <Alert variant="info">
-        Công việc lấy từ SQL Server theo nhân viên local cấu hình tại backend, chưa phải phiên đăng
-        nhập JWT. Hoàn thành task không tự đổi trạng thái phòng hoặc sự cố liên quan.
+        Nhận và hoàn thành các công việc được giao. Công việc bảo trì và sự cố liên quan được theo
+        dõi riêng.
       </Alert>
       {result.context && (
         <Alert variant={result.context.enabled ? 'info' : 'warning'}>
           {result.context.enabled ? (
             <>
-              Nhân viên local: <strong>{result.context.staffName}</strong>. Danh sách chỉ gồm công
-              việc được giao cho nhân viên này.
+              Nhân viên thực hiện: <strong>{result.context.staffName}</strong>. Danh sách chỉ gồm
+              công việc được giao cho nhân viên này.
             </>
           ) : (
             result.context.message
@@ -355,7 +355,10 @@ export default function MyTasks() {
         </Modal.Header>
         <Modal.Body>
           <p className="text-break">{actionTask?.title}</p>
-          <p>Nhân viên local: {result.context?.staffName}. Thời gian sẽ được lưu tại SQL Server.</p>
+          <p>
+            Nhân viên thực hiện: {result.context?.staffName}. Thời gian thực hiện được lưu khi xác
+            nhận.
+          </p>
           {saveError && <Alert variant="danger">{saveError}</Alert>}
         </Modal.Body>
         <Modal.Footer>
