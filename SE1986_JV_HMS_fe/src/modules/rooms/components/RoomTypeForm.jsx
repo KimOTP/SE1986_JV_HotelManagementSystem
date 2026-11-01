@@ -19,6 +19,7 @@ const defaults = {
 };
 export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving, saveError }) {
   const [images, setImages] = useState([]);
+  const [imageError, setImageError] = useState('');
   const {
     register,
     handleSubmit,
@@ -35,7 +36,12 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
       .split(/\r?\n/)
       .map((x) => x.trim())
       .filter(Boolean);
-    onSave({ ...item, ...v, images: [...images, ...added].slice(0, 6) });
+    if (images.length + added.length > 6) {
+      setImageError('Tối đa 6 ảnh. Hãy xóa bớt URL trước khi lưu.');
+      return;
+    }
+    setImageError('');
+    onSave({ ...item, ...v, images: [...images, ...added] });
   };
   return (
     <Form onSubmit={handleSubmit(submit)} noValidate>
@@ -107,9 +113,7 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
         <Col md={5}>
           <Form.Label>Ảnh phòng (tối đa 6)</Form.Label>
           <RoomGallery images={images} editable onChange={setImages} />
-          <Form.Text>
-            Dán URL ảnh, mỗi dòng một URL. Đây là lưu demo, không phải upload server.
-          </Form.Text>
+          <Form.Text>Dán URL ảnh http/https, mỗi dòng một URL, tối đa 6 ảnh.</Form.Text>
           <Form.Control as="textarea" rows={2} className="mt-2" {...register('imageText')} />
         </Col>
       </Row>
@@ -131,6 +135,7 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
       </Form.Group>
       <Form.Check className="mb-3" type="switch" label="Đang hoạt động" {...register('isActive')} />
       {saveError && <Alert variant="danger">{saveError}</Alert>}
+      {imageError && <Alert variant="danger">{imageError}</Alert>}
       <div className="d-flex justify-content-end gap-2">
         <Button variant="secondary" onClick={onCancel} disabled={saving}>
           Hủy

@@ -27,6 +27,9 @@ export default function AmenityForm({ item, onSave, onCancel, saving, saveError 
         <div className="d-flex align-items-center gap-2">
           <AmenityIcon iconKey={iconKey} size={24} />
           <Form.Select {...register('iconKey')}>
+            {item && !amenityIcons[item.iconKey] && (
+              <option value={item.iconKey}>Giữ biểu tượng hiện có</option>
+            )}
             {Object.keys(amenityIcons).map((k) => (
               <option key={k}>{k}</option>
             ))}

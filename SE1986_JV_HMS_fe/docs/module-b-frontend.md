@@ -1,111 +1,84 @@
-# Module B – Room Catalog & Availability
+# Module B — tích hợp backend
 
-## Chạy ứng dụng
+Tài liệu này thay thiết kế API đề xuất cũ. Contract chính thức và cách chạy Windows:
+[backend Module B](../../SE1986_JV_HMS_be/docs/module-b-api.md).
 
-```bash
-npm install
-npm run dev
+## Trạng thái UC
+
+| UC | FE kết nối |
+|---|---|
+| B1 | CRUD loại phòng, tiện nghi liên kết, URL ảnh tối đa 6, active |
+| B2 | CRUD phòng vật lý, tầng âm/0, notes, active; không ghi trạng thái vận hành |
+| B3 | CRUD tiện nghi, active, mapper icon seed và giữ icon cũ |
+| B4 | Public search dùng stored procedure qua backend, không tính từ mock |
+| B5 | Detail dùng roomTypeId; availability/recheck rồi handoff Module C |
+| B6 | Room Map dùng dữ liệu DB, refresh, filter/thống kê, hiển thị hai trạng thái gốc |
+
+Đã triển khai code; kiểm chứng SQL Server/CRUD qua browser cần môi trường DB và đăng nhập thật.
+Không coi test adapter hoặc test security mock là kiểm chứng DB/end-to-end.
+
+## Bật API mode
+
+```dotenv
+VITE_ROOMS_DATA_SOURCE=api
+VITE_AUTH_DATA_SOURCE=api
+VITE_API_BASE_URL=http://localhost:8080/api
+```
+
+Chạy `npm ci`, `npm run dev`; khởi động lại Vite sau khi đổi env.
+Không để JWT secret/DB password trong VITE_*. AuthProvider và axiosClient sẵn có xử lý JWT/refresh.
+Mode mock vẫn dùng kho demo riêng; API mode không import kho mock Module B và không fallback khi API lỗi.
+
+## Adapter
+
+Mọi đường dẫn tương đối bắt đầu `/inventory` vì baseURL đã chứa `/api`.
+`getCatalog()` gọi `/public/catalog`, chỉ có roomTypes/amenities, không đọc phòng nội bộ.
+`getAll(kind)` dành cho quản trị, chỉ gọi resource và options cần cho form:
+roomTypes dùng UC-B1; rooms dùng UC-B2; amenities dùng UC-B3.
+`getMap()` gọi `/room-map`, chỉ cần UC-B6, Manager/Staff không cần B1/B2/B3.
+Public search/detail không dùng getAll. Router hiện cho Staff có UC-B6 truy cập trực tiếp Room Map;
+không cần sửa guard/router/sidebar chung.
+
+`roomsHttpRepository` unwrap JSON trực tiếp hoặc envelope data tại boundary, chuẩn hóa mọi ID thành string.
+Backend cũng trả ID dạng chuỗi BIGINT. BasePrice dạng chuỗi decimal giữ chính xác khi edit/save;
+hiển thị tiền dùng formatter hiện có. Chỉ gửi whitelist trường catalog, không gửi hotelId/status/audit.
+
+Backend availability trả DTO với availableRooms=0 khi hết chỗ; adapter đổi trường hợp này thành null
+để giữ hành vi UI. Inactive trả 410, không tồn tại 404, ngày sai 400; UI hiển thị message API.
+Ảnh/notes lưu DB sau migration được duyệt: xem `03_module_b_extensions.sql` trong tài liệu backend.
+Khi backend chưa bật extension, ghi ảnh/notes bị từ chối 409, không báo thành công giả.
+
+## Room Map và icon
+
+Backend trả operationalStatus (AVAILABLE/OCCUPIED/MAINTENANCE), housekeepingStatus
+(DIRTY/CLEANING/CLEAN), displayStatus (READY/OCCUPIED/DIRTY/MAINTENANCE).
+Adapter giữ rawOperationalStatus, housekeepingStatus rồi dùng displayStatus ở field operationalStatus
+cho component UI cũ. Ưu tiên MAINTENANCE, OCCUPIED, DIRTY/CLEANING, READY.
+Modal hiện cả trạng thái gốc; active riêng biệt. Không ghi giá trị hiển thị vào DB.
+Refresh lỗi hiển thị lỗi đồng thời giữ snapshot cũ; không giả vờ đã tải dữ liệu mới.
+
+Icon seed wifi/snow/tv/water ánh xạ Wifi/Snow/Tv/Droplet. Icon khác CupHot/ShieldLock/Sun
+lưu cup-hot/shield-lock/sun. Giá trị lạ hiển thị CheckCircle; form có lựa chọn giữ nguyên,
+không ghi đè icon cũ khi chỉ sửa tên/mô tả.
+
+## Handoff và giới hạn
+
+Luồng search → detail → availability/recheck → `/rooms/booking-handoff` giữ
+roomTypeId/checkIn/checkOut/guests/roomCount. Module B không tạo booking/hold.
+Module C hiện còn store mock/localStorage; handoff thành công không chứng minh booking đã ghi SQL Server.
+Tạo booking phải kiểm tra availability lại trong transaction của C.
+
+## Kiểm tra
+
+```powershell
 npm run build
 npm run lint
+node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs
 ```
 
-Sao chép `.env.example` thành `.env` nếu cần đổi nguồn dữ liệu. Mặc định không cần backend:
-
-- `VITE_ROOMS_DATA_SOURCE=mock`: repository mock có độ trễ và lưu ở `localStorage`.
-- `VITE_ROOMS_DATA_SOURCE=api`: chỉ dùng HTTP repository, lỗi API được hiển thị và không tự fallback.
-- `VITE_API_BASE_URL`: base URL cho Axios. Không đặt secret trong biến `VITE_*`.
-
-## Route và quyền
-
-| Route                    | Chức năng              | Quyền demo          |
-| ------------------------ | ---------------------- | ------------------- |
-| `/rooms`                 | Tìm phòng theo ngày    | Guest/Admin/Manager |
-| `/rooms/:roomTypeId`     | Chi tiết loại phòng    | Guest/Admin/Manager |
-| `/rooms/booking-handoff` | Điểm bàn giao Module C | Guest/Admin/Manager |
-| `/admin/room-types`      | CRUD loại phòng        | Admin               |
-| `/admin/rooms`           | CRUD phòng vật lý      | Admin               |
-| `/admin/amenities`       | CRUD tiện nghi         | Admin               |
-| `/admin/room-map`        | Sơ đồ phòng            | Admin/Manager       |
-
-Auth của workspace chưa được triển khai. Trong mock/development, chọn Guest/Admin/Manager trên header nội bộ để demo. Đây chỉ là adapter UI, không phải bảo mật thật. Ở API mode adapter không tự cấp Admin và không tạo/gửi token giả. Khi Module A có provider thật, thay `AuthProvider` và giữ interface `canManage`, `canViewMap` hoặc cập nhật `RoomRouteGuard`.
-
-## Mock và reset
-
-Store dùng key `se1986.moduleB.rooms.v1`; seed chỉ diễn ra khi key chưa tồn tại, sai version hoặc JSON hỏng. CRUD của loại phòng/phòng/tiện nghi, search, detail và Room Map cùng đọc store này. Refresh giữ dữ liệu. Reset demo trong DevTools:
-
-```js
-localStorage.removeItem('se1986.moduleB.rooms.v1');
-location.reload();
-```
-
-Key role demo là `se1986.moduleB.demoRole`. Module B không đọc/ghi dữ liệu Module E.
-
-## Mô hình FE đề xuất (chưa phải DTO/database đã xác nhận)
-
-- `RoomType`: `id, name, description, basePrice, capacity, area, bedType, images, amenityIds, isActive`.
-- `Room`: `id, roomNumber, floor, roomTypeId, notes, isActive, operationalStatus`.
-- `Amenity`: `id, name, iconKey, description, isActive`.
-- `ReservationFixture`: `id, roomId, checkIn, checkOut, status`.
-
-Tiện nghi và giá nằm ở loại phòng; khách chọn loại phòng; detail dùng `roomTypeId`; map dùng phòng vật lý; tiền VND. `operationalStatus`: `READY`, `OCCUPIED`, `DIRTY`, `MAINTENANCE`; active độc lập. Tầng là số nguyên, cho phép 0 và số âm. Loại phòng/tiện nghi inactive đang được tham chiếu vẫn hiện khi sửa dữ liệu cũ nhưng không được gán mới.
-
-## Availability demo
-
-Khoảng lưu trú là `[checkIn, checkOut)`. Hai khoảng giao nhau khi `existingCheckIn < requestedCheckOut && existingCheckOut > requestedCheckIn`; vì vậy checkout cùng ngày với check-in mới không xung đột. Chỉ `CONFIRMED` và `CHECKED_IN` chặn phòng; `CANCELLED` không chặn. Phòng inactive bị loại. Vì mock chưa có lịch bảo trì theo ngày, phòng `MAINTENANCE` bị loại khỏi nguồn bán. `OCCUPIED` hiện tại không chặn mọi ngày tương lai; reservation theo ngày quyết định. Search chỉ trả loại phòng active, đủ sức chứa và còn ít nhất một phòng.
-
-## Facade và HTTP contract đề xuất
-
-Component chỉ gọi `roomsApi`: `getAll`, `list`, `getRoomType`, `save`, `remove`, `search`, `availability`. Chọn repository tại build time bằng env.
-
-Endpoint đề xuất, cần backend xác nhận/mapping lại:
-
-- `GET /rooms/roomTypes`, `GET /rooms/rooms`, `GET /rooms/amenities`
-- `GET /room-types/{id}`
-- `POST|PUT|DELETE /rooms/{resource}[/{id}]`
-- `GET /rooms/search?checkIn=2026-10-20&checkOut=2026-10-22&guests=2`
-- `GET /room-types/{id}/availability?checkIn=...&checkOut=...&guests=...`
-
-Adapter đọc được body là array, `{items: []}`, `{data: []}` hoặc `{data: object}`. Đây là khả năng tương thích tạm thời, không phải contract đã xác nhận. Search API mode phải trả availability đã tính từ backend; frontend chỉ áp bộ lọc hiển thị giá/loại/tiện nghi, không dùng fixture để tính lại.
-
-Ví dụ search response:
-
-```json
-[
-  {
-    "id": "rt-deluxe",
-    "name": "Deluxe",
-    "basePrice": 950000,
-    "capacity": 2,
-    "amenityIds": ["am-wifi"],
-    "availableRooms": 2
-  }
-]
-```
-
-Detail response là một `RoomType`; availability response là cùng dữ liệu loại phòng có `availableRooms`, hoặc `null` khi hết phòng.
-
-## Handoff Module C
-
-Nút Đặt phòng kiểm tra availability lần cuối rồi chuyển đến `/rooms/booking-handoff` bằng query string gồm `roomTypeId, checkIn, checkOut, guests, roomCount=1`. Trang handoff tiếp tục sang form tạo yêu cầu booking demo và giữ dữ liệu qua refresh/direct link. Form kiểm tra availability thêm lần nữa trước khi lưu trạng thái `PENDING`; thao tác này chưa tạo hold phía backend hoặc thu tiền thật. Xem các route và giới hạn demo tại [module-c-bookings.md](./module-c-bookings.md).
-
-## Ảnh, giá và giới hạn demo
-
-Ảnh demo nhận URL theo từng dòng, tối đa 6, hoặc dùng fallback ổn định; không có upload server/blob URL. `data:` URL có thể làm đầy localStorage nên không được khuyến nghị. Tổng dự kiến chỉ là `số đêm × basePrice`, chưa có thuế/giảm giá/phụ phí. Không có realtime; Room Map có nút Làm mới và không suy diễn từ mockTasks Module E. Không triển khai check-in/out hoặc giao việc dọn phòng.
-
-## Điểm cần thống nhất
-
-- Module A: shape user/role và guard thực tế.
-- Module C: route nhận handoff, reservation status chặn phòng, room count và quy tắc giữ phòng.
-- Module D: nguồn thay đổi `operationalStatus`.
-- Module E: chỉ hiển thị độc lập; Module B không suy diễn trạng thái từ housekeeping task.
-- Backend: endpoint, envelope/pagination/error schema, upload ảnh, timezone, availability authoritative và quy tắc deactivate/delete.
-
-## Kết quả kiểm tra ngày 17/10/2026
-
-- `npm install`: đạt.
-- `npm run build`: đạt; Vite cảnh báo bundle chính lớn hơn 500 kB (không chặn build).
-- `npm run lint`: đạt, không có lỗi/cảnh báo.
-- Kiểm tra logic bằng Node: 4/4 đạt (overlap, checkout trùng check-in, booking hủy không chặn, validation ngày/số khách).
-- Chưa có browser automation trong workspace nên chưa xác minh trực quan bằng trình duyệt; đã kiểm tra bằng build/lint. Module E không bị refactor, các route cũ được giữ nguyên.
-
-Checklist thủ công đề nghị: CRUD và duplicate; rule xóa/deactivate; refresh store; search → detail → handoff; checkout/check-in liền ngày; cancelled reservation; Room Map sau CRUD; Guest/Manager/Admin truy cập URL trực tiếp; desktop/mobile/offcanvas và console runtime.
+Kiểm tra trên môi trường thật: Guest search/detail không đăng nhập; Admin CRUD từng danh mục,
+refresh để xác nhận persistence; thử trùng tên/số phòng, xóa bản ghi tham chiếu, dữ liệu sai;
+Manager/Staff mở trực tiếp `/admin/room-map`, Customer bị chặn; thay đổi trạng thái qua quy trình
+D/E rồi refresh map. Kiểm tra PENDING hết hold mà status chưa đổi, ngày checkout trùng check-in,
+phòng OCCUPIED ở hiện tại khi tìm ngày tương lai và AVAILABLE/DIRTY.
+Không sửa booking thật/chạy lại seed để làm mới hold.

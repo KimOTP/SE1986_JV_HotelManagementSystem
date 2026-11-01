@@ -12,8 +12,13 @@ export const roomTypeSchema = z.object({
   name: required('Tên'),
   description: z.string().trim(),
   basePrice: z.preprocess(
-    (v) => (v === '' ? NaN : Number(v)),
-    z.number().finite('Giá không hợp lệ.').min(0, 'Giá không được âm.'),
+    (v) => String(v ?? '').trim(),
+    z
+      .string()
+      .regex(
+        /^(?:0|[1-9]\d{0,15})(?:\.\d{1,2})?$/,
+        'Giá không âm, tối đa 16 chữ số và 2 số thập phân.',
+      ),
   ),
   capacity: z.preprocess(
     (v) => (v === '' ? NaN : Number(v)),
@@ -37,7 +42,7 @@ export const roomSchema = z.object({
 });
 export const amenitySchema = z.object({
   name: required('Tên'),
-  iconKey: z.enum(['Wifi', 'Snow', 'Tv', 'Droplet', 'CupHot', 'ShieldLock', 'Sun']),
+  iconKey: z.string().max(100),
   description: z.string().trim(),
   isActive: z.boolean(),
 });

@@ -39,7 +39,7 @@ export default function RoomSearchPage() {
     setLoading(true);
     setError('');
     try {
-      const [found, all] = await Promise.all([roomsApi.search(c), roomsApi.getAll()]);
+      const [found, all] = await Promise.all([roomsApi.search(c), roomsApi.getCatalog()]);
       if (id === seq.current) {
         setResults(found);
         setData(all);
