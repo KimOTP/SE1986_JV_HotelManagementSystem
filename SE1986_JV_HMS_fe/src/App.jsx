@@ -35,7 +35,7 @@ import {
   CreateBookingPage,
   DepositPaymentPage,
   ManageBookingsPage,
-} from './modules/bookings/pages/BookingPages';
+} from './modules/bookings/pages';
 
 function RoleHomeRedirect() {
   const { hasPermission } = useAuth();
