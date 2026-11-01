@@ -94,17 +94,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "DATA_CONFLICT", "Dữ liệu bị trùng hoặc vi phạm ràng buộc.");
     }
 
-    // Lỗi xác thực ném ra bên trong controller/service (vd. sai mật khẩu khi login).
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiError> handleAuthentication(AuthenticationException exception) {
-        // Không phân biệt "sai email" hay "sai mật khẩu" để tránh dò tài khoản.
-        return build(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_FAILED", "Email hoặc mật khẩu không chính xác.");
-    }
-
-    // @PreAuthorize từ chối sẽ ném AccessDeniedException tới đây.
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception) {
-        return build(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Bạn không có quyền thực hiện thao tác này.");
+    // Ném lại lỗi bảo mật (vd. @PreAuthorize từ chối) cho Spring Security xử lý:
+    // chưa đăng nhập -> 401, đã đăng nhập nhưng thiếu quyền -> 403 (xem SecurityConfig).
+    // Nếu không, handler Exception.class bên dưới sẽ biến chúng thành 500.
+    @ExceptionHandler({AccessDeniedException.class, AuthenticationException.class})
+    public void rethrowSecurityException(RuntimeException exception) {
+        throw exception;
     }
 
     @ExceptionHandler(Exception.class)

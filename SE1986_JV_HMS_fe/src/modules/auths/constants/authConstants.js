@@ -1,6 +1,7 @@
 export const AUTH_STORAGE_KEYS = {
   USER: 'se1986.auth.user',
   TOKEN: 'se1986.auth.token',
+  REFRESH_TOKEN: 'se1986.auth.refreshToken',
 };
 
 export const ROLES = {
