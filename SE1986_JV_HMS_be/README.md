@@ -31,8 +31,7 @@ cho Module E; không chứa mật khẩu và không cung cấp API chỉnh sửa
 `Issue` hiện cũng chỉ đọc. Khi thêm API ghi cần thiết kế transaction, validation,
 optimistic locking và phân quyền trước khi bỏ chế độ immutable.
 
-Backend chưa có authentication/authorization; API này chỉ dành cho phát triển local.
-Trước khi triển khai chia sẻ cần JWT và giới hạn dữ liệu theo quyền/khách sạn.
+Đã có JWT (xem mục "Đăng nhập JWT"); các API của Module E cần tự gắn `@PreAuthorize` theo mã UC.
 Frontend dùng API cho danh mục và bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
 
 ## Kiểm tra sau khi khởi động lại backend
@@ -53,3 +52,47 @@ Commit gợi ý: `feat(operations): add paginated issue list API with fetch join
 Các bộ lọc mặc định chuỗi rỗng (không lọc); room tìm chứa chuỗi, status/category khớp chính xác.
 Status không hợp lệ trả HTTP 400. Bộ lọc chạy trước phân trang trong SQL.
 Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
+
+## Đăng nhập JWT (Module A)
+
+### Cài đặt local
+
+1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
+   Thiếu biến này app vẫn chạy nhưng tự sinh khóa tạm, nên phải đăng nhập lại sau mỗi lần restart.
+2. Tài khoản seed: `admin@sba.example`, `manager@sba.example`, `reception@sba.example`,
+   `housekeeper@sba.example`, `customer@sba.example`. Chạy `scripts/dev-reset-passwords.sql`
+   trên DB local để đặt mật khẩu chung `123456` cho các tài khoản này.
+3. Frontend: trong `SE1986_JV_HMS_fe/.env` đặt `VITE_AUTH_DATA_SOURCE=api` và
+   `VITE_API_BASE_URL=http://localhost:8080/api`, rồi đăng nhập bằng tài khoản seed.
+
+### API
+
+| Method | URL | Body | Kết quả |
+| --- | --- | --- | --- |
+| POST | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken, tokenType, expiresIn, user }` |
+| POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
+| POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
+| GET | `/api/auth/me` | — | `user` (cần Bearer token) |
+
+`user` gồm `id, fullName, email, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified`.
+Access token sống 15 phút, refresh token 7 ngày. FE (`axiosClient`) tự gắn
+`Authorization: Bearer ...` và tự refresh khi gặp 401.
+
+### Dùng trong module khác
+
+Hiện mọi đường dẫn ngoài `/api/auth/**` vẫn mở (giai đoạn chuyển tiếp). Module nào cần
+bảo vệ thì gắn `@PreAuthorize` theo mã UC; chưa đăng nhập trả 401, thiếu quyền trả 403.
+
+```java
+@GetMapping
+@PreAuthorize("hasAuthority('UC-E5')")          // hoặc hasRole('MANAGER')
+public List<IssueResponse> getIssues(@AuthenticationPrincipal AuthUserDetails currentUser) {
+    Long userId = currentUser.getId();          // getEmail(), getHotelId(), getRoles(), getPermissions()
+    ...
+}
+```
+
+- `AuthUserDetails` nằm ở `com.hotel.hms.identity.security`.
+- `Principal#getName()` trả về email (Module D đang dùng cách này).
+- Quyền được đọc lại từ DB ở mỗi request, nên đổi quyền hoặc khóa tài khoản có hiệu lực ngay.
+

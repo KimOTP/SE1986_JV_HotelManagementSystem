@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Col, Form, Row } from 'react-bootstrap';
 import { useSearchParams } from 'react-router';
+import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingError from '../components/BookingError';
 import PageHeading from '../components/PageHeading';
 import { getBookings, payBookingDeposit } from '../mocks/bookingStore';
 import { displayDate, money, nightsBetween } from '../utils/bookingUtils';
 
 export default function DepositPaymentPage() {
+  const { hasPermission } = useAuth();
+  const canPayDeposit = hasPermission('UC-C2');
   const [params] = useSearchParams();
   const [bookings, setBookings] = useState(() => getBookings());
   const [selectedId, setSelectedId] = useState(params.get('bookingId') || '');
@@ -18,6 +21,7 @@ export default function DepositPaymentPage() {
   const payableBookings = bookings.filter((booking) => booking.status === 'PENDING');
 
   const pay = () => {
+    if (!canPayDeposit) return setError('Bạn không có UC-C2 để thanh toán tiền cọc.');
     setError('');
     setNotice('');
     setPaying(true);
@@ -102,7 +106,7 @@ export default function DepositPaymentPage() {
                     </div>
                   </div>
                   {selected.status === 'PENDING' ? (
-                    <Button className="w-100" onClick={pay} disabled={paying}>
+                    <Button className="w-100" onClick={pay} disabled={!canPayDeposit || paying}>
                       {paying ? 'Đang xử lý…' : 'Xác nhận thanh toán demo'}
                     </Button>
                   ) : (

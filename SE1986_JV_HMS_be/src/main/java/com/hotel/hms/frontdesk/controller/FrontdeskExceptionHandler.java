@@ -9,7 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import java.util.Map;
+// Chạy trước GlobalExceptionHandler để ApiException của frontdesk không bị bắt thành lỗi 500.
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(basePackages = "com.hotel.hms.frontdesk")
 public class FrontdeskExceptionHandler {
     @ExceptionHandler(ApiException.class)

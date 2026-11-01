@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Form, Modal } from 'react-bootstrap';
 import { Link, useNavigate, useParams } from 'react-router';
+import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingError from '../components/BookingError';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
@@ -8,6 +9,8 @@ import { cancelBooking, getBooking } from '../mocks/bookingStore';
 import { displayDate } from '../utils/bookingUtils';
 
 export default function CancelBookingPage() {
+  const { hasPermission } = useAuth();
+  const canCancelBooking = hasPermission('UC-C4');
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(() => getBooking(id));
@@ -84,7 +87,7 @@ export default function CancelBookingPage() {
             <Button variant="outline-secondary" as={Link} to={`/bookings/${booking.id}`}>
               Giữ đặt phòng
             </Button>
-            <Button variant="danger" onClick={() => setShowConfirm(true)}>
+            <Button variant="danger" onClick={() => setShowConfirm(true)} disabled={!canCancelBooking}>
               Tiếp tục hủy
             </Button>
           </div>
@@ -101,7 +104,7 @@ export default function CancelBookingPage() {
           <Button variant="outline-secondary" onClick={() => setShowConfirm(false)}>
             Quay lại
           </Button>
-          <Button variant="danger" onClick={confirmCancel}>
+          <Button variant="danger" onClick={confirmCancel} disabled={!canCancelBooking}>
             Xác nhận hủy đặt phòng
           </Button>
         </Modal.Footer>

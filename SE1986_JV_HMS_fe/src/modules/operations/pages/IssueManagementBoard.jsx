@@ -15,7 +15,6 @@ import {
 import { getDatabaseIssues } from '../api/issuesApi';
 import { getIssueTypes } from '../api/issueTypesApi';
 import { useAuth } from '../../../app/provider/AuthsContext';
-import { PERMISSIONS } from '../../auths/constants/authConstants';
 
 const statuses = {
   OPEN: { label: 'Mới báo cáo', color: 'danger' },
@@ -42,6 +41,7 @@ const formatDate = (value) =>
 export default function IssueManagementBoard() {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const canReportIssue = hasPermission('UC-E4');
   const [formData, setFormData] = useState(emptyFilters);
   const [filters, setFilters] = useState(emptyFilters);
   const [page, setPage] = useState(0);
@@ -111,7 +111,7 @@ export default function IssueManagementBoard() {
           <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
             Tải lại
           </Button>
-          {hasPermission(PERMISSIONS.HOUSEKEEPING_VIEW) && (
+          {canReportIssue && (
             <Button onClick={() => navigate('/operations/report-issue')}>+ Báo cáo demo</Button>
           )}
         </div>

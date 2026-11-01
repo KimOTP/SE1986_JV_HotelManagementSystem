@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Card, Col, Form, Row } from 'react-bootstrap';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useAuth } from '../../../app/provider/AuthsContext';
 import { roomsApi } from '../../rooms/api/roomsApi';
 import { validateSearch } from '../../rooms/utils/roomUtils';
 import BookingError from '../components/BookingError';
@@ -9,6 +10,8 @@ import { createBooking } from '../mocks/bookingStore';
 import { money, nightsBetween, today } from '../utils/bookingUtils';
 
 export default function CreateBookingPage() {
+  const { hasPermission } = useAuth();
+  const canCreateBooking = hasPermission('UC-C1');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRoomTypeId = params.get('roomTypeId') || '';
@@ -57,6 +60,7 @@ export default function CreateBookingPage() {
 
   const submit = (event) => {
     event.preventDefault();
+    if (!canCreateBooking) return setError('Bạn không có UC-C1 để tạo đặt phòng.');
     setError('');
     const dateErrors = validateSearch({
       checkIn: form.checkIn,
@@ -261,7 +265,7 @@ export default function CreateBookingPage() {
             <Button
               type="submit"
               className="w-100"
-              disabled={loadingTypes || submitting || !roomType}
+              disabled={!canCreateBooking || loadingTypes || submitting || !roomType}
             >
               {submitting ? 'Đang kiểm tra phòng…' : 'Tạo đặt phòng'}
             </Button>
