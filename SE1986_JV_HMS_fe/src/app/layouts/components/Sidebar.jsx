@@ -1,7 +1,7 @@
 import { Nav } from 'react-bootstrap';
 import { NavLink, useLocation } from 'react-router';
 import { sidebarMenu } from '../sidebarMenu';
-import { useAuth } from '../../provider/AuthsContext';
+import { useAuth } from '../../provider/AuthsContext.jsx';
 
 const matchesPath = (pathname, to) =>
   pathname === to || pathname.startsWith(`${to}/`);

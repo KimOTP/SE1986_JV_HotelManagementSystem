@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
+import { Outlet } from 'react-router';
 export default function MainLayout({ children }) {
   const [show, setShow] = useState(false);
   return (
@@ -12,7 +13,9 @@ export default function MainLayout({ children }) {
         <div className="d-none d-md-block">
           <Sidebar />
         </div>
-        <main className="flex-grow-1 p-3 p-md-4 overflow-hidden">{children}</main>
+        <main className="flex-grow-1 p-3 p-md-4 overflow-hidden">
+          {children || <Outlet />}
+        </main>
       </Container>
       <Offcanvas show={show} onHide={() => setShow(false)}>
         <Offcanvas.Header closeButton>
