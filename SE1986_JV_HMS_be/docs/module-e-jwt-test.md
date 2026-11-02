@@ -87,3 +87,7 @@ Thêm -WriteDemoData chỉ khi muốn tạo một task và một issue kiểm th
 ~~~
 
 Kiểm tra SQL/Unicode/trạng thái và quyền JWT bằng unit test + HTTP MockMvc với chữ ký thật. Không thay thế chạy toàn bộ luồng trên database của bạn.
+
+## Kiểm thử feedback độc lập với các module khác
+
+Đã bổ sung bộ kiểm thử API/service/SQL Server dùng database riêng và rollback fixtures. Xem [hướng dẫn kiểm thử tích hợp feedback](module-e-feedback-integration.md).
