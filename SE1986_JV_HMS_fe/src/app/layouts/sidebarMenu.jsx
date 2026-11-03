@@ -12,7 +12,7 @@ export const sidebarMenu = [
   { groupLabel: 'FRONT DESK', items: [
     { label: 'Check-in', to: '/frontdesk/check-in', requiredPermission: 'UC-D1' },
     { label: 'Check-out', to: '/frontdesk/check-out', requiredPermission: 'UC-D2' },
-    { label: 'Hóa đơn', to: '/frontdesk/invoices', requiredPermission: 'UC-D6' },
+    { label: 'Hóa đơn', to: '/frontdesk/invoices', requiredPermission: 'UC-D4' },
   ] },
   { groupLabel: 'BOOKINGS', items: [
     { label: 'Tạo đặt phòng', to: '/bookings/new', requiredPermission: 'UC-C1' },

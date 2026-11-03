@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 
 import LoginForm from '../components/LoginForm';
-import { ROLES } from '../constants/authConstants';
+import { getHomePath } from '../utils/homePath';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -9,16 +9,10 @@ export default function LoginPage() {
 
   const handleSuccess = (user) => {
     const requestedLocation = location.state?.from;
-    const roleHome = {
-      [ROLES.ADMIN]: '/users',
-      [ROLES.MANAGER]: '/bookings',
-      [ROLES.STAFF]: '/operations/my-tasks',
-      [ROLES.CUSTOMER]: '/bookings',
-    };
     const destination =
       requestedLocation?.pathname && requestedLocation.pathname !== '/'
         ? requestedLocation
-        : roleHome[user.role] || '/profile';
+        : getHomePath(user.permissions);
     navigate(destination, { replace: true });
   };
 
