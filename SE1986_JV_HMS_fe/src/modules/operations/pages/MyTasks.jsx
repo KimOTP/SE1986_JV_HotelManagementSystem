@@ -1,240 +1,375 @@
-import { useState, useMemo } from 'react';
-import { Table, Badge, Form, Row, Col, Pagination, Button } from 'react-bootstrap';
-import { mockTasks as initialTasks } from '../mocks/mockData';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Table,
+  Badge,
+  Form,
+  Row,
+  Col,
+  Pagination,
+  Button,
+  Alert,
+  Modal,
+  ListGroup,
+} from 'react-bootstrap';
+import { getIssueWorkContext } from '../api/issueProgressApi';
+import { getMyDatabaseTasks, updateMyTask } from '../api/myTasksApi';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
+import { ROLES } from '../../auths/constants/authConstants';
 
-const MyTasks = () => {
-  const { user } = useAuth();
-  const currentUser = user?.name || user?.fullName;
+const statuses = {
+  PENDING: ['Chờ xử lý', 'secondary'],
+  IN_PROGRESS: ['Đang thực hiện', 'warning'],
+  COMPLETED: ['Đã hoàn thành', 'success'],
+  CANCELLED: ['Đã hủy', 'dark'],
+};
+const types = { CLEANING: 'Dọn phòng', MAINTENANCE: 'Bảo trì' };
+const priorities = { LOW: 'Thấp', NORMAL: 'Bình thường', HIGH: 'Cao', URGENT: 'Khẩn cấp' };
+const defaults = { room: '', status: '', type: '' };
+const size = 5;
+const formatDate = (value) =>
+  value
+    ? new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`).toLocaleString('vi-VN')
+    : '—';
+const errorMessage = (error) => {
+  switch (error.response?.status) {
+    case 400:
+      return 'Bộ lọc hoặc tham số không hợp lệ.';
+    case 403:
+      return 'Công việc không được giao cho nhân viên đang đăng nhập này hoặc thuộc khách sạn khác.';
+    case 404:
+      return 'Không tìm thấy công việc hoặc phòng/khách sạn đã ngừng hoạt động.';
+    case 409:
+      return 'Công việc đã đổi trạng thái hoặc được giao lại. Đóng hộp thoại và tải lại danh sách.';
+    case 503:
+      return 'Tài khoản hiện tại chưa hợp lệ hoặc nhân viên đang đăng nhập không còn hoạt động.';
+    default:
+      return 'Chưa xác nhận được kết quả. Kiểm tra backend và tải lại danh sách trước khi thử lại.';
+  }
+};
 
-  // 1. QUẢN LÝ STATE DỮ LIỆU
-  const [tasks, setTasks] = useState(initialTasks);
+export default function MyTasks() {
+  const { hasRole, hasPermission } = useAuth();
+  const canUpdate = hasRole(ROLES.STAFF) && hasPermission('UC-E2');
+  const [draft, setDraft] = useState(defaults);
+  const [filters, setFilters] = useState(defaults);
+  const [page, setPage] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  const [result, setResult] = useState({ loading: true, items: [], context: null, error: null });
+  const [detail, setDetail] = useState(null);
+  const [actionTask, setActionTask] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const busy = useRef(false);
 
-  // 2. STATE CHO FORM NHẬP LIỆU
-  const [formData, setFormData] = useState({
-    room: '',
-    status: 'ALL',
-    type: 'ALL',
-  });
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const context = await getIssueWorkContext(controller.signal);
+        const items = context.enabled
+          ? await getMyDatabaseTasks({ ...filters, page, size }, controller.signal)
+          : [];
+        if (!controller.signal.aborted) setResult({ loading: false, items, context, error: null });
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setResult({ loading: false, items: [], context: null, error: errorMessage(error) });
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [filters, page, attempt]);
 
-  // 3. STATE CHO ĐIỀU KIỆN LỌC
-  const [searchParams, setSearchParams] = useState({
-    room: '',
-    status: 'ALL',
-    type: 'ALL',
-  });
-
-  // 4. STATE CHO PAGING
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  // Hàm cập nhật form khi gõ/chọn
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const loading = () => {
+    setResult({ loading: true, items: [], context: null, error: null });
+    setDetail(null);
   };
-
-  // Hàm xử lý khi bấm nút TÌM KIẾM
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setSearchParams(formData);
-    setCurrentPage(1);
+  const refresh = () => {
+    loading();
+    setAttempt((value) => value + 1);
   };
-
-  // Hàm xử lý khi bấm nút RESET
-  const handleReset = () => {
-    const emptyForm = { room: '', status: 'ALL', type: 'ALL' };
-    setFormData(emptyForm);
-    setSearchParams(emptyForm);
-    setCurrentPage(1);
+  const apply = (values) => {
+    loading();
+    setFilters({ ...values, room: values.room.trim() });
+    setPage(0);
   };
-
-  // 5. HÀM XỬ LÝ CẬP NHẬT TRẠNG THÁI (Dùng chung cho Dropdown)
-  const handleUpdateStatus = (taskId, newStatus) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === taskId ? { ...task, status: newStatus } : task
-      )
-    );
+  const changePage = (next) => {
+    loading();
+    setPage(next);
   };
-
-  // 6. LỌC DỮ LIỆU
-  const filteredTasks = useMemo(() => {
-    let result = tasks.filter((t) => t.assignedTo === currentUser);
-
-    if (searchParams.status !== 'ALL')
-      result = result.filter((t) => t.status === searchParams.status);
-    if (searchParams.type !== 'ALL')
-      result = result.filter((t) => t.type === searchParams.type);
-    if (searchParams.room.trim() !== '')
-      result = result.filter((t) => t.roomNumber.includes(searchParams.room.trim()));
-
-    return result;
-  }, [currentUser, searchParams, tasks]);
-
-  // 7. PHÂN TRANG
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
+  const handleChange = (event) =>
+    setDraft((old) => ({ ...old, [event.target.name]: event.target.value }));
+  const chooseAction = (task) => {
+    setSaveError(null);
+    setSuccess(null);
+    setActionTask(task);
+  };
+  const perform = async () => {
+    if (!canUpdate || !actionTask || busy.current) return;
+    busy.current = true;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const response = await updateMyTask(
+        actionTask.id,
+        actionTask.status === 'PENDING' ? 'start' : 'complete',
+      );
+      setSuccess(response);
+      setActionTask(null);
+      refresh();
+    } catch (error) {
+      setSaveError(errorMessage(error));
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
+  };
 
   return (
     <div>
-      <h2 className="mb-4">Công việc của tôi</h2>
-
-      {/* KHU VỰC FILTER */}
-      <Form onSubmit={handleSearch} className="mb-3 g-2 bg-light p-3 rounded border">
-        <Row className="align-items-end">
+      <div className="d-flex justify-content-between mb-3">
+        <h2>Công việc của tôi</h2>
+        <Button variant="outline-primary" onClick={refresh} disabled={result.loading || saving}>
+          Tải lại
+        </Button>
+      </div>
+      <Alert variant="info">
+        Nhận và hoàn thành các công việc được giao. Công việc bảo trì và sự cố liên quan được theo
+        dõi riêng.
+      </Alert>
+      {result.context && (
+        <Alert variant={result.context.enabled ? 'info' : 'warning'}>
+          {result.context.enabled ? (
+            <>
+              Nhân viên thực hiện: <strong>{result.context.staffName}</strong>. Danh sách chỉ gồm
+              công việc được giao cho nhân viên này.
+            </>
+          ) : (
+            result.context.message
+          )}
+        </Alert>
+      )}
+      {success && (
+        <Alert variant="success" dismissible onClose={() => setSuccess(null)}>
+          Đã cập nhật công việc #{success.id}: {statuses[success.status][0]}. Bộ lọc hiện tại vẫn
+          được giữ.
+        </Alert>
+      )}
+      {result.error && (
+        <Alert variant="danger">
+          {result.error}{' '}
+          <Button size="sm" variant="outline-danger" onClick={refresh}>
+            Thử lại
+          </Button>
+        </Alert>
+      )}
+      <Form
+        className="bg-light p-3 border rounded mb-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          apply(draft);
+        }}
+      >
+        <Row className="g-2 align-items-end">
           <Col md={3}>
-            <Form.Group>
-              <Form.Label className="small mb-1 fw-semibold">Tìm theo phòng</Form.Label>
+            <Form.Group controlId="my-task-room">
+              <Form.Label>Phòng</Form.Label>
               <Form.Control
-                type="text"
                 name="room"
-                placeholder="VD: 101..."
-                value={formData.room}
-                onChange={handleFormChange}
+                value={draft.room}
+                onChange={handleChange}
+                placeholder="VD: 103"
               />
             </Form.Group>
           </Col>
           <Col md={3}>
-            <Form.Group>
-              <Form.Label className="small mb-1 fw-semibold">Trạng thái</Form.Label>
-              <Form.Select name="status" value={formData.status} onChange={handleFormChange}>
-                <option value="ALL">Tất cả</option>
-                <option value="TODO">Chờ xử lý</option>
-                <option value="IN_PROGRESS">Đang thực hiện</option>
-                <option value="DONE">Đã hoàn thành</option>
+            <Form.Group controlId="my-task-status">
+              <Form.Label>Trạng thái</Form.Label>
+              <Form.Select name="status" value={draft.status} onChange={handleChange}>
+                <option value="">Tất cả</option>
+                {Object.entries(statuses).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value[0]}
+                  </option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Col>
           <Col md={3}>
-            <Form.Group>
-              <Form.Label className="small mb-1 fw-semibold">Loại công việc</Form.Label>
-              <Form.Select name="type" value={formData.type} onChange={handleFormChange}>
-                <option value="ALL">Tất cả</option>
-                <option value="Daily Clean">Dọn hàng ngày</option>
-                <option value="Deep Clean">Dọn tổng thể</option>
-                <option value="Maintenance">Bảo trì</option>
+            <Form.Group controlId="my-task-type">
+              <Form.Label>Loại công việc</Form.Label>
+              <Form.Select name="type" value={draft.type} onChange={handleChange}>
+                <option value="">Tất cả</option>
+                {Object.entries(types).map(([key, value]) => (
+                  <option key={key} value={key}>
+                    {value}
+                  </option>
+                ))}
               </Form.Select>
             </Form.Group>
           </Col>
           <Col md={3} className="d-flex gap-2">
-            <Button type="submit" variant="primary" className="w-100 fw-semibold">
+            <Button type="submit" disabled={result.loading || saving}>
               Tìm kiếm
             </Button>
             <Button
-              type="button"
               variant="outline-secondary"
-              className="w-100"
-              onClick={handleReset}
+              disabled={result.loading || saving}
+              onClick={() => {
+                setDraft(defaults);
+                apply(defaults);
+              }}
             >
-              Reset
+              Đặt lại
             </Button>
           </Col>
         </Row>
       </Form>
-
-      {/* BẢNG DỮ LIỆU */}
-      <Table striped bordered hover className="align-middle">
-        <thead className="table-light">
+      <Table striped bordered hover responsive className="align-middle">
+        <thead>
           <tr>
             <th>#</th>
             <th>Phòng</th>
-            <th>Loại công việc</th>
-            <th>Độ ưu tiên</th>
-            <th>Trạng thái hiện tại</th>
-            <th>Cập nhật trạng thái</th>
+            <th>Công việc</th>
+            <th>Loại</th>
+            <th>Ưu tiên</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
-          {currentTasks.length === 0 ? (
+          {result.loading ? (
             <tr>
-              <td colSpan={6} className="text-center py-4 text-muted">
-                Không tìm thấy công việc nào phù hợp với bộ lọc.
+              <td colSpan={7} role="status">
+                Đang tải công việc...
               </td>
             </tr>
+          ) : result.error ? (
+            <tr>
+              <td colSpan={7}>Chưa tải được dữ liệu.</td>
+            </tr>
+          ) : !result.context?.enabled ? (
+            <tr>
+              <td colSpan={7}>Tài khoản hiện tại cần hồ sơ nhân viên đang hoạt động để xem công việc.</td>
+            </tr>
+          ) : !result.items.length ? (
+            <tr>
+              <td colSpan={7}>Không có công việc trong trang này hoặc phù hợp bộ lọc.</td>
+            </tr>
           ) : (
-            currentTasks.map((t, index) => (
-              <tr key={t.id}>
-                <td>{indexOfFirstItem + index + 1}</td>
-                <td className="fw-semibold">{t.roomNumber}</td>
-                <td>{t.type}</td>
+            result.items.map((task, index) => (
+              <tr key={task.id}>
+                <td>{page * size + index + 1}</td>
+                <td>{task.roomNumber}</td>
+                <td>{task.title}</td>
+                <td>{types[task.taskType]}</td>
+                <td>{priorities[task.priority]}</td>
                 <td>
                   <Badge
-                    bg={
-                      t.priority === 'High'
-                        ? 'danger'
-                        : t.priority === 'Medium'
-                          ? 'warning'
-                          : 'secondary'
-                    }
+                    bg={statuses[task.status][1]}
+                    text={task.status === 'IN_PROGRESS' ? 'dark' : 'white'}
                   >
-                    {t.priority === 'High' ? 'Cao' : t.priority === 'Medium' ? 'Trung bình' : 'Thấp'}
+                    {statuses[task.status][0]}
                   </Badge>
                 </td>
                 <td>
-                  <Badge
-                    bg={
-                      t.status === 'DONE'
-                        ? 'success'
-                        : t.status === 'IN_PROGRESS'
-                          ? 'warning'
-                          : 'secondary'
-                    }
-                  >
-                    {t.status === 'DONE' ? 'Đã hoàn thành' : t.status === 'IN_PROGRESS' ? 'Đang thực hiện' : 'Chờ xử lý'}
-                  </Badge>
-                </td>
-                <td>
-                  {/* DROPDOWN ĐỂ CẬP NHẬT TRẠNG THÁI */}
-                  <Form.Select
-                    size="sm"
-                    value={t.status}
-                    onChange={(e) => handleUpdateStatus(t.id, e.target.value)}
-                    style={{ width: '160px' }}
-                  >
-                    <option value="TODO">Chờ xử lý</option>
-                    <option value="IN_PROGRESS">Đang thực hiện</option>
-                    <option value="DONE">Đã hoàn thành</option>
-                  </Form.Select>
+                  <Button size="sm" variant="outline-primary" onClick={() => setDetail(task)}>
+                    Chi tiết
+                  </Button>
+                  {canUpdate && ['PENDING', 'IN_PROGRESS'].includes(task.status) && (
+                    <Button size="sm" className="ms-2" onClick={() => chooseAction(task)}>
+                      {task.status === 'PENDING' ? 'Bắt đầu' : 'Hoàn thành'}
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </Table>
-
-      {/* PHÂN TRANG */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <span className="text-muted small">
-            Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredTasks.length)} /{' '}
-            {filteredTasks.length} công việc
-          </span>
-          <Pagination className="mb-0">
-            <Pagination.Prev
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-            />
-            {[...Array(totalPages)].map((_, idx) => (
-              <Pagination.Item
-                key={idx + 1}
-                active={idx + 1 === currentPage}
-                onClick={() => setCurrentPage(idx + 1)}
-              >
-                {idx + 1}
-              </Pagination.Item>
-            ))}
-            <Pagination.Next
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-            />
-          </Pagination>
-        </div>
-      )}
+      <div className="d-flex justify-content-between">
+        <span>Trang {page + 1}</span>
+        <Pagination>
+          <Pagination.Prev
+            disabled={page === 0 || result.loading || saving}
+            onClick={() => changePage(page - 1)}
+          />
+          <Pagination.Next
+            disabled={result.loading || saving || !!result.error || result.items.length < size}
+            onClick={() => changePage(page + 1)}
+          />
+        </Pagination>
+      </div>
+      <Modal show={!!detail} onHide={() => setDetail(null)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Công việc #{detail?.id}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {detail && (
+            <ListGroup variant="flush">
+              <ListGroup.Item>
+                <strong>Tiêu đề:</strong> {detail.title}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Phòng:</strong> {detail.roomNumber}
+              </ListGroup.Item>
+              <ListGroup.Item className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                <strong>Mô tả:</strong> {detail.description || 'Chưa có'}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Lịch thực hiện:</strong> {formatDate(detail.scheduledAt)}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Bắt đầu:</strong> {formatDate(detail.startedAt)}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Hoàn thành:</strong> {formatDate(detail.completedAt)}
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Sự cố liên quan:</strong>{' '}
+                {detail.issueId ? `#${detail.issueId}` : 'Không có'}
+              </ListGroup.Item>
+            </ListGroup>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setDetail(null)}>
+            Đóng
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={!!actionTask}
+        onHide={() => {
+          if (!saving) setActionTask(null);
+        }}
+        backdrop={saving ? 'static' : true}
+        keyboard={!saving}
+        centered
+      >
+        <Modal.Header closeButton={!saving}>
+          <Modal.Title>
+            {actionTask?.status === 'PENDING' ? 'Bắt đầu' : 'Hoàn thành'} công việc #
+            {actionTask?.id}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-break">{actionTask?.title}</p>
+          <p>
+            Nhân viên thực hiện: {result.context?.staffName}. Thời gian thực hiện được lưu khi xác
+            nhận.
+          </p>
+          {saveError && <Alert variant="danger">{saveError}</Alert>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" disabled={saving} onClick={() => setActionTask(null)}>
+            Hủy
+          </Button>
+          <Button disabled={saving} onClick={perform}>
+            {saving ? 'Đang lưu...' : 'Xác nhận'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
-};
-
-export default MyTasks;
+}

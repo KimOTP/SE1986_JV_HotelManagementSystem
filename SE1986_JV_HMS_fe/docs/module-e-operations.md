@@ -1,3 +1,5 @@
+> Cập nhật hiện tại: Module E đã dùng JWT, bỏ danh tính local-demo. Xem [hướng dẫn test JWT](../../SE1986_JV_HMS_be/docs/module-e-jwt-test.md). Các ghi chú local-demo bên dưới là lịch sử và không còn áp dụng.
+
 # Module E — Hoàng Minh Đức
 
 ## Bước 1: Báo cáo sự cố (UC-E4)
@@ -65,3 +67,78 @@ Commit gợi ý: `feat(operations): load issue types from backend in report form
 6. Bộ lọc mới kiểm tra trực tiếp bằng `/api/operations/issues?room=103&status=ASSIGNED`.
 
 Commit gợi ý: `feat(operations): display database issues with server-side filters`
+
+## Bước 5: Tạo báo cáo vào SQL Server (local-demo)
+
+Đã đồng bộ main mới nhất, giữ shared axiosClient và phân quyền route của Module A.
+Form chọn phòng/danh mục API, thêm title/priority, validate React Hook Form + Zod và POST `/operations/issues`.
+Không còn lưu localStorage; thành công chỉ hiển thị sau HTTP 201 và có link tới bảng database.
+
+Backend chưa có JWT thật. Tính năng ghi mặc định tắt. Để thử local xem README backend:
+Active profiles = `local-demo`, thêm biến `OPERATIONS_DEMO_REPORTER_EMAIL=reception@sba.example` rồi khởi động lại.
+Reporter do backend cấu hình từ tài khoản database hoạt động và hiển thị rõ trên form;
+chưa phải tài khoản React đang đăng nhập. Không triển khai chia sẻ chế độ này.
+Khi có JWT cần tích hợp principal và quyền ở backend trước khi mở ghi thực tế.
+
+Kiểm tra gửi form hợp lệ: bảng phải xuất hiện sự cố OPEN mới và giữ lại sau tải trang.
+Báo cáo localStorage cũ không tự migrate vào database.
+
+Commit: `feat(operations): create database issue reports in explicit local demo mode`
+
+## Bước 6: Phân công sự cố OPEN (local-demo)
+
+- Bảng có nút Phân công cho sự cố OPEN khi tài khoản React có HOUSEKEEPING_MANAGE.
+- Modal chọn staff lấy từ backend theo khách sạn, có loading/lỗi/tải lại và cảnh báo danh tính manager local.
+- PATCH lưu nhân viên, người phân công và trạng thái ASSIGNED; bảng tự tải lại giữ bộ lọc.
+- Backend giới hạn role manager, phạm vi khách sạn, staff hoạt động, chuyển trạng thái có điều kiện để tránh ghi đè đồng thời.
+- Xem README backend để cấu hình `OPERATIONS_DEMO_MANAGER_EMAIL=manager@sba.example` và profile `local-demo`.
+- Chưa tái phân công/cập nhật tiến độ, chưa tự tạo housekeeping task, chưa có JWT thật.
+- Build frontend, lint file sửa và 18 unit test backend đạt; cần kiểm tra tích hợp SQL Server trên máy local.
+
+## Bước 7: Nhận xử lý và hoàn tất sự cố — Module E
+
+- Staff có UC-E5 thấy nút Nhận xử lý cho ASSIGNED và Hoàn tất cho IN_PROGRESS.
+- Modal kiểm tra staff local được backend cấu hình có đúng assignee của sự cố.
+- Hoàn tất bắt buộc ghi chú 5–2000 ký tự; SQL lưu resolution_note và resolved_at UTC.
+- Chi tiết hiển thị ghi chú và thời gian sau khi hoàn tất; bảng tự tải lại giữ bộ lọc.
+- Backend chặn sai nhân viên/khách sạn, sai trạng thái và thao tác xung đột.
+- Cấu hình thêm OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example, giữ profile local-demo rồi restart backend.
+- Không sửa đăng nhập/JWT hay module khác; staff identity còn là danh tính cấu hình local rõ ràng trên modal.
+- Build, lint file sửa và 30 unit test backend đạt. Xem README backend để chạy thử tích hợp SQL Server.
+
+## Bước 8: UC-E2 Công việc của tôi dùng database
+
+- Bỏ mockTasks và lọc bằng tên hiển thị React; backend lọc theo staff ID và hotel ID của local context.
+- Có lọc/phân trang SQL, loading/lỗi/thử lại và modal Chi tiết với scheduledAt/startedAt/completedAt.
+- Bắt đầu PENDING → IN_PROGRESS; Hoàn thành IN_PROGRESS → COMPLETED; lưu timestamps UTC.
+- Xác nhận trước khi ghi, tự tải lại giữ bộ lọc, chặn thao tác trùng/sai người/sai trạng thái ở backend.
+- Không sửa module khác. Chỉ cập nhật operations.tasks, không tự đổi phòng hoặc issue liên quan.
+- Giữ local-demo + OPERATIONS_DEMO_STAFF_EMAIL hiện tại, restart backend trước khi thử.
+- Với seed ban đầu có 2 task của Housekeeper Demo. Bảng công việc Manager/Dashboard vẫn dùng mock, sẽ tích hợp riêng.
+- Build frontend, lint file sửa và 40 unit test Module E đạt. Chưa thử ghi thật trên SQL Server trong phiên này.
+- Thay đổi đã được người dùng duyệt; xem README backend để chạy thử tích hợp.
+
+## Bước 9: UC-E1 Manager tạo và giao task
+
+- UC-E2 đã được duyệt và push ở commit 50fe3ce.
+- Bảng công việc Manager đã đọc database theo phạm vi khách sạn, lọc/phân trang và gom trạng thái trong trang.
+- Form React Hook Form + Zod chọn phòng, STAFF cùng khách sạn, title/description/type/priority/scheduledAt.
+- Lịch nhập theo giờ địa phương, chuyển UTC trước gửi; backend lưu assigned_by từ manager local và trạng thái PENDING.
+- Task mới có thể xem và cập nhật trong Công việc của tôi của nhân viên local được giao.
+- Giữ local-demo và OPERATIONS_DEMO_MANAGER_EMAIL; không sửa module khác hoặc cơ chế đăng nhập.
+- Build frontend, lint, validation ngày giờ và 50 unit test Module E đạt; cần thử tích hợp SQL Server theo README backend.
+- UC-E1 đã được người dùng duyệt để commit/push. Dashboard/Feedback vẫn chưa tích hợp dữ liệu thật ở bước này.
+
+## Bản hoàn thiện nghiệp vụ — UC-E3 và UC-E6
+
+- Cả 6 trang Operations dùng API SQL Server, không import dữ liệu mock/localStorage.
+- Dashboard theo ngày/múi giờ, tổng trạng thái/task quá hạn, workload staff và polling 30 giây.
+- Feedback Customer cho booking CHECKED_OUT của mình, 1 review/booking; Manager lọc và phản hồi theo khách sạn.
+- Form dùng React Hook Form + Zod; backend validation/transaction/Unicode/conditional writes.
+- Route/menu 6 trang sử dụng UC-E1…UC-E6 để Customer dùng được E4/E6, không sửa logic đăng nhập.
+- Profile local-demo có mặc định email seed cho reporter/manager/staff/customer; chỉ cần DB_USERNAME/DB_PASSWORD và bật profile để thử.
+- Hướng dẫn và giới hạn kiểm chứng: [Tài liệu bàn giao](../../SE1986_JV_HMS_be/docs/module-e-final.md).
+- Build/lint frontend và 69 unit test backend đạt. Truy vấn SQL Server dashboard/feedback và task/issue rollback test đạt.
+- Chưa commit/push phần hoàn thiện; chờ người dùng duyệt.
+
+Cập nhật trải nghiệm sử dụng: dashboard mặc định Tất cả thời gian, có chọn Theo ngày; bỏ banner thuật ngữ kỹ thuật khỏi luồng thông thường, vẫn hiện người thực hiện/chế độ kiểm thử. Sự cố thêm cột Người xử lý. SQL Server đối chiếu allTime trả đúng 2 task (1 PENDING, 1 COMPLETED), trong khi ngày trên ảnh trả 0. Sau cập nhật: build/lint và 70 unit test đạt. Chưa push.

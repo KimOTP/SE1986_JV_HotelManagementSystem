@@ -8,7 +8,7 @@ export function useRoomsData() {
     setLoading(true);
     setError('');
     try {
-      setData(await roomsApi.getAll());
+      setData(await roomsApi.getMap());
     } catch (e) {
       setError(e?.response?.data?.message || e.message || 'Không thể tải dữ liệu.');
     } finally {
@@ -20,7 +20,7 @@ export function useRoomsData() {
     (async () => {
       setLoading(true);
       try {
-        const v = await roomsApi.getAll();
+        const v = await roomsApi.getMap();
         if (active) setData(v);
       } catch (e) {
         if (active) setError(e?.response?.data?.message || e.message);

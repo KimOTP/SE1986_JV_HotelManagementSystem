@@ -1,0 +1,25 @@
+package com.hotel.hms.operations.controller;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.hotel.hms.operations.dto.*;
+import com.hotel.hms.operations.service.IssueProgressService;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@PreAuthorize("isAuthenticated()")
+@RequestMapping("/api/operations")
+public class IssueProgressController {
+    private final IssueProgressService service;
+    public IssueProgressController(IssueProgressService service) { this.service = service; }
+    @GetMapping("/issue-work-context")
+    public IssueWorkContext getContext() { return service.getContext(); }
+    @PatchMapping("/issues/{id}/start")
+    @PreAuthorize("hasAuthority('UC-E5')")
+    public IssueProgressResponse start(@PathVariable Long id) { return service.start(id); }
+    @PatchMapping("/issues/{id}/resolve")
+    @PreAuthorize("hasAuthority('UC-E5')")
+    public IssueProgressResponse resolve(@PathVariable Long id, @Valid @RequestBody ResolveIssueRequest request) {
+        return service.resolve(id, request);
+    }
+}

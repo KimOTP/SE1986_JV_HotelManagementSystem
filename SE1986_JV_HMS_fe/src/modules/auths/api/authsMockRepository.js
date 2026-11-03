@@ -130,25 +130,34 @@ const normalizeRolePermissions = (rolePermissions) => {
       }
 
       const permissions = new Set(
-        stored.map((permission) => {
-          if (permission === 'USER_MANAGE') return PERMISSIONS.USER_MANAGE;
-          if (permission === 'ROLE_MANAGE') return PERMISSIONS.ROLE_MANAGE;
-          return permission;
-        }),
+        stored
+          .map((permission) => {
+            if (permission === 'USER_MANAGE') return PERMISSIONS.USER_MANAGE;
+            if (permission === 'ROLE_MANAGE') return PERMISSIONS.ROLE_MANAGE;
+            return permission;
+          })
+          .filter((permission) => DATABASE_PERMISSION_CODES.includes(permission)),
       );
-
-      if (permissions.has('HOUSEKEEPING') || permissions.has('OPERATIONS_VIEW')) {
-        permissions.add(PERMISSIONS.HOUSEKEEPING_VIEW);
-      }
-      if (
-        permissions.has('HOUSEKEEPING') &&
-        [ROLES.ADMIN, ROLES.MANAGER].includes(role)
-      ) {
-        permissions.add(PERMISSIONS.HOUSEKEEPING_MANAGE);
-      }
       if (role !== ROLES.ADMIN) {
         permissions.delete(PERMISSIONS.USER_MANAGE);
         permissions.delete(PERMISSIONS.ROLE_MANAGE);
+      }
+
+      // Older demo builds stored only broad permission aliases. Preserve
+      // usability until the administrator saves a role in the UC editor.
+      if (!stored.some((permission) => DATABASE_PERMISSION_CODES.includes(permission)) &&
+          (stored.some((permission) => ['ROOM_MANAGE', 'ROOM_MAP_VIEW', 'BOOKING_VIEW', 'BOOKING_MANAGE', 'INVOICE_VIEW', 'INVOICE_MANAGE', 'HOUSEKEEPING_VIEW', 'HOUSEKEEPING_MANAGE'].includes(permission)))) {
+        const legacyToUc = {
+          ROOM_MANAGE: ['UC-B1', 'UC-B2', 'UC-B3'],
+          ROOM_MAP_VIEW: ['UC-B6'],
+          BOOKING_VIEW: ['UC-C1', 'UC-C2', 'UC-C3', 'UC-C4', 'UC-C6'],
+          BOOKING_MANAGE: ['UC-C5'],
+          INVOICE_VIEW: ['UC-D4', 'UC-D6'],
+          INVOICE_MANAGE: ['UC-D1', 'UC-D2', 'UC-D3', 'UC-D5'],
+          HOUSEKEEPING_VIEW: ['UC-E1', 'UC-E2', 'UC-E3', 'UC-E4', 'UC-E5'],
+          HOUSEKEEPING_MANAGE: ['UC-E1', 'UC-E3', 'UC-E5', 'UC-E6'],
+        };
+        stored.forEach((permission) => (legacyToUc[permission] || []).forEach((uc) => permissions.add(uc)));
       }
 
       return [role, [...permissions]];
@@ -233,16 +242,15 @@ export const authsMockRepository = {
       throw new Error('Danh sách quyền không hợp lệ.');
     }
 
-    const validPermissions = new Set([
-      ...DATABASE_PERMISSION_CODES,
-      ...Object.values(PERMISSIONS),
-    ]);
+    // UC grants are the only configurable permissions. Legacy aliases remain
+    // accepted only when reading older localStorage values.
+    const validPermissions = new Set(DATABASE_PERMISSION_CODES);
     const uniquePermissions = [...new Set(permissions)];
     if (uniquePermissions.some((permission) => !validPermissions.has(permission))) {
       throw new Error('Danh sách chứa quyền không được hỗ trợ.');
     }
-    if (role === ROLES.ADMIN && !uniquePermissions.includes('UC-A6')) {
-      throw new Error('Không thể gỡ UC-A6 khỏi vai trò ADMIN.');
+    if (role === ROLES.ADMIN && DATABASE_PERMISSION_CODES.some((permission) => !uniquePermissions.includes(permission))) {
+      throw new Error('Không thể thay đổi toàn bộ quyền UC của ADMIN.');
     }
 
     const rolePermissions = getStoredRolePermissions();
@@ -251,6 +259,8 @@ export const authsMockRepository = {
       ROLE_PERMISSIONS_STORAGE_KEY,
       JSON.stringify(rolePermissions),
     );
+    window.dispatchEvent(new CustomEvent('auth:permissions-changed', { detail: { role } }));
+    window.localStorage.setItem('se1986.auth.permissions.version', String(Date.now()));
     return { code: role, permissions: uniquePermissions };
   },
 

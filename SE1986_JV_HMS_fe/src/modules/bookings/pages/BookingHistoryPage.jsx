@@ -8,7 +8,9 @@ import { DEMO_BOOKING_CUSTOMER_KEY, getBookings } from '../mocks/bookingStore';
 import { BOOKING_STATUS, displayDate, money } from '../utils/bookingUtils';
 
 export default function BookingHistoryPage() {
-  const { role, canManageBookings } = useAuth();
+  const { role, hasPermission } = useAuth();
+  const canManageBookings = hasPermission('UC-C5');
+  const canCreateBooking = hasPermission('UC-C1');
   const [bookings, setBookings] = useState(() => getBookings());
   const [statusFilter, setStatusFilter] = useState('ALL');
   const visible = canManageBookings
@@ -24,11 +26,11 @@ export default function BookingHistoryPage() {
       <PageHeading
         title="Đặt phòng của tôi"
         description="Theo dõi trạng thái và lịch sử các lần đặt phòng."
-        actions={
+        actions={canCreateBooking && (
           <Button as={Link} to="/bookings/new">
             Tạo đặt phòng
           </Button>
-        }
+        )}
       />
       {isCustomerView && (
         <Alert variant="info">

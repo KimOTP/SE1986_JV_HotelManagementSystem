@@ -36,6 +36,7 @@ export default function RoomMapPage() {
   const roomType = (id) => data.roomTypes.find((t) => t.id === id)?.name || 'Không xác định';
   return (
     <div className="rooms-module">
+      {error && <ErrorState message={error} onRetry={reload} />}
       <div className="d-flex justify-content-between flex-wrap gap-2 mb-3">
         <div>
           <h2>Sơ đồ phòng</h2>
@@ -165,6 +166,12 @@ export default function RoomMapPage() {
               </p>
               <p>
                 <strong>Sử dụng:</strong> <ActiveBadge active={selected.isActive} />
+              </p>
+              <p>
+                <strong>Trạng thái DB:</strong>{' '}
+                {selected.rawOperationalStatus || selected.operationalStatus}
+                {' / '}
+                {selected.housekeepingStatus || '—'}
               </p>
               <p>
                 <strong>Ghi chú:</strong> {selected.notes || 'Không có'}

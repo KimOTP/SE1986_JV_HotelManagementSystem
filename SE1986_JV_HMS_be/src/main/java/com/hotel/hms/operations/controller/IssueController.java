@@ -1,5 +1,6 @@
 package com.hotel.hms.operations.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hotel.hms.operations.dto.IssueResponse;
 import com.hotel.hms.operations.service.IssueService;
 import org.springframework.http.HttpStatus;
@@ -8,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @RestController
+@PreAuthorize("isAuthenticated()")
 @RequestMapping("/api/operations/issues")
 public class IssueController {
     private final IssueService service;
@@ -15,6 +17,7 @@ public class IssueController {
         this.service = service;
     }
     @GetMapping
+    @PreAuthorize("hasAuthority('UC-E5')")
     public List<IssueResponse> getIssues(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

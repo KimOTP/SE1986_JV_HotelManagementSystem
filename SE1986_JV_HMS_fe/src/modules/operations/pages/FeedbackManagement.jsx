@@ -1,208 +1,256 @@
-import { useState, useMemo } from 'react';
-import { Card, Button, Modal, Form, Row, Col, Badge, Pagination } from 'react-bootstrap';
-import { mockFeedbacks as initialFeedbacks } from '../mocks/mockData';
-
-const FeedbackManagement = () => {
-  const [feedbacks, setFeedbacks] = useState(initialFeedbacks);
-
-  // FORM & SEARCH STATE
-  const [formData, setFormData] = useState({ rating: 'ALL', status: 'ALL' });
-  const [searchParams, setSearchParams] = useState({ rating: 'ALL', status: 'ALL' });
-
-  // PAGING
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
-
-  // MODAL
-  const [showModal, setShowModal] = useState(false);
-  const [currentId, setCurrentId] = useState(null);
-  const [replyText, setReplyText] = useState('');
-
-  const handleFormChange = (e) =>
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setSearchParams(formData);
-    setCurrentPage(1);
+import { useEffect, useState } from 'react';
+import { Alert, Badge, Button, Card, Col, Form, Pagination, Row } from 'react-bootstrap';
+import { getAssignmentContext } from '../api/issueAssignmentsApi';
+import { getCustomerFeedbackContext, getFeedback } from '../api/feedbackApi';
+import FeedbackFormModal from '../components/FeedbackFormModal';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
+import { ROLES } from '../../auths/constants/authConstants';
+const empty = { rating: '0', status: '' };
+const size = 5;
+const date = (value) =>
+  new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`).toLocaleString('vi-VN');
+export default function FeedbackManagement() {
+  const { hasRole, hasPermission } = useAuth();
+  const customer = hasRole(ROLES.CUSTOMER);
+  const allowed =
+    hasPermission('UC-E6') && (customer || (hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER)));
+  const [draft, setDraft] = useState(empty);
+  const [filters, setFilters] = useState(empty);
+  const [page, setPage] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState({ loading: true, context: null, items: [], error: null });
+  const [modal, setModal] = useState(null);
+  const [success, setSuccess] = useState(null);
+  useEffect(() => {
+    if (!allowed) return;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const context = customer
+          ? await getCustomerFeedbackContext(controller.signal)
+          : await getAssignmentContext(controller.signal);
+        const items = context.enabled
+          ? await getFeedback(
+              {
+                page,
+                size,
+                ...(customer ? {} : { rating: Number(filters.rating), status: filters.status }),
+              },
+              customer,
+              controller.signal,
+            )
+          : [];
+        if (!controller.signal.aborted) setState({ loading: false, context, items, error: null });
+      } catch {
+        if (!controller.signal.aborted)
+          setState({
+            loading: false,
+            context: null,
+            items: [],
+            error: 'Không tải được đánh giá. Kiểm tra backend và tài khoản đang đăng nhập rồi thử lại.',
+          });
+      }
+    };
+    load();
+    return () => controller.abort();
+  }, [allowed, customer, page, filters, attempt]);
+  const loading = () => setState({ loading: true, context: null, items: [], error: null });
+  const refresh = () => {
+    loading();
+    setAttempt((value) => value + 1);
   };
-
-  const handleReset = () => {
-    const empty = { rating: 'ALL', status: 'ALL' };
-    setFormData(empty);
-    setSearchParams(empty);
-    setCurrentPage(1);
+  const apply = (values) => {
+    loading();
+    setFilters({ ...values });
+    setPage(0);
   };
-
-  // LỌC
-  const filteredFeedbacks = useMemo(() => {
-    let result = [...feedbacks];
-    if (searchParams.rating !== 'ALL')
-      result = result.filter((f) => f.rating === Number(searchParams.rating));
-    if (searchParams.status !== 'ALL')
-      result = result.filter((f) => f.status === searchParams.status);
-    return result;
-  }, [feedbacks, searchParams]);
-
-  // PHÂN TRANG
-  const totalPages = Math.ceil(filteredFeedbacks.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentFeedbacks = filteredFeedbacks.slice(indexOfFirstItem, indexOfLastItem);
-
-  const openReply = (id) => {
-    setCurrentId(id);
-    setReplyText('');
-    setShowModal(true);
+  const move = (next) => {
+    loading();
+    setPage(next);
   };
-  const handleReply = () => {
-    setFeedbacks((prev) =>
-      prev.map((f) => (f.id === currentId ? { ...f, reply: replyText, status: 'REPLIED' } : f)),
+  if (!allowed)
+    return (
+      <Alert variant="warning">
+        Chức năng dành cho Customer hoặc Manager/Admin có quyền UC-E6.
+      </Alert>
     );
-    setShowModal(false);
-  };
-
   return (
     <div>
-      <h2 className="mb-4">Feedback Management</h2>
-
-      {/* BỘ LỌC */}
-      <Form onSubmit={handleSearch} className="mb-4 g-2 bg-light p-3 rounded border">
-        <Row className="align-items-end">
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label className="small mb-1 fw-semibold">Đánh giá (Sao)</Form.Label>
-              <Form.Select name="rating" value={formData.rating} onChange={handleFormChange}>
-                <option value="ALL">Tất cả</option>
-                <option value="5">5 Sao</option>
-                <option value="4">4 Sao</option>
-                <option value="3">3 Sao</option>
-                <option value="2">2 Sao</option>
-                <option value="1">1 Sao</option>
-              </Form.Select>
-            </Form.Group>
-          </Col>
-          <Col md={4}>
-            <Form.Group>
-              <Form.Label className="small mb-1 fw-semibold">Trạng thái phản hồi</Form.Label>
-              <Form.Select name="status" value={formData.status} onChange={handleFormChange}>
-                <option value="ALL">Tất cả</option>
-                <option value="PENDING">Chưa phản hồi</option>
-                <option value="REPLIED">Đã phản hồi</option>
-              </Form.Select>
-            </Form.Group>
-          </Col>
-          <Col md={4} className="d-flex gap-2">
-            <Button type="submit" variant="primary" className="w-100 fw-semibold">
-              Tìm kiếm
-            </Button>
+      <div className="d-flex justify-content-between gap-2 mb-3">
+        <h2>{customer ? 'Đánh giá của tôi' : 'Đánh giá của khách'}</h2>
+        <div className="d-flex gap-2">
+          <Button variant="outline-primary" onClick={refresh} disabled={state.loading}>
+            Tải lại
+          </Button>
+          {customer && (
             <Button
-              type="button"
-              variant="outline-secondary"
-              className="w-100"
-              onClick={handleReset}
+              disabled={state.loading || !state.context?.enabled}
+              onClick={() => {
+                setSuccess(null);
+                setModal({ creating: true });
+              }}
             >
-              Reset
+              Gửi đánh giá
             </Button>
-          </Col>
-        </Row>
-      </Form>
-
-      {/* DANH SÁCH CARD */}
-      {currentFeedbacks.length === 0 ? (
-        <div className="text-center py-5 text-muted bg-light rounded border">
-          Không tìm thấy feedback nào phù hợp.
+          )}
         </div>
+      </div>
+      <Alert variant="info">
+        Mỗi booking đã trả phòng được đánh giá một lần. Bạn có thể xem đánh giá và phản hồi tại đây.
+      </Alert>
+      {state.context && (
+        <Alert variant={state.context.enabled ? 'info' : 'warning'}>
+          {state.context.enabled ? (
+            <>
+              Người thao tác:{' '}
+              <strong>{customer ? state.context.customerName : state.context.managerName}</strong>,
+              <Badge bg="secondary">Phiên đăng nhập hiện tại</Badge>
+            </>
+          ) : (
+            state.context.message
+          )}
+        </Alert>
+      )}
+      {state.error && <Alert variant="danger">{state.error}</Alert>}
+      {success && (
+        <Alert variant="success" dismissible onClose={() => setSuccess(null)}>
+          Đã lưu {customer ? 'đánh giá' : 'phản hồi'} #{success.id}. Danh sách đã tải lại.
+        </Alert>
+      )}
+      {!customer && (
+        <Form
+          className="p-3 border bg-light rounded mb-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            apply(draft);
+          }}
+        >
+          <Row className="g-2 align-items-end">
+            <Col md={4}>
+              <Form.Group controlId="feedback-filter-rating">
+                <Form.Label>Số sao</Form.Label>
+                <Form.Select
+                  value={draft.rating}
+                  onChange={(event) => setDraft((old) => ({ ...old, rating: event.target.value }))}
+                >
+                  <option value="0">Tất cả</option>
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <option key={value} value={value}>
+                      {value} sao
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4}>
+              <Form.Group controlId="feedback-filter-status">
+                <Form.Label>Phản hồi</Form.Label>
+                <Form.Select
+                  value={draft.status}
+                  onChange={(event) => setDraft((old) => ({ ...old, status: event.target.value }))}
+                >
+                  <option value="">Tất cả</option>
+                  <option value="PENDING">Chưa phản hồi</option>
+                  <option value="REPLIED">Đã phản hồi</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={4} className="d-flex gap-2">
+              <Button type="submit" disabled={state.loading}>
+                Tìm kiếm
+              </Button>
+              <Button
+                variant="outline-secondary"
+                disabled={state.loading}
+                onClick={() => {
+                  setDraft(empty);
+                  apply(empty);
+                }}
+              >
+                Đặt lại
+              </Button>
+            </Col>
+          </Row>
+        </Form>
+      )}
+      {state.loading ? (
+        <p role="status">Đang tải đánh giá...</p>
       ) : (
-        currentFeedbacks.map((f) => (
-          <Card key={f.id} className="mb-3 shadow-sm border-0">
-            <Card.Body>
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <div>
-                  <Card.Title className="fw-bold mb-1">{f.guestName}</Card.Title>
-                  <small className="text-muted">Ngày gửi: {f.createdAt}</small>
-                </div>
-                <div className="text-end">
-                  <div className="text-warning fw-bold mb-1">Đánh giá: {f.rating}/5</div>
+        !state.error &&
+        state.context?.enabled &&
+        (!state.items.length ? (
+          <Alert variant="secondary">Không có đánh giá trong trang này hoặc phù hợp bộ lọc.</Alert>
+        ) : (
+          state.items.map((feedback) => (
+            <Card key={feedback.id} className="mb-3">
+              <Card.Body>
+                <div className="d-flex justify-content-between">
+                  <div>
+                    <h5>
+                      {feedback.guestName} — {feedback.rating}/5 sao
+                    </h5>
+                    <small>
+                      {feedback.bookingCode} · {feedback.hotelName} · {date(feedback.createdAt)}
+                    </small>
+                  </div>
                   <Badge
-                    bg={f.status === 'REPLIED' ? 'success' : 'warning'}
-                    text={f.status === 'PENDING' ? 'dark' : 'white'}
+                    bg={feedback.reply !== null ? 'success' : 'warning'}
+                    text={feedback.reply !== null ? 'white' : 'dark'}
                   >
-                    {f.status === 'REPLIED' ? 'Đã phản hồi' : 'Chờ xử lý'}
+                    {feedback.reply !== null ? 'Đã phản hồi' : 'Chưa phản hồi'}
                   </Badge>
                 </div>
-              </div>
-              <Card.Text className="mb-3 p-2 bg-light rounded border">{f.comment}</Card.Text>
-
-              {f.reply ? (
-                <div className="border-start border-3 border-primary ps-3 py-1">
-                  <small className="text-primary fw-bold d-block mb-1">Phản hồi từ Quản lý:</small>
-                  <span className="text-muted">{f.reply}</span>
-                </div>
-              ) : (
-                <Button size="sm" variant="primary" onClick={() => openReply(f.id)}>
-                  Phản hồi ngay
-                </Button>
-              )}
-            </Card.Body>
-          </Card>
+                <p className="text-break mt-3" style={{ whiteSpace: 'pre-wrap' }}>
+                  {feedback.comment}
+                </p>
+                {feedback.reply !== null ? (
+                  <div className="border-start ps-3">
+                    <strong>{feedback.repliedBy || 'Quản lý'}</strong>
+                    {feedback.repliedAt && <small> · {date(feedback.repliedAt)}</small>}
+                    <p className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                      {feedback.reply}
+                    </p>
+                  </div>
+                ) : (
+                  !customer && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSuccess(null);
+                        setModal({ feedback });
+                      }}
+                    >
+                      Phản hồi
+                    </Button>
+                  )
+                )}
+              </Card.Body>
+            </Card>
+          ))
         ))
       )}
-
-      {/* PHÂN TRANG */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-4">
-          <span className="text-muted small">
-            Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredFeedbacks.length)}{' '}
-            / {filteredFeedbacks.length} feedback
-          </span>
-          <Pagination className="mb-0">
-            <Pagination.Prev
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-            />
-            {[...Array(totalPages)].map((_, idx) => (
-              <Pagination.Item
-                key={idx + 1}
-                active={idx + 1 === currentPage}
-                onClick={() => setCurrentPage(idx + 1)}
-              >
-                {idx + 1}
-              </Pagination.Item>
-            ))}
-            <Pagination.Next
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-            />
-          </Pagination>
-        </div>
-      )}
-
-      {/* MODAL */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Phản hồi khách hàng</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Control
-            as="textarea"
-            rows={4}
-            placeholder="Nhập nội dung phản hồi..."
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
+      <div className="d-flex justify-content-between">
+        <span>Trang {page + 1}</span>
+        <Pagination>
+          <Pagination.Prev disabled={page === 0 || state.loading} onClick={() => move(page - 1)} />
+          <Pagination.Next
+            disabled={state.loading || !!state.error || state.items.length < size}
+            onClick={() => move(page + 1)}
           />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Hủy
-          </Button>
-          <Button variant="primary" onClick={handleReply}>
-            Gửi phản hồi
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        </Pagination>
+      </div>
+      {modal && (
+        <FeedbackFormModal
+          feedback={modal.feedback}
+          onClose={() => setModal(null)}
+          onSaved={(response) => {
+            setModal(null);
+            setSuccess(response);
+            setDraft(empty);
+            apply(empty);
+          }}
+        />
+      )}
     </div>
   );
-};
-
-export default FeedbackManagement;
+}

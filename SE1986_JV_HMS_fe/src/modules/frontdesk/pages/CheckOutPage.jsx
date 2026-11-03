@@ -5,9 +5,12 @@ import { Link, useNavigate } from 'react-router';
 import { getInvoiceByBooking, getReservations } from '../mocks/frontdeskStore';
 import { InvoiceStatusBadge } from '../components/InvoiceSummary';
 import { currency } from '../utils/frontdeskUtils';
+import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 // UC-D2: Check-out. Lists in-house guests; invoice is created on a separate page.
 export default function CheckOutPage() {
+  const { hasPermission } = useAuth();
+  const canCheckOut = hasPermission('UC-D2');
   const navigate = useNavigate();
   const [reservations] = useState(getReservations);
   const [keyword, setKeyword] = useState('');
@@ -125,6 +128,7 @@ export default function CheckOutPage() {
                   <Button
                     variant="primary"
                     className="w-100 fw-semibold py-2"
+                    disabled={!canCheckOut}
                     onClick={() => navigate(`/frontdesk/invoices/new?bookingId=${selected.id}`)}
                   >
                     <FileEarmarkPlus /> Tạo hóa đơn

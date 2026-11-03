@@ -8,5 +8,5 @@ public record IssueResponse(
         String title, String description, String priority, String status,
         Long reportedById, String reportedBy,
         Long assignedStaffId, String assignedTo,
-        LocalDateTime createdAt
+        LocalDateTime createdAt, String resolutionNote, LocalDateTime resolvedAt
 ) {}

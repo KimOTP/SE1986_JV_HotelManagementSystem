@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
 
   const [token, setToken] = useState(() => getStoredToken());
 
-  const login = useCallback(({ user: loggedInUser, token: authToken }) => {
+  const login = useCallback(({ user: loggedInUser, token: authToken, refreshToken }) => {
     const normalizedUser = normalizeUser(loggedInUser);
 
     setUser(normalizedUser);
@@ -85,15 +85,30 @@ export function AuthProvider({ children }) {
     );
 
     localStorage.setItem(AUTH_STORAGE_KEYS.TOKEN, authToken);
+    if (refreshToken) {
+      localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    } else {
+      localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+    }
   }, []);
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback(() => {
     setUser(null);
     setToken(null);
 
     localStorage.removeItem(AUTH_STORAGE_KEYS.USER);
     localStorage.removeItem(AUTH_STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
   }, []);
+
+  // Xóa phiên local ngay, sau đó thu hồi refresh token ở backend (lỗi mạng bỏ qua).
+  const logout = useCallback(() => {
+    const refreshToken = localStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+    clearSession();
+    if (refreshToken && authsApi.logout) {
+      Promise.resolve(authsApi.logout(refreshToken)).catch(() => {});
+    }
+  }, [clearSession]);
 
   const refreshAuthorization = useCallback(async () => {
     if (!user) {
@@ -107,12 +122,39 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
-    const handleUnauthorized = () => logout();
+    if (!user) return undefined;
+    let active = true;
+    const refresh = async () => {
+      const permissions = await authsApi.getPermissionsForRoles(user.roles);
+      if (!active) return;
+      const updatedUser = { ...user, permissions };
+      setUser(updatedUser);
+      localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+    };
+    const onPermissionsChanged = (event) => {
+      if (event.detail?.role && !user.roles.includes(event.detail.role)) return;
+      refresh();
+    };
+    const onStorage = (event) => {
+      if (event.key === 'se1986.auth.permissions.version') refresh();
+    };
+    window.addEventListener('auth:permissions-changed', onPermissionsChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      active = false;
+      window.removeEventListener('auth:permissions-changed', onPermissionsChanged);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    // Refresh đã thất bại nên không cần gọi API logout nữa.
+    const handleUnauthorized = () => clearSession();
     window.addEventListener('auth:unauthorized', handleUnauthorized);
     return () => {
       window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
-  }, [logout]);
+  }, [clearSession]);
 
   useEffect(() => {
     if (!user) {

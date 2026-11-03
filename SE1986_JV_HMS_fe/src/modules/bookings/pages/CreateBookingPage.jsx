@@ -1,8 +1,4 @@
 import { useEffect, useState } from 'react';
-<<<<<<< Updated upstream
-import { Button, Card, Col, Form, Row } from 'react-bootstrap';
-import { useNavigate, useSearchParams } from 'react-router';
-=======
 import { Button, Col, Form, Row } from 'react-bootstrap';
 import {
   ArrowLeft,
@@ -29,7 +25,6 @@ import {
 } from 'react-bootstrap-icons';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
->>>>>>> Stashed changes
 import { roomsApi } from '../../rooms/api/roomsApi';
 import { imageOrFallback, validateSearch } from '../../rooms/utils/roomUtils';
 import BookingError from '../components/BookingError';
@@ -51,6 +46,8 @@ const formatDay = (value) => {
 };
 
 export default function CreateBookingPage() {
+  const { hasPermission } = useAuth();
+  const canCreateBooking = hasPermission('UC-C1');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRoomTypeId = params.get('roomTypeId') || '';
@@ -169,6 +166,7 @@ export default function CreateBookingPage() {
 
   const submit = (event) => {
     event.preventDefault();
+    if (!canCreateBooking) return setError('Bạn không có UC-C1 để tạo đặt phòng.');
     setError('');
     const dateErrors = validateSearch({
       checkIn: form.checkIn,
@@ -298,22 +296,6 @@ export default function CreateBookingPage() {
                     <strong className="booking-nights-value">{nights} đêm</strong>
                   </div>
                 </div>
-<<<<<<< Updated upstream
-                <p className="booking-hint">
-                  Đặt phòng được tạo ở trạng thái chờ. Tiền cọc trong bản demo không phải giao dịch
-                  ngân hàng thực.
-                </p>
-              </Card.Body>
-            </Card>
-            <BookingError error={error} />
-            <Button
-              type="submit"
-              className="w-100"
-              disabled={loadingTypes || submitting || !roomType}
-            >
-              {submitting ? 'Đang kiểm tra phòng…' : 'Tạo đặt phòng'}
-            </Button>
-=======
               </div>
             </section>
 
@@ -661,7 +643,6 @@ export default function CreateBookingPage() {
                 </div>
               </div>
             </aside>
->>>>>>> Stashed changes
           </Col>
         </Row>
       </Form>

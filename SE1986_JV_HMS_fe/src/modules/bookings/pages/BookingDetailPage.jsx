@@ -3,12 +3,15 @@ import { Link, useParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
-import { getBooking } from '../mocks/bookingStore';
+import { DEMO_BOOKING_CUSTOMER_KEY, getBooking } from '../mocks/bookingStore';
 import { displayDate, displayDateTime, money } from '../utils/bookingUtils';
 
 export default function BookingDetailPage() {
   const { id } = useParams();
-  const { canManageBookings } = useAuth();
+  const { hasPermission } = useAuth();
+  const canManageBookings = hasPermission('UC-C5');
+  const canCancelBooking = hasPermission('UC-C4');
+  const canPayDeposit = hasPermission('UC-C2');
   const booking = getBooking(id);
   if (!booking) {
     return (
@@ -16,6 +19,11 @@ export default function BookingDetailPage() {
         Không tìm thấy đặt phòng <strong>{id}</strong>. <Link to="/bookings">Về danh sách</Link>
       </Alert>
     );
+  }
+  const canViewAllBookings = canManageBookings;
+  const belongsToCurrentCustomer = booking.customerKey === DEMO_BOOKING_CUSTOMER_KEY;
+  if (!canViewAllBookings && !belongsToCurrentCustomer) {
+    return <Alert variant="danger">Bạn không có UC-C6 để xem đặt phòng này.</Alert>;
   }
   const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status);
   const canPay = booking.status === 'PENDING';
@@ -99,17 +107,17 @@ export default function BookingDetailPage() {
             <Card.Body>
               <h3 className="booking-section-title">Thao tác</h3>
               <div className="booking-actions">
-                {canPay && (
+                {canPay && canPayDeposit && (
                   <Button as={Link} to={`/bookings/deposit?bookingId=${booking.id}`}>
                     Thanh toán tiền cọc
                   </Button>
                 )}
-                {canCancel && (
+                {canCancel && canCancelBooking && (
                   <Button as={Link} to={`/bookings/${booking.id}/cancel`} variant="outline-danger">
                     Hủy đặt phòng
                   </Button>
                 )}
-                {!canPay && !canCancel && (
+                {(!canPay || !canPayDeposit) && (!canCancel || !canCancelBooking) && (
                   <p className="booking-hint m-0">
                     Không có thao tác nào khả dụng cho trạng thái này.
                   </p>

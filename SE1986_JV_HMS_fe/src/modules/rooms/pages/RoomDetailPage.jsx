@@ -29,13 +29,13 @@ export default function RoomDetailPage() {
     (async () => {
       setLoading(true);
       try {
-        const [t, a] = await Promise.all([roomsApi.getRoomType(id), roomsApi.getAll()]);
+        const [t, a] = await Promise.all([roomsApi.getRoomType(id), roomsApi.getCatalog()]);
         if (live) {
           setType(t);
           setData(a);
         }
       } catch (e) {
-        if (live) setError(e.message);
+        if (live) setError(e?.response?.data?.message || e.message);
       } finally {
         if (live) setLoading(false);
       }
@@ -55,7 +55,7 @@ export default function RoomDetailPage() {
     roomsApi
       .availability(id, criteria)
       .then((v) => live && setAvailable(v))
-      .catch((e) => live && setError(e.message))
+      .catch((e) => live && setError(e?.response?.data?.message || e.message))
       .finally(() => live && setChecking(false));
     return () => {
       live = false;
@@ -103,9 +103,16 @@ export default function RoomDetailPage() {
         setAvailable(null);
         return;
       }
+      const roomCount = Math.max(1, Number(params.get('roomCount')) || 1);
+      if (latest.availableRooms < roomCount) {
+        setError('Không đủ số phòng yêu cầu. Vui lòng tìm lại.');
+        return;
+      }
       navigate(
-        `/rooms/booking-handoff?roomTypeId=${id}&checkIn=${criteria.checkIn}&checkOut=${criteria.checkOut}&guests=${criteria.guests}&roomCount=1`,
+        `/rooms/booking-handoff?roomTypeId=${id}&checkIn=${criteria.checkIn}&checkOut=${criteria.checkOut}&guests=${criteria.guests}&roomCount=${roomCount}`,
       );
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message);
     } finally {
       setChecking(false);
     }

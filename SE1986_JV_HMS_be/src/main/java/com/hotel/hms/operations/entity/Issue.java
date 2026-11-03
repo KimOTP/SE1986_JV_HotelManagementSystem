@@ -33,6 +33,10 @@ public class Issue {
     private String status;
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+    @Column(name = "resolution_note", length = 2000)
+    private String resolutionNote;
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
     protected Issue() {}
     public Long getId() { return id; }
     public IssueRoom getRoom() { return room; }
@@ -44,4 +48,6 @@ public class Issue {
     public String getPriority() { return priority; }
     public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public String getResolutionNote() { return resolutionNote; }
+    public LocalDateTime getResolvedAt() { return resolvedAt; }
 }
