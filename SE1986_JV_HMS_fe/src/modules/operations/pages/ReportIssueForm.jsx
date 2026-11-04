@@ -11,6 +11,7 @@ import {
   getIssueRooms,
   getIssueReportingContext,
 } from '../api/issueReportsApi';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 
 const defaults = { roomId: '', issueTypeId: '', title: '', description: '', priority: 'NORMAL' };
 export default function ReportIssueForm() {
@@ -109,8 +110,10 @@ export default function ReportIssueForm() {
       <Button variant="link" className="px-0 mb-3" onClick={() => navigate(-1)}>
         ← Quay lại
       </Button>
-      <h2 className="fw-bold">Báo cáo sự cố</h2>
-      <p className="text-muted">Chọn phòng và nhập thông tin để gửi báo cáo vào hệ thống.</p>
+      <OperationsPageHeader
+        title="Báo cáo sự cố"
+        description="Chọn phòng và nhập thông tin để gửi báo cáo vào hệ thống."
+      />
       {catalog.loading && (
         <Alert variant="info" role="status">
           Đang tải phòng, danh mục và tài khoản người báo cáo...
@@ -141,7 +144,10 @@ export default function ReportIssueForm() {
         </Alert>
       )}
       {!catalog.loading && !catalog.error && (!catalog.rooms.length || !catalog.types.length) && (
-        <Alert variant="warning">Chưa có phòng thuộc phạm vi tài khoản hoặc loại sự cố đang hoạt động. Khách hàng cần booking đã check-in để báo sự cố cho phòng đang lưu trú.</Alert>
+        <Alert variant="warning">
+          Chưa có phòng thuộc phạm vi tài khoản hoặc loại sự cố đang hoạt động. Khách hàng cần
+          booking đã check-in để báo sự cố cho phòng đang lưu trú.
+        </Alert>
       )}
       {created && (
         <Alert variant="success">

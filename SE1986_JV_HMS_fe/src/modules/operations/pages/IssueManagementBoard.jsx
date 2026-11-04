@@ -16,6 +16,7 @@ import { getDatabaseIssues } from '../api/issuesApi';
 import { getIssueTypes } from '../api/issueTypesApi';
 import AssignIssueModal from '../components/AssignIssueModal';
 import IssueProgressModal from '../components/IssueProgressModal';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import { ROLES } from '../../auths/constants/authConstants';
 
@@ -111,21 +112,17 @@ export default function IssueManagementBoard() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4 gap-2">
-        <h2 className="mb-0">Quản lý sự cố</h2>
-        <div className="d-flex gap-2">
-          <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
-            Tải lại
-          </Button>
-          {hasPermission('UC-E4') && (
-            <Button onClick={() => navigate('/operations/report-issue')}>+ Báo cáo sự cố</Button>
-          )}
-        </div>
-      </div>
-      <p className="text-muted">
-        Phân công sự cố mới cho nhân viên. Sự cố đã phân công sẽ do nhân viên được giao nhận xử lý
-        và hoàn tất.
-      </p>
+      <OperationsPageHeader
+        title="Quản lý sự cố"
+        description="Phân công sự cố mới cho nhân viên. Sự cố đã phân công sẽ do nhân viên được giao nhận xử lý và hoàn tất."
+      >
+        <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
+          Tải lại
+        </Button>
+        {hasPermission('UC-E4') && (
+          <Button onClick={() => navigate('/operations/report-issue')}>+ Báo cáo sự cố</Button>
+        )}
+      </OperationsPageHeader>
       {assignmentSuccess && (
         <Alert variant="success" dismissible onClose={() => setAssignmentSuccess(null)}>
           Đã phân công sự cố #{assignmentSuccess.id}, trạng thái Đã phân công. Bộ lọc hiện tại vẫn
@@ -152,7 +149,7 @@ export default function IssueManagementBoard() {
           event.preventDefault();
           applyFilters(formData);
         }}
-        className="mb-3 bg-light p-3 rounded border"
+        className="operations-filter-panel"
       >
         <Row className="align-items-end g-2">
           <Col md={3}>

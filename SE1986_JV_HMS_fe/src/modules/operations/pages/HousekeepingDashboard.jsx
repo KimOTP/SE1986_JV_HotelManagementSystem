@@ -14,6 +14,7 @@ import {
 import { Link } from 'react-router';
 import { getAssignmentContext } from '../api/issueAssignmentsApi';
 import { getHousekeepingDashboard } from '../api/dashboardApi';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 const today = () => {
@@ -82,10 +83,10 @@ export default function HousekeepingDashboard() {
   const rate = effective ? Math.round((data.summary.completed / effective) * 100) : 0;
   return (
     <div>
-      <h2>Tổng quan vận hành</h2>
-      <p className="text-muted">
-        Theo dõi công việc, tiến độ và khối lượng của nhân viên trong khách sạn.
-      </p>
+      <OperationsPageHeader
+        title="Tổng quan vận hành"
+        description="Theo dõi công việc, tiến độ và khối lượng của nhân viên trong khách sạn."
+      />
       <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
         <Form.Group controlId="dashboard-scope">
           <Form.Label>Phạm vi thống kê</Form.Label>
