@@ -7,7 +7,7 @@ Tài liệu này thay thiết kế API đề xuất cũ. Contract chính thức 
 
 | UC | FE kết nối |
 |---|---|
-| B1 | CRUD loại phòng, tiện nghi liên kết, URL ảnh tối đa 6, active |
+| B1 | CRUD loại phòng, tiện nghi liên kết, upload JPG/PNG hoặc nhập URL ảnh tối đa 6, active |
 | B2 | CRUD phòng vật lý, tầng âm/0, notes, active; không ghi trạng thái vận hành |
 | B3 | CRUD tiện nghi, active, mapper icon seed và giữ icon cũ |
 | B4 | Public search dùng stored procedure qua backend, không tính từ mock |
@@ -45,8 +45,22 @@ hiển thị tiền dùng formatter hiện có. Chỉ gửi whitelist trường 
 
 Backend availability trả DTO với availableRooms=0 khi hết chỗ; adapter đổi trường hợp này thành null
 để giữ hành vi UI. Inactive trả 410, không tồn tại 404, ngày sai 400; UI hiển thị message API.
-Ảnh/notes lưu DB sau migration được duyệt: xem `03_module_b_extensions.sql` trong tài liệu backend.
+Backend catalog hiện dùng Spring Data JPA. Database phải có notes và room_type_images trước khi khởi động;
+schema hoàn chỉnh đã chứa cả hai. Xem tài liệu backend nếu database còn dùng schema cũ.
 Khi backend chưa bật extension, ghi ảnh/notes bị từ chối 409, không báo thành công giả.
+
+## Upload ảnh
+
+Trong form loại phòng, chọn ảnh từ máy, chờ preview rồi bấm Lưu. Chỉ hiển thị upload khi dùng API repository.
+JPG/PNG, tối đa 5 MB mỗi ảnh và 6 ảnh tổng cộng (tính cả URL đang nhập).
+Client kiểm tra file trước khi gửi; backend kiểm tra nội dung ảnh thực, kích thước và quyền UC-B1.
+File được gửi trực tiếp qua axiosClient/JWT với Content-Type image/jpeg hoặc image/png đến
+`POST /inventory/admin/images`; kết quả `{url}` gắn vào mảng images hiện có.
+Ảnh được đọc public qua `/api/inventory/public/images/{name}`.
+Không cho lưu form trong lúc đang upload, hủy request khi đóng form; lỗi upload hiển thị tại form.
+Nếu upload nhiều file mà một file lỗi, các ảnh đã upload thành công vẫn ở preview.
+Binary ảnh nằm trong thư mục bền vững của backend; database lưu URL khi Lưu. Không có thay đổi schema.
+Xóa ảnh khỏi form không tự xóa file trên server. Cấu hình đường dẫn/URL server và giới hạn chi tiết xem tài liệu backend.
 
 ## Room Map và icon
 
