@@ -215,5 +215,107 @@ Có thể đặt qua biến môi trường, ví dụ `BOOKING_HOLD_MINUTES=30`.
 - Payload giữ đúng tên trường như bảng Request; ngày dạng `yyyy-MM-dd`.
 - Không gửi `customerId`, giá, cọc hoặc `hotelId`.
 - Response trả `id`/`bookingCode` để điều hướng sang trang chi tiết booking.
-- Hiện chưa có `GET /api/bookings/{code}`; trang chi tiết muốn đọc từ backend cần bổ sung
-  endpoint này ở bước tiếp theo.
+- Đã có `GET /api/bookings` và `GET /api/bookings/{bookingCode}` cho màn "Đặt phòng của tôi"
+  và trang chi tiết; xem mục cuối tài liệu.
+
+## 11. API đọc và hủy booking (bổ sung cho UC-C3 / UC-C6 / UC-C4)
+
+Ba endpoint dưới đây dùng chung một shape `BookingResponse` với `POST /api/bookings`,
+nên frontend chỉ cần một hàm map. Response có thêm hai trường cuối:
+
+| Trường | Kiểu | Ý nghĩa |
+| --- | --- | --- |
+| `cancelReason` | chuỗi / null | Lý do hủy do khách nhập |
+| `cancelledAt` | thời gian / null | Thời điểm hủy (UTC, không offset) |
+
+`depositPaid` giờ được tính từ `billing.payment_transactions` (tổng giao dịch
+`DEPOSIT` + `SUCCESS`), không còn luôn bằng 0 như response tạo booking.
+
+### 11.1 Danh sách của tôi
+
+| Thuộc tính | Giá trị |
+| --- | --- |
+| Method / path | `GET /api/bookings` |
+| Quyền | `UC-C3` |
+| Query | `page` (mặc định 0), `size` (1–100, mặc định 20), `status` (tuỳ chọn) |
+| Thành công | `200` + mảng `BookingResponse`, mới nhất trước |
+| Phạm vi | Chỉ booking có `customer_id` = user trong JWT |
+
+`status` nhận `PENDING`, `CONFIRMED`, `CHECKED_IN`, `CHECKED_OUT`, `CANCELLED`, `EXPIRED`;
+chuỗi rỗng nghĩa là không lọc. Sắp xếp `created_at DESC, booking_id DESC`, phân trang
+bằng `OFFSET/FETCH`.
+
+```bash
+curl "http://localhost:8080/api/bookings?page=0&size=20&status=PENDING" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+### 11.2 Chi tiết một booking
+
+| Thuộc tính | Giá trị |
+| --- | --- |
+| Method / path | `GET /api/bookings/{bookingCode}` |
+| Quyền | `UC-C6` (chủ booking) hoặc `UC-C5` (quản lý đặt phòng xem mọi booking) |
+| Thành công | `200` + `BookingResponse` |
+| Không tìm thấy / của người khác | `404 BOOKING_NOT_FOUND` |
+
+Trả 404 thay vì 403 khi booking thuộc khách khác để không xác nhận mã đặt phòng có tồn tại.
+
+### 11.3 Hủy booking
+
+| Thuộc tính | Giá trị |
+| --- | --- |
+| Method / path | `POST /api/bookings/{bookingCode}/cancel` |
+| Quyền | `UC-C4`, chỉ chủ booking |
+| Body | `{ "reason": "..." }` — tuỳ chọn, tối đa 1000 ký tự |
+| Thành công | `200` + `BookingResponse` ở trạng thái `CANCELLED` |
+| Transaction | `UPDATE` trạng thái + ghi `booking_status_history` trong một transaction |
+
+Quy tắc:
+
+- Chỉ hủy được `PENDING` hoặc `CONFIRMED`; trạng thái khác trả `409 BOOKING_NOT_CANCELLABLE`.
+- `UPDATE` có điều kiện `status IN ('PENDING','CONFIRMED')`; nếu một luồng khác
+  (thanh toán, lễ tân) vừa đổi trạng thái, số dòng cập nhật = 0 và trả
+  `409 BOOKING_CANCEL_CONFLICT` — không ghi đè trạng thái mới.
+- Ghi `cancel_reason`, `cancelled_at`, `updated_at` và một dòng history
+  `old_status → CANCELLED`, `changed_by` = customerId, note = `Khách hủy: <lý do>`
+  (hoặc `Khách hủy đặt phòng` nếu không nhập lý do).
+
+```bash
+curl -X POST "http://localhost:8080/api/bookings/BK-33B7AD6A0B7844A8A450E587/cancel" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary '{"reason":"Đổi kế hoạch"}'
+```
+
+### 11.4 Mã lỗi bổ sung
+
+| HTTP | `code` | Khi nào |
+| --- | --- | --- |
+| 400 | `BOOKING_INVALID_PAGE` | `page` âm hoặc quá lớn |
+| 400 | `BOOKING_INVALID_PAGE_SIZE` | `size` ngoài 1–100 |
+| 400 | `BOOKING_INVALID_STATUS` | `status` không thuộc danh sách cho phép |
+| 400 | `BOOKING_CODE_REQUIRED` | Path thiếu mã đặt phòng |
+| 400 | `BOOKING_CANCEL_REASON_TOO_LONG` | Lý do hủy quá 1000 ký tự |
+| 404 | `BOOKING_NOT_FOUND` | Không có booking hoặc không thuộc khách hiện tại |
+| 409 | `BOOKING_NOT_CANCELLABLE` | Booking đã check-in/check-out/hủy/hết hạn |
+| 409 | `BOOKING_CANCEL_CONFLICT` | Trạng thái vừa bị luồng khác đổi trước khi UPDATE |
+
+### 11.5 Kiểm chứng
+
+- Unit/integration: `BookingQueryServiceTests` (12 test), `BookingApiSecurityTests` (14 test),
+  `BookingServiceTests` (9 test) — toàn bộ 35 test pass.
+- E2E với SQL Server (`HotelManagement_SBA_booking_test`, JWT tự sinh cho user 5):
+  `GET /api/bookings` trả 6 booking, tổng tiền/`depositPaid`/loại phòng/phòng vật lý đúng;
+  lọc `status=PENDING&size=2` trả 2 bản ghi; `page=1&size=4` trả trang kế tiếp;
+  `size=101` → 400; `status=DONE` → 400; `GET` chi tiết → 200; mã không tồn tại → 404;
+  `POST` tạo booking → 201; hủy → 200 kèm `cancelReason` tiếng Việt đúng; hủy lần hai → 409.
+  Dữ liệu test đã được xoá sau khi kiểm chứng.
+
+### 11.6 Frontend cần lưu ý
+
+- Trạng thái hoàn tất trong DB là `CHECKED_OUT`, còn mock frontend đang dùng `COMPLETED`;
+  khi nối API cần map `CHECKED_OUT → COMPLETED` (hoặc đổi nhãn hiển thị).
+- `rooms` trong response là số phòng vật lý thực tế; `pricePerNight` là trung bình theo
+  `nightly_rate` đã lưu, không phải giá hiện tại của loại phòng.
+- Hủy booking không hoàn tiền tự động; hoàn cọc thuộc luồng billing (Module D) chưa nối.

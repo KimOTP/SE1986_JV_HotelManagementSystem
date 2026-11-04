@@ -161,7 +161,9 @@ public class BookingService {
                 request.specialRequests(),
                 assignedRooms.stream()
                         .map(room -> new BookingResponse.AssignedRoom(room.roomId(), room.roomNumber()))
-                        .toList()
+                        .toList(),
+                null,
+                null
         );
     }
 

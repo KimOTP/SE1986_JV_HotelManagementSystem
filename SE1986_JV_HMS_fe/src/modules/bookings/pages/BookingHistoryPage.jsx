@@ -1,112 +1,379 @@
-import { useState } from 'react';
-import { Alert, Button, Form, Table } from 'react-bootstrap';
-import { Link } from 'react-router';
+import { useMemo, useState } from 'react';
+import { Button, Form, Pagination } from 'react-bootstrap';
+import {
+  ArrowRepeat,
+  Calendar3,
+  CalendarCheck,
+  CalendarPlus,
+  CheckCircle,
+  DoorOpen,
+  HourglassSplit,
+  MoonStars,
+  People,
+  Search,
+  XCircle,
+} from 'react-bootstrap-icons';
+import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
-import PageHeading from '../components/PageHeading';
 import { DEMO_BOOKING_CUSTOMER_KEY, getBookings } from '../mocks/bookingStore';
-import { BOOKING_STATUS, displayDate, money } from '../utils/bookingUtils';
+import {
+  BOOKING_GROUPS,
+  bookingGroup,
+  canCancelBooking,
+  displayDate,
+  isDepositSettled,
+  money,
+  nightsBetween,
+} from '../utils/bookingUtils';
+import '../styles/booking-history.css';
+
+const PAGE_SIZE = 5;
+const GROUP_ORDER = { UPCOMING: 0, CURRENT: 1, PAST: 2, CANCELLED: 3 };
+const GROUP_ICONS = {
+  ALL: CalendarCheck,
+  UPCOMING: HourglassSplit,
+  CURRENT: MoonStars,
+  PAST: CheckCircle,
+  CANCELLED: XCircle,
+};
+
+const compareBookings = (first, second) => {
+  const firstGroup = GROUP_ORDER[bookingGroup(first)];
+  const secondGroup = GROUP_ORDER[bookingGroup(second)];
+  if (firstGroup !== secondGroup) {
+    return firstGroup - secondGroup;
+  }
+  // Đơn sắp tới: gần ngày nhận phòng trước. Các nhóm còn lại: mới nhất trước.
+  return firstGroup === GROUP_ORDER.UPCOMING
+    ? first.checkIn.localeCompare(second.checkIn)
+    : second.checkIn.localeCompare(first.checkIn);
+};
+
+function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
+  const nights = nightsBetween(booking.checkIn, booking.checkOut);
+
+  return (
+    <li className="bh-item">
+      <div className="bh-item__main">
+        <span className="bh-item__thumb">
+          <DoorOpen aria-hidden="true" />
+        </span>
+        <div className="bh-item__identity">
+          <div className="bh-item__code">{booking.id}</div>
+          <div className="bh-item__type">
+            {booking.roomTypeName || 'Đang cập nhật'} · {booking.rooms || 1} phòng
+            {showCustomer && booking.customerName ? ` · ${booking.customerName}` : ''}
+          </div>
+          <div className="bh-item__status">
+            <BookingStatus status={booking.status} />
+          </div>
+        </div>
+      </div>
+
+      <div className="bh-item__dates">
+        <span className="bh-item__date">
+          <Calendar3 aria-hidden="true" />
+          {displayDate(booking.checkIn)} – {displayDate(booking.checkOut)}
+        </span>
+        <span className="bh-item__meta">
+          {nights} đêm
+          <span aria-hidden="true">·</span>
+          <People aria-hidden="true" />
+          {booking.guests} khách
+        </span>
+      </div>
+
+      <div className="bh-item__amount">
+        <span className="bh-item__total">{money(booking.totalAmount)}</span>
+        <span className="bh-item__deposit">
+          Cọc {money(booking.depositRequired)} ·{' '}
+          {isDepositSettled(booking) ? 'đã thu' : 'chưa thu'}
+        </span>
+      </div>
+
+      <div className="bh-item__side">
+        <div className="bh-item__actions">
+          {booking.status === 'PENDING' && canPayDeposit && (
+            <Link
+              className="btn btn-sm btn-primary"
+              to={`/bookings/deposit?bookingId=${booking.id}`}
+            >
+              Thanh toán cọc
+            </Link>
+          )}
+          <Link
+            className="btn btn-sm btn-outline-primary"
+            to={`/bookings/${booking.id}`}
+          >
+            Chi tiết
+          </Link>
+          {canCancel && canCancelBooking(booking) && (
+            <Link
+              className="btn btn-sm btn-outline-danger"
+              to={`/bookings/${booking.id}/cancel`}
+            >
+              Hủy
+            </Link>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
 
 export default function BookingHistoryPage() {
   const { role, hasPermission } = useAuth();
   const canManageBookings = hasPermission('UC-C5');
   const canCreateBooking = hasPermission('UC-C1');
+  const canSearchRooms = hasPermission('UC-B4');
+  const canPayDeposit = hasPermission('UC-C2');
+  const canCancel = hasPermission('UC-C4');
+
   const [bookings, setBookings] = useState(() => getBookings());
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const visible = canManageBookings
-    ? bookings
-    : bookings.filter((booking) => booking.customerKey === DEMO_BOOKING_CUSTOMER_KEY);
-  const filtered = visible.filter(
-    (booking) => statusFilter === 'ALL' || booking.status === statusFilter,
-  );
+  const [params, setParams] = useSearchParams();
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
+
+  const rawGroup = params.get('status') || 'ALL';
+  const groupFilter = BOOKING_GROUPS.some((group) => group.key === rawGroup)
+    ? rawGroup
+    : 'ALL';
   const isCustomerView = role === 'CUSTOMER' || !canManageBookings;
 
+  const visible = useMemo(
+    () =>
+      canManageBookings
+        ? bookings
+        : bookings.filter(
+            (booking) => booking.customerKey === DEMO_BOOKING_CUSTOMER_KEY,
+          ),
+    [bookings, canManageBookings],
+  );
+
+  const counts = useMemo(() => {
+    const result = { ALL: visible.length };
+    BOOKING_GROUPS.forEach((group) => {
+      result[group.key] = 0;
+    });
+    visible.forEach((booking) => {
+      result[bookingGroup(booking)] += 1;
+    });
+    return result;
+  }, [visible]);
+
+  const filtered = useMemo(() => {
+    const text = query.trim().toLowerCase();
+    return visible
+      .filter((booking) => groupFilter === 'ALL' || bookingGroup(booking) === groupFilter)
+      .filter((booking) => !text || booking.id.toLowerCase().includes(text))
+      .sort(compareBookings);
+  }, [visible, groupFilter, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const selectGroup = (key) => {
+    setPage(1);
+    setParams(key === 'ALL' ? {} : { status: key }, { replace: true });
+  };
+
+  const clearFilters = () => {
+    setQuery('');
+    setPage(1);
+    setParams({}, { replace: true });
+  };
+
+  const reload = () => {
+    setBookings(getBookings());
+    setPage(1);
+  };
+
   return (
-    <div className="bookings-module booking-page">
-      <PageHeading
-        title="Đặt phòng của tôi"
-        description="Theo dõi trạng thái và lịch sử các lần đặt phòng."
-        actions={canCreateBooking && (
-          <Button as={Link} to="/bookings/new">
-            Tạo đặt phòng
-          </Button>
-        )}
-      />
+    <div className="bookings-module bh-page">
+      <header className="hms-page-head">
+        <div className="hms-page-head__main">
+          <span className="hms-page-head__icon">
+            <CalendarCheck aria-hidden="true" />
+          </span>
+          <div>
+            <h1 className="hms-page-head__title">Đặt phòng của tôi</h1>
+            <p className="hms-page-head__desc">
+              Theo dõi trạng thái và lịch sử các lần đặt phòng.
+            </p>
+          </div>
+        </div>
+
+        <div className="bh-head-actions">
+          {canSearchRooms && (
+            <Button as={Link} to="/rooms" variant="outline-primary">
+              Tìm phòng
+            </Button>
+          )}
+          {canCreateBooking && (
+            <Button as={Link} to="/bookings/new">
+              <CalendarPlus aria-hidden="true" />
+              Tạo đặt phòng
+            </Button>
+          )}
+        </div>
+      </header>
+
       {isCustomerView && (
-        <Alert variant="info">
-          Đang hiển thị dữ liệu khách demo trên trình duyệt này. Chưa kết nối tài khoản hoặc
-          backend.
-        </Alert>
+        <div className="bh-demo-note">
+          <span className="bh-demo-note__icon">
+            <CalendarCheck aria-hidden="true" />
+          </span>
+          <span>
+            Đang hiển thị dữ liệu khách demo trên trình duyệt này — chưa kết nối
+            tài khoản hoặc backend.
+          </span>
+        </div>
       )}
-      <div className="booking-list-toolbar">
-        <Form.Select
-          className="booking-filter-select"
-          aria-label="Lọc trạng thái đặt phòng"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
+
+      <section className="bh-stats" aria-label="Tóm tắt đặt phòng theo trạng thái">
+        {[
+          { key: 'ALL', label: 'Tất cả đặt phòng' },
+          ...BOOKING_GROUPS.map((group) => ({
+            key: group.key,
+            label: group.label,
+          })),
+        ].map((item) => {
+          const Icon = GROUP_ICONS[item.key];
+          const active = groupFilter === item.key;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`bh-stat${active ? ' is-active' : ''}`}
+              onClick={() => selectGroup(item.key)}
+              aria-pressed={active}
+            >
+              <span className="bh-stat__icon">
+                <Icon aria-hidden="true" />
+              </span>
+              <span className="bh-stat__body">
+                <span className="bh-stat__value">{counts[item.key]}</span>
+                <span className="bh-stat__label">{item.label}</span>
+              </span>
+            </button>
+          );
+        })}
+      </section>
+
+      <div className="bh-toolbar">
+        <div className="bh-search">
+          <Search className="bh-search__icon" aria-hidden="true" />
+          <Form.Control
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Tìm theo mã đặt phòng (VD: BK-2601)"
+            aria-label="Tìm theo mã đặt phòng"
+          />
+        </div>
+
+        {(query || groupFilter !== 'ALL') && (
+          <button type="button" className="bh-clear" onClick={clearFilters}>
+            Xóa bộ lọc
+          </button>
+        )}
+
+        <span className="bh-result-meta" aria-live="polite">
+          {filtered.length} đặt phòng
+        </span>
+
+        <button
+          type="button"
+          className="bh-reload"
+          onClick={reload}
+          title="Tải lại dữ liệu demo"
         >
-          <option value="ALL">Tất cả trạng thái</option>
-          {Object.entries(BOOKING_STATUS).map(([value, item]) => (
-            <option key={value} value={value}>
-              {item.label}
-            </option>
-          ))}
-        </Form.Select>
+          <ArrowRepeat aria-hidden="true" />
+          <span className="d-none d-sm-inline">Tải lại</span>
+        </button>
       </div>
-      <div className="booking-table-wrap">
-        <Table hover className="booking-table align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Mã đặt phòng</th>
-              <th>Loại phòng</th>
-              {!isCustomerView && <th>Khách hàng</th>}
-              <th>Ngày lưu trú</th>
-              <th className="text-end">Tổng tiền</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={isCustomerView ? 6 : 7} className="booking-empty">
-                  Chưa có đặt phòng phù hợp.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((booking) => (
-                <tr key={booking.id}>
-                  <td className="fw-semibold">{booking.id}</td>
-                  <td>
-                    {booking.roomTypeName} <span className="text-muted">× {booking.rooms}</span>
-                  </td>
-                  {!isCustomerView && <td>{booking.customerName}</td>}
-                  <td>
-                    {displayDate(booking.checkIn)} – {displayDate(booking.checkOut)}
-                  </td>
-                  <td className="text-end">{money(booking.totalAmount)}</td>
-                  <td>
-                    <BookingStatus status={booking.status} />
-                  </td>
-                  <td>
-                    <Button
-                      as={Link}
-                      to={`/bookings/${booking.id}`}
-                      size="sm"
-                      variant="outline-primary"
-                    >
-                      Chi tiết
-                    </Button>
-                  </td>
-                </tr>
-              ))
+
+      {filtered.length === 0 ? (
+        <div className="bh-empty">
+          <span className="bh-empty__icon">
+            <CalendarCheck aria-hidden="true" />
+          </span>
+          <h2 className="bh-empty__title">
+            {query
+              ? 'Không tìm thấy đặt phòng'
+              : groupFilter !== 'ALL'
+                ? 'Không có đặt phòng trong nhóm này'
+                : 'Chưa có đặt phòng nào'}
+          </h2>
+          <p className="bh-empty__desc">
+            {query
+              ? `Không có mã đặt phòng nào khớp với “${query}”.`
+              : groupFilter !== 'ALL'
+                ? 'Thử chọn nhóm trạng thái khác hoặc xóa bộ lọc để xem toàn bộ đặt phòng.'
+                : 'Bạn chưa có đặt phòng. Hãy tìm phòng phù hợp để bắt đầu kỳ nghỉ.'}
+          </p>
+          <div className="bh-empty__actions">
+            {(query || groupFilter !== 'ALL') && (
+              <Button variant="outline-primary" onClick={clearFilters}>
+                Xóa bộ lọc
+              </Button>
             )}
-          </tbody>
-        </Table>
-      </div>
-      <Button variant="link" onClick={() => setBookings(getBookings())} className="px-0 mt-2">
-        Tải lại dữ liệu demo
-      </Button>
+            {canSearchRooms && (
+              <Button as={Link} to="/rooms">
+                Tìm phòng
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <ul className="bh-list">
+            {pageItems.map((booking) => (
+              <BookingRow
+                key={booking.id}
+                booking={booking}
+                canPayDeposit={canPayDeposit}
+                canCancel={canCancel}
+                showCustomer={!isCustomerView}
+              />
+            ))}
+          </ul>
+
+          {totalPages > 1 && (
+            <div className="bh-pagination-wrap">
+              <Pagination className="bh-pagination mb-0">
+                <Pagination.Prev
+                  disabled={currentPage === 1}
+                  onClick={() => setPage(currentPage - 1)}
+                />
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                  (pageNumber) => (
+                    <Pagination.Item
+                      key={pageNumber}
+                      active={pageNumber === currentPage}
+                      onClick={() => setPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </Pagination.Item>
+                  ),
+                )}
+                <Pagination.Next
+                  disabled={currentPage === totalPages}
+                  onClick={() => setPage(currentPage + 1)}
+                />
+              </Pagination>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -328,6 +328,16 @@
   color: #4b5563;
 }
 
+.bookings-module .booking-status.is-checked-in {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.bookings-module .booking-status.is-expired {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 /* Timeline */
 .bookings-module .booking-timeline {
   display: grid;

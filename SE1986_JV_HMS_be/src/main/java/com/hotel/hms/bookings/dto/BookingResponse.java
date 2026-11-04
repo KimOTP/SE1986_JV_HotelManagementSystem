@@ -36,7 +36,9 @@ public record BookingResponse(
         String email,
         String phone,
         String specialRequests,
-        List<AssignedRoom> assignedRooms
+        List<AssignedRoom> assignedRooms,
+        String cancelReason,
+        LocalDateTime cancelledAt
 ) {
     public record AssignedRoom(Long roomId, String roomNumber) {
     }

@@ -1,9 +1,54 @@
 export const BOOKING_STATUS = {
   PENDING: { label: 'Chờ thanh toán', className: 'is-pending' },
+  DEPOSITED: { label: 'Đã đặt cọc', className: 'is-confirmed' },
   CONFIRMED: { label: 'Đã xác nhận', className: 'is-confirmed' },
-  CANCELLED: { label: 'Đã hủy', className: 'is-cancelled' },
+  CHECKED_IN: { label: 'Đang lưu trú', className: 'is-checked-in' },
   COMPLETED: { label: 'Đã hoàn tất', className: 'is-completed' },
+  CHECKED_OUT: { label: 'Đã trả phòng', className: 'is-completed' },
+  CANCELLED: { label: 'Đã hủy', className: 'is-cancelled' },
+  EXPIRED: { label: 'Hết hạn giữ chỗ', className: 'is-expired' },
 };
+
+// Nhóm trạng thái theo UC-2.6 View Booking History (Upcoming / Current / Past / Cancelled).
+export const BOOKING_GROUPS = [
+  { key: 'UPCOMING', label: 'Sắp tới', hint: 'Đã đặt, chưa tới ngày nhận phòng' },
+  { key: 'CURRENT', label: 'Đang lưu trú', hint: 'Đang trong thời gian lưu trú' },
+  { key: 'PAST', label: 'Đã qua', hint: 'Đã trả phòng hoặc hoàn tất' },
+  { key: 'CANCELLED', label: 'Đã hủy', hint: 'Đã hủy hoặc hết hạn giữ chỗ' },
+];
+
+const CANCELLED_STATUSES = ['CANCELLED', 'EXPIRED'];
+const PAST_STATUSES = ['COMPLETED', 'CHECKED_OUT'];
+
+/**
+ * Xếp một booking vào nhóm hiển thị. Trạng thái trong DB là nguồn chính; với
+ * booking đã xác nhận nhưng hôm nay nằm trong khoảng lưu trú thì coi là đang ở.
+ */
+export const bookingGroup = (booking) => {
+  const status = booking?.status;
+  if (CANCELLED_STATUSES.includes(status)) return 'CANCELLED';
+  if (PAST_STATUSES.includes(status)) return 'PAST';
+  if (status === 'CHECKED_IN') return 'CURRENT';
+
+  const checkIn = booking?.checkIn;
+  const checkOut = booking?.checkOut;
+  const currentDay = today();
+  if (checkIn && checkOut && checkIn <= currentDay && currentDay < checkOut) {
+    return 'CURRENT';
+  }
+  return 'UPCOMING';
+};
+
+/**
+ * BR-CAN-03: booking đã check-in hoặc đã hoàn tất không được hủy. Chỉ PENDING,
+ * DEPOSITED (CONFIRMED) mới hủy được.
+ */
+export const canCancelBooking = (booking) =>
+  ['PENDING', 'DEPOSITED', 'CONFIRMED'].includes(booking?.status);
+
+export const isDepositSettled = (booking) =>
+  Number(booking?.depositRequired || 0) > 0 &&
+  Number(booking?.depositPaid || 0) >= Number(booking?.depositRequired || 0);
 
 export const money = (value) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
