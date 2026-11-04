@@ -1,0 +1,645 @@
+/* ==========================================================================
+   HMS shell — header / sidebar / footer
+   Bám theo mockup: header navy, sidebar trắng có promo card, footer navy
+   có skyline. Toàn bộ token đặt ở :root để đổi theme một chỗ.
+   ========================================================================== */
+
+:root {
+  --hms-navy: #0a2540;
+  --hms-navy-soft: #10345a;
+  --hms-navy-line: rgba(255, 255, 255, 0.16);
+  --hms-blue: #1a73e8;
+  --hms-blue-strong: #1558c0;
+  --hms-blue-soft: #e8f0fe;
+  --hms-ink: #1f3350;
+  --hms-muted: #66788f;
+  --hms-border: #e3e9f2;
+  --hms-page: #f5f7fb;
+  --hms-gold: #f2c14e;
+  --hms-header-h: 60px;
+  --hms-sidebar-w: 232px;
+  --hms-shadow-sm: 0 1px 2px rgba(15, 35, 60, 0.06);
+  --hms-shadow-md: 0 10px 28px rgba(10, 37, 64, 0.12);
+}
+
+/* ---------- Shell ---------------------------------------------------------- */
+
+.hms-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--hms-page);
+}
+
+.hms-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Vùng cuộn duy nhất: nội dung trang + footer. */
+.hms-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.hms-main {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 1.5rem;
+  background: var(--hms-page);
+}
+
+/* ---------- Header --------------------------------------------------------- */
+
+.hms-header {
+  flex: 0 0 var(--hms-header-h);
+  height: var(--hms-header-h);
+  background: var(--hms-navy);
+  color: #fff;
+  z-index: 1030;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.hms-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 100%;
+  padding: 0 1.5rem;
+}
+
+.hms-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #fff;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.hms-brand:hover,
+.hms-brand:focus-visible {
+  color: #fff;
+}
+
+.hms-brand__logo {
+  width: 38px;
+  height: 38px;
+  display: block;
+}
+
+.hms-brand__text {
+  line-height: 1.1;
+}
+
+.hms-header__divider {
+  width: 1px;
+  height: 26px;
+  background: var(--hms-navy-line);
+  flex: 0 0 auto;
+}
+
+/* User block */
+.hms-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.hms-user__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.86rem;
+}
+
+.hms-user__toggle:hover,
+.hms-user__toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.hms-user__name {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hms-user__caret {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}
+
+.hms-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #4f9bff, #1a73e8);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.22);
+}
+
+.hms-user-menu {
+  min-width: 230px;
+  margin-top: 0.5rem !important;
+  border: 1px solid var(--hms-border);
+  border-radius: 12px;
+  box-shadow: var(--hms-shadow-md);
+  padding: 0.4rem;
+}
+
+.hms-user-menu__head {
+  padding: 0.5rem 0.65rem 0.6rem;
+  border-bottom: 1px solid var(--hms-border);
+  margin-bottom: 0.35rem;
+}
+
+.hms-user-menu__name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--hms-ink);
+}
+
+.hms-user-menu__email {
+  font-size: 0.75rem;
+  color: var(--hms-muted);
+  word-break: break-all;
+}
+
+.hms-user-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  color: var(--hms-ink);
+}
+
+.hms-user-menu .dropdown-item:hover,
+.hms-user-menu .dropdown-item:focus {
+  background: var(--hms-blue-soft);
+  color: var(--hms-blue-strong);
+}
+
+.hms-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.84rem;
+}
+
+.hms-icon-btn:hover,
+.hms-icon-btn:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hms-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.hms-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.hms-login-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 8px;
+  background: var(--hms-blue);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hms-login-btn:hover {
+  background: #2f83f0;
+  color: #fff;
+}
+
+/* ---------- Sidebar -------------------------------------------------------- */
+
+.hms-sidebar-col {
+  flex: 0 0 var(--hms-sidebar-w);
+  width: var(--hms-sidebar-w);
+  height: 100%;
+  background: #fff;
+  border-right: 1px solid var(--hms-border);
+  overflow: hidden;
+}
+
+.hms-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  height: 100%;
+  padding: 1rem 0.7rem 1.15rem;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.hms-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.hms-sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.hms-sidebar__section + .hms-sidebar__section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hms-border);
+}
+
+/* Tiêu đề nhóm không bấm được: chỉ để phân khu, không có hover/focus. */
+.hms-sidebar__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0.35rem 0.7rem 0.45rem;
+  color: var(--hms-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  cursor: default;
+  user-select: none;
+}
+
+.hms-sidebar__heading .hms-sidebar__icon {
+  opacity: 0.65;
+}
+
+.hms-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+  color: #3d4f68;
+  font-size: 0.855rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.hms-sidebar__link:hover,
+.hms-sidebar__link:focus-visible {
+  background: #f2f6fc;
+  color: #12233d;
+}
+
+.hms-sidebar__link.is-active {
+  background: var(--hms-blue-soft);
+  color: var(--hms-blue);
+  font-weight: 600;
+}
+
+.hms-sidebar__icon {
+  flex: 0 0 1.05rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  opacity: 0.8;
+}
+
+.hms-sidebar__link.is-active .hms-sidebar__icon {
+  opacity: 1;
+}
+
+/* Ảnh minh hoạ bám đáy sidebar (chỉ ảnh, không kèm caption). */
+.hms-sidebar__promo {
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+.hms-sidebar__promo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 10px 22px rgba(10, 37, 64, 0.14);
+}
+
+.hms-offcanvas {
+  width: var(--hms-sidebar-w) !important;
+}
+
+.hms-offcanvas__head {
+  border-bottom: 1px solid var(--hms-border);
+  padding: 0.9rem 1rem;
+}
+
+.hms-offcanvas__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--hms-ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- Footer --------------------------------------------------------- */
+
+.hms-footer {
+  flex: 0 0 auto;
+  background: var(--hms-navy);
+  color: #a9b8cc;
+  font-size: 0.85rem;
+}
+
+.hms-footer__main {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 2.2fr);
+  gap: 2.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 2rem;
+}
+
+.hms-footer__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #fff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hms-footer__logo:hover,
+.hms-footer__logo:focus-visible {
+  color: #fff;
+}
+
+.hms-footer__logo img {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.hms-footer__tagline {
+  max-width: 300px;
+  margin: 0.85rem 0 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #93a6bd;
+}
+
+.hms-footer__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.15rem;
+}
+
+.hms-footer__badge {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #c8d4e3;
+}
+
+.hms-footer__social {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.hms-footer__social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6edf7;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.hms-footer__social a:hover,
+.hms-footer__social a:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.hms-footer__columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.hms-footer__col-title {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.hms-footer__col ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.62rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hms-footer__col a {
+  color: #a9b8cc;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.hms-footer__col a:hover,
+.hms-footer__col a:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.hms-footer__bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hms-footer__bottom-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  font-size: 0.78rem;
+  color: #93a6bd;
+}
+
+/* ---------- Shared page pieces -------------------------------------------- */
+
+.hms-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.hms-page-head__main {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.hms-page-head__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--hms-blue-soft);
+  color: var(--hms-blue);
+  font-size: 1.3rem;
+}
+
+.hms-page-head__title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--hms-ink);
+  letter-spacing: -0.01em;
+}
+
+.hms-page-head__desc {
+  margin: 0.2rem 0 0;
+  color: var(--hms-muted);
+  font-size: 0.875rem;
+}
+
+.hms-panel {
+  background: #fff;
+  border: 1px solid var(--hms-border);
+  border-radius: 14px;
+  box-shadow: var(--hms-shadow-sm);
+}
+
+.hms-panel__body {
+  padding: 1.25rem;
+}
+
+/* ---------- Responsive ----------------------------------------------------- */
+
+@media (max-width: 1199.98px) {
+  .hms-user__name {
+    max-width: 130px;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .hms-header__inner {
+    padding: 0 1rem;
+  }
+
+  .hms-main {
+    padding: 1rem;
+  }
+
+  .hms-brand__text {
+    font-size: 0.92rem;
+  }
+
+  .hms-footer__main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+    padding: 2rem 1.25rem 1.5rem;
+  }
+
+  .hms-footer__columns {
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hms-header__inner {
+    gap: 0.6rem;
+  }
+
+  .hms-brand__text {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hms-footer__columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hms-footer__bottom-inner {
+    justify-content: center;
+    text-align: center;
+    padding: 0.9rem 1rem;
+  }
+}
