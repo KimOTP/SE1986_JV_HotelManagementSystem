@@ -25,7 +25,50 @@
   background-color: var(--bs-light-bg-subtle);
 }
 
+.operations-report-form {
+  padding: 1.5rem;
+}
+
+.operations-report-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.25rem 1.5rem;
+  min-width: 0;
+}
+
+.operations-report-fields > * {
+  min-width: 0;
+}
+
+.operations-report-description {
+  grid-column: 1 / -1;
+}
+
+.operations-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--bs-border-color);
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .operations-report-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 575.98px) {
+  .operations-report-form {
+    padding: 1rem;
+  }
+
+  .operations-report-actions > .btn {
+    flex: 1 1 auto;
+  }
+
   .operations-page-heading__actions {
     width: 100%;
   }
