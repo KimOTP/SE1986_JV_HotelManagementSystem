@@ -3,6 +3,8 @@ package com.hotel.hms.bookings.controller;
 import com.hotel.hms.bookings.dto.BookingResponse;
 import com.hotel.hms.bookings.dto.CancelBookingRequest;
 import com.hotel.hms.bookings.dto.CreateBookingRequest;
+import com.hotel.hms.bookings.dto.PayDepositRequest;
+import com.hotel.hms.bookings.service.BookingDepositService;
 import com.hotel.hms.bookings.service.BookingQueryService;
 import com.hotel.hms.bookings.service.BookingService;
 import com.hotel.hms.common.exception.ApiException;
@@ -29,10 +31,14 @@ public class BookingController {
 
     private final BookingService service;
     private final BookingQueryService queryService;
+    private final BookingDepositService depositService;
 
-    public BookingController(BookingService service, BookingQueryService queryService) {
+    public BookingController(BookingService service,
+                             BookingQueryService queryService,
+                             BookingDepositService depositService) {
         this.service = service;
         this.queryService = queryService;
+        this.depositService = depositService;
     }
 
     /**
@@ -91,6 +97,19 @@ public class BookingController {
         requireUser(currentUser);
         return queryService.cancel(currentUser.getId(), bookingCode,
                 request == null ? null : request.reason());
+    }
+
+    /**
+     * UC-2.5 / UC-C2 – thanh toán tiền cọc trực tuyến cho booking PENDING.
+     * Chỉ nhận BANK_TRANSFER, CREDIT_CARD hoặc E_WALLET.
+     */
+    @PostMapping("/{bookingCode}/deposit")
+    @PreAuthorize("hasAuthority('UC-C2')")
+    public BookingResponse payDeposit(@AuthenticationPrincipal AuthUserDetails currentUser,
+                                      @PathVariable String bookingCode,
+                                      @Valid @RequestBody PayDepositRequest request) {
+        requireUser(currentUser);
+        return depositService.payDeposit(currentUser.getId(), bookingCode, request.method());
     }
 
     private static void requireUser(AuthUserDetails currentUser) {

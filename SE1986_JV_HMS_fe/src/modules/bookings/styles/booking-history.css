@@ -259,7 +259,21 @@
 }
 
 .bh-item__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
   margin-top: 0.4rem;
+}
+
+.bh-item__hold {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.bh-item__hold.is-expired {
+  color: #b91c1c;
 }
 
 .bh-item__dates {

@@ -3,6 +3,7 @@ package com.hotel.hms.bookings;
 import com.hotel.hms.bookings.controller.BookingController;
 import com.hotel.hms.bookings.dto.BookingResponse;
 import com.hotel.hms.bookings.dto.CreateBookingRequest;
+import com.hotel.hms.bookings.service.BookingDepositService;
 import com.hotel.hms.bookings.service.BookingQueryService;
 import com.hotel.hms.bookings.service.BookingService;
 import com.hotel.hms.common.exception.GlobalExceptionHandler;
@@ -85,8 +86,15 @@ class BookingApiSecurityTests {
         }
 
         @Bean
-        BookingController controller(BookingService service, BookingQueryService queryService) {
-            return new BookingController(service, queryService);
+        BookingDepositService depositService() {
+            return mock(BookingDepositService.class);
+        }
+
+        @Bean
+        BookingController controller(BookingService service,
+                                     BookingQueryService queryService,
+                                     BookingDepositService depositService) {
+            return new BookingController(service, queryService, depositService);
         }
 
         @Bean
@@ -104,11 +112,14 @@ class BookingApiSecurityTests {
     @Autowired
     private BookingQueryService queryService;
 
+    @Autowired
+    private BookingDepositService depositService;
+
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        reset(service, queryService);
+        reset(service, queryService, depositService);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
 
@@ -291,6 +302,54 @@ class BookingApiSecurityTests {
         verify(queryService).cancel(5L, "BK-TEST", null);
     }
 
+    @Test
+    void anonymousCannotPayDeposit() throws Exception {
+        mvc.perform(post("/api/bookings/BK-TEST/deposit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"BANK_TRANSFER\"}"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(depositService);
+    }
+
+    @Test
+    void payDepositWithoutUcC2IsForbidden() throws Exception {
+        mvc.perform(post("/api/bookings/BK-TEST/deposit")
+                        .with(auth(5L, "UC-C3"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"BANK_TRANSFER\"}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(depositService);
+    }
+
+    @Test
+    void customerPaysDepositWithUcC2() throws Exception {
+        when(depositService.payDeposit(5L, "BK-TEST", "CREDIT_CARD"))
+                .thenReturn(confirmedResponse());
+
+        mvc.perform(post("/api/bookings/BK-TEST/deposit")
+                        .with(auth(5L, "UC-C2"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"CREDIT_CARD\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.depositPaid").value(480000.00));
+
+        verify(depositService).payDeposit(5L, "BK-TEST", "CREDIT_CARD");
+    }
+
+    @Test
+    void payDepositRejectsBlankMethodBeforeServiceRuns() throws Exception {
+        mvc.perform(post("/api/bookings/BK-TEST/deposit")
+                        .with(auth(5L, "UC-C2"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"method\":\"  \"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(depositService);
+    }
+
     private static String validBody() {        return """
                 {
                   "roomTypeId": 2,
@@ -318,6 +377,19 @@ class BookingApiSecurityTests {
                 List.of(new BookingResponse.AssignedRoom(4L, "201")),
                 null, null
         );
+    }
+
+    private static BookingResponse confirmedResponse() {
+        BookingResponse created = response();
+        return new BookingResponse(
+                created.bookingId(), created.id(), created.bookingCode(), created.customerId(),
+                created.hotelId(), created.roomTypeId(), created.roomTypeName(),
+                created.checkIn(), created.checkOut(), created.nights(), created.guests(),
+                created.rooms(), created.pricePerNight(), created.totalAmount(),
+                created.depositRequired(), created.depositRequired(), "CONFIRMED",
+                created.holdExpiresAt(), created.createdAt(), created.customerName(),
+                created.email(), created.phone(), created.specialRequests(),
+                created.assignedRooms(), null, null);
     }
 
     private static BookingResponse cancelledResponse() {

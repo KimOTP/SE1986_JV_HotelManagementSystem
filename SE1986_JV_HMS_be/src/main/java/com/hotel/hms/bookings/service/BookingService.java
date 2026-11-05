@@ -46,7 +46,7 @@ public class BookingService {
     private final ZoneId hotelZone;
 
     public BookingService(BookingCreationRepository repository,
-                          @Value("${booking.hold-minutes:30}") long holdMinutes,
+                          @Value("${booking.hold-minutes:15}") long holdMinutes,
                           @Value("${frontdesk.hotel-zone:Asia/Ho_Chi_Minh}") String hotelZone) {
         this.repository = repository;
         this.holdMinutes = holdMinutes;

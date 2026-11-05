@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Form, Pagination } from 'react-bootstrap';
 import {
   ArrowRepeat,
@@ -22,7 +22,10 @@ import {
   bookingGroup,
   canCancelBooking,
   displayDate,
+  formatHoldTime,
+  holdRemainingSeconds,
   isDepositSettled,
+  isHoldExpired,
   money,
   nightsBetween,
 } from '../utils/bookingUtils';
@@ -52,6 +55,9 @@ const compareBookings = (first, second) => {
 
 function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
   const nights = nightsBetween(booking.checkIn, booking.checkOut);
+  const holdRemaining =
+    booking.status === 'PENDING' ? holdRemainingSeconds(booking) : null;
+  const holdExpired = booking.status === 'PENDING' && isHoldExpired(booking);
 
   return (
     <li className="bh-item">
@@ -67,6 +73,15 @@ function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
           </div>
           <div className="bh-item__status">
             <BookingStatus status={booking.status} />
+            {holdRemaining !== null && (
+              <span
+                className={`bh-item__hold${holdExpired ? ' is-expired' : ''}`}
+              >
+                {holdExpired
+                  ? 'Đã hết hạn giữ chỗ'
+                  : `Còn ${formatHoldTime(holdRemaining)} để thanh toán cọc`}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -94,7 +109,7 @@ function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
 
       <div className="bh-item__side">
         <div className="bh-item__actions">
-          {booking.status === 'PENDING' && canPayDeposit && (
+          {booking.status === 'PENDING' && canPayDeposit && !holdExpired && (
             <Link
               className="btn btn-sm btn-primary"
               to={`/bookings/deposit?bookingId=${booking.id}`}
@@ -134,6 +149,22 @@ export default function BookingHistoryPage() {
   const [params, setParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
+  const [, setTick] = useState(0);
+
+  // Cập nhật đồng hồ đếm ngược và tự chuyển PENDING → EXPIRED khi hết 15 phút.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick((value) => value + 1);
+      setBookings((current) =>
+        current.some(
+          (booking) => booking.status === 'PENDING' && isHoldExpired(booking),
+        )
+          ? getBookings()
+          : current,
+      );
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   const rawGroup = params.get('status') || 'ALL';
   const groupFilter = BOOKING_GROUPS.some((group) => group.key === rawGroup)

@@ -1335,3 +1335,51 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Hold countdown — booking PENDING được giữ phòng 15 phút (UC-2.4/UC-2.5) */
+.bookings-module .booking-hold {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #1e3a8a;
+}
+
+.bookings-module .booking-hold.is-expired {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.bookings-module .booking-hold__icon {
+  flex: 0 0 auto;
+  font-size: 1.2rem;
+}
+
+.bookings-module .booking-hold__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.bookings-module .booking-hold__body strong {
+  font-size: 0.9rem;
+}
+
+.bookings-module .booking-hold__body span {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+@media (max-width: 575.98px) {
+  .bookings-module .booking-hold {
+    flex-wrap: wrap;
+  }
+}

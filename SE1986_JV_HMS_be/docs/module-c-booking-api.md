@@ -115,12 +115,19 @@ depositRequired = totalAmount × 0.30                (làm tròn HALF_UP, 2 ch�
 
 Tỷ lệ cọc cố định 30% trong `BookingService`. Nếu sau này cần cấu hình, đây là điểm thay đổi.
 
-### Giữ chỗ
+### Giữ chỗ 15 phút
 
-- Booking mới giữ phòng trong `booking.hold-minutes` phút (mặc định 30, tối thiểu 1).
+- Booking mới giữ phòng trong `booking.hold-minutes` phút, **mặc định 15**, tối thiểu 1.
 - `holdExpiresAt = createdAt + holdMinutes`.
-- Procedure tìm phòng coi booking `PENDING` còn hạn giữ chỗ là đã chiếm phòng.
-- Booking `PENDING` hết hạn không còn chặn phòng; job chuyển sang `EXPIRED` (nếu có) là luồng riêng.
+- Procedure `inventory.search_available_rooms` coi booking `PENDING` là đã chiếm phòng
+  **chỉ khi** `hold_expires_at > SYSUTCDATETIME()`; hết hạn là phòng được nhả ngay cho
+  khách khác, không phụ thuộc job.
+- Job `BookingHoldExpiryJob` chạy mỗi `booking.hold-scan-ms` (mặc định 60s), quét tối đa
+  200 booking/lần và chuyển `PENDING → EXPIRED` khi đã quá hạn, ghi
+  `booking_status_history` với note "Hết hạn giữ chỗ sau 15 phút" và `changed_by = NULL`.
+- `UPDATE` có điều kiện `status = 'PENDING' AND hold_expires_at <= now`; nếu khách vừa
+  thanh toán/hủy, job bỏ qua (không ghi đè trạng thái mới).
+- Booking `EXPIRED` không thanh toán/hủy được nữa; khách phải tạo đơn mới.
 
 ### Mã booking
 
@@ -203,7 +210,9 @@ curl -X POST http://localhost:8080/api/bookings \
 
 | Thuộc tính | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `booking.hold-minutes` | `30` | Số phút giữ phòng của booking `PENDING` |
+| `booking.hold-minutes` | `15` | Số phút giữ phòng của booking `PENDING` |
+| `booking.hold-scan-ms` | `60000` | Chu kỳ quét job nhả phòng |
+| `booking.hold-scan-initial-ms` | `15000` | Chờ trước lần quét đầu tiên sau khi khởi động |
 | `frontdesk.hotel-zone` | `Asia/Ho_Chi_Minh` | Múi giờ dùng để xác định "hôm nay" |
 
 Có thể đặt qua biến môi trường, ví dụ `BOOKING_HOLD_MINUTES=30`.
@@ -288,7 +297,50 @@ curl -X POST "http://localhost:8080/api/bookings/BK-33B7AD6A0B7844A8A450E587/can
   --data-binary '{"reason":"Đổi kế hoạch"}'
 ```
 
-### 11.4 Mã lỗi bổ sung
+### 11.4 Thanh toán tiền cọc (online-only)
+
+| Thuộc tính | Giá trị |
+| --- | --- |
+| Method / path | `POST /api/bookings/{bookingCode}/deposit` |
+| Quyền | `UC-C2`, chỉ chủ booking |
+| Body | `{ "method": "BANK_TRANSFER" \| "CREDIT_CARD" \| "E_WALLET" }` |
+| Thành công | `200` + `BookingResponse` ở trạng thái `CONFIRMED`, `depositPaid = depositRequired` |
+| Transaction | Khóa booking, ghi `billing.payment_transactions`, đổi trạng thái và ghi history trong một transaction |
+
+Quy tắc:
+
+- Chỉ thanh toán booking `PENDING`; trạng thái khác trả `409 BOOKING_NOT_PAYABLE`.
+- `hold_expires_at` đã qua trả `409 BOOKING_HOLD_EXPIRED` (phòng đã được nhả sau 15 phút).
+- Chỉ nhận kênh trực tuyến; `CASH` hoặc giá trị khác trả `400 BOOKING_PAYMENT_METHOD_INVALID`.
+- `deposit_required <= 0` trả `409 BOOKING_DEPOSIT_NOT_REQUIRED`.
+- Booking được khóa `UPDLOCK, HOLDLOCK` khi đọc; nếu luồng hủy/hết hạn vừa đổi trạng thái,
+  `UPDATE ... WHERE status='PENDING'` trả 0 → `409 BOOKING_PAYMENT_CONFLICT` và toàn bộ
+  transaction rollback (không có giao dịch mồ côi).
+
+Ghi database:
+
+| Bảng | Nội dung |
+| --- | --- |
+| `billing.payment_transactions` | `transaction_type = 'DEPOSIT'`, `status = 'SUCCESS'`, `amount = deposit_required`, `paid_at = now`, `transaction_code = DEP-…` |
+| `booking.bookings` | `status = 'CONFIRMED'`, `updated_at = now` |
+| `booking.booking_status_history` | `PENDING → CONFIRMED`, `changed_by = customerId`, note "Đã thanh toán tiền cọc …" |
+
+Mapping kênh thanh toán (DB chỉ có `CASH`, `BANK_TRANSFER`, `GATEWAY`):
+
+| Request | DB `method` |
+| --- | --- |
+| `BANK_TRANSFER` | `BANK_TRANSFER` |
+| `CREDIT_CARD` | `GATEWAY` |
+| `E_WALLET` | `GATEWAY` |
+
+```bash
+curl -X POST "http://localhost:8080/api/bookings/BK-33B7AD6A0B7844A8A450E587/deposit" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary '{"method":"BANK_TRANSFER"}'
+```
+
+### 11.5 Mã lỗi bổ sung
 
 | HTTP | `code` | Khi nào |
 | --- | --- | --- |
@@ -297,25 +349,38 @@ curl -X POST "http://localhost:8080/api/bookings/BK-33B7AD6A0B7844A8A450E587/can
 | 400 | `BOOKING_INVALID_STATUS` | `status` không thuộc danh sách cho phép |
 | 400 | `BOOKING_CODE_REQUIRED` | Path thiếu mã đặt phòng |
 | 400 | `BOOKING_CANCEL_REASON_TOO_LONG` | Lý do hủy quá 1000 ký tự |
+| 400 | `BOOKING_PAYMENT_METHOD_REQUIRED` | Body thiếu `method` |
+| 400 | `BOOKING_PAYMENT_METHOD_INVALID` | `method` không phải kênh trực tuyến |
 | 404 | `BOOKING_NOT_FOUND` | Không có booking hoặc không thuộc khách hiện tại |
 | 409 | `BOOKING_NOT_CANCELLABLE` | Booking đã check-in/check-out/hủy/hết hạn |
 | 409 | `BOOKING_CANCEL_CONFLICT` | Trạng thái vừa bị luồng khác đổi trước khi UPDATE |
+| 409 | `BOOKING_NOT_PAYABLE` | Booking không còn `PENDING` (đã cọc/hủy/hết hạn) |
+| 409 | `BOOKING_HOLD_EXPIRED` | Đã quá 15 phút giữ chỗ |
+| 409 | `BOOKING_DEPOSIT_NOT_REQUIRED` | `deposit_required` bằng 0 |
+| 409 | `BOOKING_PAYMENT_CONFLICT` | Trạng thái vừa bị luồng khác đổi khi xác nhận cọc |
 
-### 11.5 Kiểm chứng
+### 11.6 Kiểm chứng
 
-- Unit/integration: `BookingQueryServiceTests` (12 test), `BookingApiSecurityTests` (14 test),
-  `BookingServiceTests` (9 test) — toàn bộ 35 test pass.
+- Unit/integration: `BookingApiSecurityTests` (18), `BookingDepositServiceTests` (10),
+  `BookingQueryServiceTests` (12), `BookingHoldExpiryServiceTests` (3),
+  `BookingServiceTests` (9) — toàn bộ **52 test pass**.
 - E2E với SQL Server (`HotelManagement_SBA_booking_test`, JWT tự sinh cho user 5):
-  `GET /api/bookings` trả 6 booking, tổng tiền/`depositPaid`/loại phòng/phòng vật lý đúng;
-  lọc `status=PENDING&size=2` trả 2 bản ghi; `page=1&size=4` trả trang kế tiếp;
-  `size=101` → 400; `status=DONE` → 400; `GET` chi tiết → 200; mã không tồn tại → 404;
-  `POST` tạo booking → 201; hủy → 200 kèm `cancelReason` tiếng Việt đúng; hủy lần hai → 409.
+  `POST` tạo booking → 201; `GET /api/bookings` trả 6 booking, tổng tiền/`depositPaid`/
+  loại phòng/phòng vật lý đúng; lọc `status=PENDING&size=2` → 2 bản ghi; `page=1&size=4`
+  đúng; `size=101` → 400; `status=DONE` → 400; chi tiết → 200; mã không tồn tại → 404;
+  hủy → 200 kèm lý do tiếng Việt; hủy lần hai → 409.
+- E2E thanh toán cọc: `POST …/deposit` `BANK_TRANSFER` → 200 `CONFIRMED`, `depositPaid`
+  đúng; thanh toán lần hai → 409 `BOOKING_NOT_PAYABLE`; đơn thứ hai trả bằng `E_WALLET`
+  → DB ghi `GATEWAY`; `CASH` → 400 `BOOKING_PAYMENT_METHOD_INVALID`; DB có
+  `payment_transactions` `DEPOSIT/SUCCESS` và history `PENDING → CONFIRMED`.
   Dữ liệu test đã được xoá sau khi kiểm chứng.
 
-### 11.6 Frontend cần lưu ý
+### 11.7 Frontend cần lưu ý
 
 - Trạng thái hoàn tất trong DB là `CHECKED_OUT`, còn mock frontend đang dùng `COMPLETED`;
   khi nối API cần map `CHECKED_OUT → COMPLETED` (hoặc đổi nhãn hiển thị).
 - `rooms` trong response là số phòng vật lý thực tế; `pricePerNight` là trung bình theo
   `nightly_rate` đã lưu, không phải giá hiện tại của loại phòng.
 - Hủy booking không hoàn tiền tự động; hoàn cọc thuộc luồng billing (Module D) chưa nối.
+- Thanh toán cọc đã có endpoint thật (`POST …/deposit`), FE chỉ cần thay mock
+  `payBookingDeposit` bằng lời gọi API và hiển thị lỗi theo `code` trả về.

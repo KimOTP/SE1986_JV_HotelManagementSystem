@@ -128,13 +128,53 @@ public class BookingQueryRepository {
         return jdbc.update(sql, reason, cancelledAt, cancelledAt, bookingId);
     }
 
-    public void insertCancellationHistory(long bookingId, String oldStatus, long changedBy, String note) {
+    /**
+     * Booking PENDING đã quá hạn giữ chỗ. Procedure tìm phòng đã tự bỏ qua các
+     * booking này; job chỉ đồng bộ trạng thái để khách thấy "Hết hạn giữ chỗ".
+     */
+    public List<ExpiredHold> findExpiredHolds(LocalDateTime now, int limit) {
+        String sql = """
+                SELECT TOP (?) booking_id, booking_code
+                FROM booking.bookings
+                WHERE status = 'PENDING'
+                  AND hold_expires_at IS NOT NULL
+                  AND hold_expires_at <= ?
+                ORDER BY hold_expires_at
+                """;
+        return jdbc.query(sql, (rs, rowNum) -> new ExpiredHold(
+                rs.getLong("booking_id"),
+                rs.getString("booking_code")
+        ), limit, now);
+    }
+
+    /**
+     * Chỉ chuyển PENDING → EXPIRED khi vẫn còn PENDING và đã quá hạn. Trả 0 nếu
+     * một luồng khác (thanh toán, hủy) vừa đổi trạng thái trước đó.
+     */
+    public int expireHold(long bookingId, LocalDateTime now) {
+        String sql = """
+                UPDATE booking.bookings
+                SET status = 'EXPIRED', updated_at = ?
+                WHERE booking_id = ?
+                  AND status = 'PENDING'
+                  AND hold_expires_at IS NOT NULL
+                  AND hold_expires_at <= ?
+                """;
+        return jdbc.update(sql, now, bookingId, now);
+    }
+
+    public void insertStatusHistory(long bookingId, String oldStatus, String newStatus,
+                                    Long changedBy, String note) {
         String sql = """
                 INSERT INTO booking.booking_status_history
                     (booking_id, old_status, new_status, changed_by, note)
-                VALUES (?, ?, 'CANCELLED', ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """;
-        jdbc.update(sql, bookingId, oldStatus, changedBy, note);
+        jdbc.update(sql, bookingId, oldStatus, newStatus, changedBy, note);
+    }
+
+    public void insertCancellationHistory(long bookingId, String oldStatus, long changedBy, String note) {
+        insertStatusHistory(bookingId, oldStatus, "CANCELLED", changedBy, note);
     }
 
     private static BookingRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
@@ -178,5 +218,8 @@ public class BookingQueryRepository {
 
     public record BookingRoomRow(long bookingId, long roomId, String roomNumber,
                                  long roomTypeId, String roomTypeName, BigDecimal nightlyRate) {
+    }
+
+    public record ExpiredHold(long bookingId, String bookingCode) {
     }
 }

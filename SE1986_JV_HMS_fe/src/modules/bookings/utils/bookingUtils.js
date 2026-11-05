@@ -50,6 +50,31 @@ export const isDepositSettled = (booking) =>
   Number(booking?.depositRequired || 0) > 0 &&
   Number(booking?.depositPaid || 0) >= Number(booking?.depositRequired || 0);
 
+// Thời gian giữ phòng của booking PENDING (khớp backend `booking.hold-minutes`).
+export const HOLD_MINUTES = 15;
+
+/** Số giây còn lại để thanh toán cọc; null nếu booking không có hạn giữ chỗ. */
+export const holdRemainingSeconds = (booking) => {
+  if (!booking?.holdExpiresAt) return null;
+  const expiresAt = Date.parse(booking.holdExpiresAt);
+  if (Number.isNaN(expiresAt)) return null;
+  return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+};
+
+/** Đếm ngược dạng m:ss. */
+export const formatHoldTime = (totalSeconds) => {
+  const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
+
+export const isHoldExpired = (booking) => {
+  if (!booking?.holdExpiresAt) return false;
+  const expiresAt = Date.parse(booking.holdExpiresAt);
+  return !Number.isNaN(expiresAt) && expiresAt <= Date.now();
+};
+
 export const money = (value) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
 

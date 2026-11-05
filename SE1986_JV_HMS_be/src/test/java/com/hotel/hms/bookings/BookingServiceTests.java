@@ -46,7 +46,7 @@ class BookingServiceTests {
     @BeforeEach
     void setUp() {
         repository = mock(BookingCreationRepository.class);
-        service = new BookingService(repository, 30, HOTEL_ZONE.getId());
+        service = new BookingService(repository, 15, HOTEL_ZONE.getId());
         checkIn = TODAY.plusDays(10);
         checkOut = checkIn.plusDays(2);
     }
@@ -79,7 +79,7 @@ class BookingServiceTests {
         assertEquals("PENDING", response.status());
         assertEquals("Nguyễn An", response.customerName());
         assertEquals(List.of(new BookingResponse.AssignedRoom(4L, "201")), response.assignedRooms());
-        assertEquals(30, ChronoUnit.MINUTES.between(response.createdAt(), response.holdExpiresAt()));
+        assertEquals(15, ChronoUnit.MINUTES.between(response.createdAt(), response.holdExpiresAt()));
 
         ArgumentCaptor<NewBooking> saved = ArgumentCaptor.forClass(NewBooking.class);
         verify(repository).insertBooking(saved.capture());

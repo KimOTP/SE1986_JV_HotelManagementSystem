@@ -1,10 +1,18 @@
+import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Row } from 'react-bootstrap';
+import { ClockHistory } from 'react-bootstrap-icons';
 import { Link, useParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
 import { DEMO_BOOKING_CUSTOMER_KEY, getBooking } from '../mocks/bookingStore';
-import { displayDate, displayDateTime, money } from '../utils/bookingUtils';
+import {
+  displayDate,
+  displayDateTime,
+  formatHoldTime,
+  holdRemainingSeconds,
+  money,
+} from '../utils/bookingUtils';
 
 export default function BookingDetailPage() {
   const { id } = useParams();
@@ -13,6 +21,21 @@ export default function BookingDetailPage() {
   const canCancelBooking = hasPermission('UC-C4');
   const canPayDeposit = hasPermission('UC-C2');
   const booking = getBooking(id);
+  const [, setTick] = useState(0);
+  const holdDeadline = booking?.holdExpiresAt;
+  const bookingStatus = booking?.status;
+
+  // Đếm ngược thời gian giữ phòng của booking PENDING.
+  useEffect(() => {
+    if (bookingStatus !== 'PENDING' || !holdDeadline) {
+      return undefined;
+    }
+    const timer = setInterval(() => setTick((value) => value + 1), 1000);
+    return () => clearInterval(timer);
+  }, [bookingStatus, holdDeadline]);
+
+  const remaining = booking ? holdRemainingSeconds(booking) : null;
+
   if (!booking) {
     return (
       <Alert variant="warning">
@@ -25,8 +48,11 @@ export default function BookingDetailPage() {
   if (!canViewAllBookings && !belongsToCurrentCustomer) {
     return <Alert variant="danger">Bạn không có UC-C6 để xem đặt phòng này.</Alert>;
   }
-  const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status);
-  const canPay = booking.status === 'PENDING';
+  const holdExpired =
+    booking.status === 'PENDING' && remaining !== null && remaining <= 0;
+  const displayStatus = holdExpired ? 'EXPIRED' : booking.status;
+  const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status) && !holdExpired;
+  const canPay = booking.status === 'PENDING' && !holdExpired;
 
   return (
     <div className="bookings-module booking-page">
@@ -43,13 +69,42 @@ export default function BookingDetailPage() {
           </Button>
         }
       />
+      {booking.status === 'PENDING' && remaining !== null && (
+        <div className={`booking-hold${remaining > 0 ? '' : ' is-expired'}`}>
+          <ClockHistory className="booking-hold__icon" aria-hidden="true" />
+          <div className="booking-hold__body">
+            <strong>
+              {remaining > 0
+                ? `Giữ phòng còn ${formatHoldTime(remaining)}`
+                : 'Đã hết hạn giữ chỗ'}
+            </strong>
+            <span>
+              {remaining > 0
+                ? `Thanh toán cọc trước ${displayDateTime(booking.holdExpiresAt)} để giữ phòng. Quá hạn, phòng sẽ được nhả cho khách khác.`
+                : 'Phòng đã được nhả cho khách khác. Vui lòng tạo đặt phòng mới.'}
+            </span>
+          </div>
+          {remaining > 0 && canPayDeposit && (
+            <Button as={Link} to={`/bookings/deposit?bookingId=${booking.id}`} size="sm">
+              Thanh toán cọc
+            </Button>
+          )}
+        </div>
+      )}
+
+      {booking.status === 'EXPIRED' && (
+        <Alert variant="warning">
+          Đặt phòng đã hết hạn giữ chỗ (quá 15 phút chưa thanh toán cọc) và phòng đã
+          được nhả. Vui lòng đặt lại đơn mới.
+        </Alert>
+      )}
       <Row className="g-4">
         <Col lg={7}>
           <Card className="booking-card mb-4">
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center gap-3 mb-3">
                 <h3 className="booking-section-title mb-0">Thông tin lưu trú</h3>
-                <BookingStatus status={booking.status} />
+                <BookingStatus status={displayStatus} />
               </div>
               <dl className="booking-info">
                 <dt>Khách hàng</dt>
@@ -119,7 +174,9 @@ export default function BookingDetailPage() {
                 )}
                 {(!canPay || !canPayDeposit) && (!canCancel || !canCancelBooking) && (
                   <p className="booking-hint m-0">
-                    Không có thao tác nào khả dụng cho trạng thái này.
+                    {booking.status === 'EXPIRED'
+                      ? 'Đơn đã hết hạn giữ chỗ nên không thể thanh toán hoặc hủy.'
+                      : 'Không có thao tác nào khả dụng cho trạng thái này.'}
                   </p>
                 )}
               </div>
