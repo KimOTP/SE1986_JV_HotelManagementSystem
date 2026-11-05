@@ -16,12 +16,15 @@ globalThis.__roomsTestClient = Object.fromEntries(
     },
   ]),
 );
-const source = (
-  await readFile(new URL('../api/roomsHttpRepository.js', import.meta.url), 'utf8')
-).replace(
-  "import axiosClient from '../../../shared/api/axiosClient';",
-  'const axiosClient = globalThis.__roomsTestClient;',
-);
+const source = (await readFile(new URL('../api/roomsHttpRepository.js', import.meta.url), 'utf8'))
+  .replace(
+    "import axiosClient from '../../../shared/api/axiosClient';",
+    'const axiosClient = globalThis.__roomsTestClient;',
+  )
+  .replace(
+    "'../utils/roomImageUpload.js'",
+    JSON.stringify(new URL('../utils/roomImageUpload.js', import.meta.url).href),
+  );
 const { roomsHttpRepository: api } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
 );
@@ -86,4 +89,21 @@ test('API failure propagates without any mock fallback', async () => {
     failure,
   );
   failure = null;
+});
+
+test('upload sends binary image and its MIME type through the authenticated client', async () => {
+  calls.length = 0;
+  const file = new Blob(['image bytes'], { type: 'image/png' });
+  const controller = new AbortController();
+  response = { url: 'http://localhost:8080/api/inventory/public/images/test.png' };
+  assert.deepEqual(await api.uploadImage(file, { signal: controller.signal }), response);
+  assert.deepEqual(calls[0], [
+    'post',
+    '/inventory/admin/images',
+    file,
+    {
+      headers: { 'Content-Type': 'image/png' },
+      signal: controller.signal,
+    },
+  ]);
 });

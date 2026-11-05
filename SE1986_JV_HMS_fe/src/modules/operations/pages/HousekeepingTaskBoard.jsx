@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row } from 'r
 import { getAssignmentContext } from '../api/issueAssignmentsApi';
 import { getManagedTasks } from '../api/taskManagementApi';
 import CreateTaskModal from '../components/CreateTaskModal';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 
@@ -83,27 +84,23 @@ export default function HousekeepingTaskBoard() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between gap-2 mb-3">
-        <h2>Bảng công việc</h2>
-        <div className="d-flex gap-2">
-          <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
-            Tải lại
-          </Button>
-          <Button
-            disabled={result.loading || !result.context?.enabled}
-            onClick={() => {
-              setCreated(null);
-              setCreating(true);
-            }}
-          >
-            + Tạo và giao việc
-          </Button>
-        </div>
-      </div>
-      <p className="text-muted">
-        Giao công việc cho nhân viên và theo dõi tiến độ. Số đếm trên mỗi cột chỉ tính các công việc
-        trong trang hiện tại.
-      </p>
+      <OperationsPageHeader
+        title="Bảng công việc"
+        description="Giao công việc cho nhân viên và theo dõi tiến độ. Số đếm trên mỗi cột chỉ tính các công việc trong trang hiện tại."
+      >
+        <Button variant="outline-primary" disabled={result.loading} onClick={refresh}>
+          Tải lại
+        </Button>
+        <Button
+          disabled={result.loading || !result.context?.enabled}
+          onClick={() => {
+            setCreated(null);
+            setCreating(true);
+          }}
+        >
+          + Tạo và giao việc
+        </Button>
+      </OperationsPageHeader>
       {result.context && (
         <Alert variant={result.context.enabled ? 'info' : 'warning'}>
           {result.context.enabled ? (
@@ -131,7 +128,7 @@ export default function HousekeepingTaskBoard() {
         </Alert>
       )}
       <Form
-        className="p-3 mb-3 bg-light border rounded"
+        className="operations-filter-panel"
         onSubmit={(event) => {
           event.preventDefault();
           apply(draft);

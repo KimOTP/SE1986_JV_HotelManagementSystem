@@ -1,4 +1,5 @@
 import axiosClient from '../../../shared/api/axiosClient';
+import { validateRoomImageSelection } from '../utils/roomImageUpload.js';
 
 const root = '/inventory';
 const resources = { roomTypes: 'room-types', rooms: 'rooms', amenities: 'amenities' };
@@ -38,6 +39,17 @@ const fields = {
 };
 const criteriaParams = ({ checkIn, checkOut, guests }) => ({ checkIn, checkOut, guests });
 export const roomsHttpRepository = {
+  async uploadImage(file, { signal } = {}) {
+    validateRoomImageSelection([file]);
+    const result = unwrap(
+      await axiosClient.post(`${root}/admin/images`, file, {
+        headers: { 'Content-Type': file.type },
+        signal,
+      }),
+    );
+    if (!result?.url) throw new Error('Không nhận được đường dẫn ảnh. Vui lòng thử lại.');
+    return result;
+  },
   async getCatalog() {
     return dataset(unwrap(await axiosClient.get(`${root}/public/catalog`)));
   },

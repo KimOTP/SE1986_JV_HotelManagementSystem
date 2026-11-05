@@ -16,14 +16,17 @@ import org.springframework.http.HttpStatus;
  */
 @Configuration
 public class InventoryWebConfiguration implements WebMvcConfigurer {
-    @Override public void addInterceptors(InterceptorRegistry registry) {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
-            @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-                var auth=SecurityContextHolder.getContext().getAuthentication();
-                if(auth==null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken)
-                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Vui lòng đăng nhập.");
+            @Override
+            public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+                    Object handler) {
+                var auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken)
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
                 return true;
             }
-        }).addPathPatterns("/api/inventory/admin/**","/api/inventory/room-map");
+        }).addPathPatterns("/api/inventory/admin/**", "/api/inventory/room-map");
     }
 }
