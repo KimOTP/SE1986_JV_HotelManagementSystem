@@ -1,31 +1,44 @@
-import { Container, Offcanvas } from 'react-bootstrap';
 import { useState } from 'react';
+import { Offcanvas } from 'react-bootstrap';
+import { Outlet } from 'react-router';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
-import { Outlet } from 'react-router';
+
 export default function MainLayout({ children }) {
-  const [show, setShow] = useState(false);
+  const [showNav, setShowNav] = useState(false);
+
   return (
-    <div className="d-flex flex-column min-vh-100">
-      <Header onMenu={() => setShow(true)} />
-      <Container fluid className="flex-grow-1 p-0 d-flex">
-        <div className="d-none d-md-block">
+    <div className="hms-shell">
+      <Header onMenu={() => setShowNav(true)} />
+
+      <div className="hms-body">
+        <div className="hms-sidebar-col d-none d-lg-block">
           <Sidebar />
         </div>
-        <main className="flex-grow-1 p-3 p-md-4 overflow-hidden">
-          {children || <Outlet />}
-        </main>
-      </Container>
-      <Offcanvas show={show} onHide={() => setShow(false)}>
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>Điều hướng</Offcanvas.Title>
+
+        {/* Vùng cuộn duy nhất: nội dung trang + footer. Sidebar đứng yên. */}
+        <div className="hms-scroll">
+          <main className="hms-main">{children || <Outlet />}</main>
+          <Footer />
+        </div>
+      </div>
+
+      <Offcanvas
+        show={showNav}
+        onHide={() => setShowNav(false)}
+        placement="start"
+        className="hms-offcanvas"
+      >
+        <Offcanvas.Header closeButton className="hms-offcanvas__head">
+          <Offcanvas.Title className="hms-offcanvas__title">
+            Danh mục
+          </Offcanvas.Title>
         </Offcanvas.Header>
-        <Offcanvas.Body className="p-0" onClick={() => setShow(false)}>
-          <Sidebar />
+        <Offcanvas.Body className="p-0">
+          <Sidebar onNavigate={() => setShowNav(false)} />
         </Offcanvas.Body>
       </Offcanvas>
-      <Footer />
     </div>
   );
 }

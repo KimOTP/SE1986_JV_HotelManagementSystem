@@ -3,6 +3,7 @@ package com.hotel.hms.bookings;
 import com.hotel.hms.bookings.controller.BookingController;
 import com.hotel.hms.bookings.dto.BookingResponse;
 import com.hotel.hms.bookings.dto.CreateBookingRequest;
+import com.hotel.hms.bookings.service.BookingQueryService;
 import com.hotel.hms.bookings.service.BookingService;
 import com.hotel.hms.common.exception.GlobalExceptionHandler;
 import com.hotel.hms.config.SecurityConfig;
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -78,8 +80,13 @@ class BookingApiSecurityTests {
         }
 
         @Bean
-        BookingController controller(BookingService service) {
-            return new BookingController(service);
+        BookingQueryService queryService() {
+            return mock(BookingQueryService.class);
+        }
+
+        @Bean
+        BookingController controller(BookingService service, BookingQueryService queryService) {
+            return new BookingController(service, queryService);
         }
 
         @Bean
@@ -94,11 +101,14 @@ class BookingApiSecurityTests {
     @Autowired
     private BookingService service;
 
+    @Autowired
+    private BookingQueryService queryService;
+
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        reset(service);
+        reset(service, queryService);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
 
@@ -194,8 +204,94 @@ class BookingApiSecurityTests {
         verifyNoInteractions(service);
     }
 
-    private static String validBody() {
-        return """
+    @Test
+    void anonymousCannotListMyBookings() throws Exception {
+        mvc.perform(get("/api/bookings"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(queryService);
+    }
+
+    @Test
+    void customerWithoutUcC3CannotListMyBookings() throws Exception {
+        mvc.perform(get("/api/bookings").with(auth(5L, "ROLE_CUSTOMER")))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(queryService);
+    }
+
+    @Test
+    void customerWithUcC3ListsOnlyOwnBookings() throws Exception {
+        when(queryService.listMine(eq(5L), eq(""), eq(0), eq(20)))
+                .thenReturn(List.of(response()));
+
+        mvc.perform(get("/api/bookings").with(auth(5L, "UC-C3")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("BK-TEST"))
+                .andExpect(jsonPath("$[0].roomTypeName").value("Deluxe"))
+                .andExpect(jsonPath("$[0].assignedRooms[0].roomNumber").value("201"));
+
+        verify(queryService).listMine(5L, "", 0, 20);
+    }
+
+    @Test
+    void detailRequiresUcC6AndPassesOwnershipFlag() throws Exception {
+        when(queryService.getByCode(5L, "BK-TEST", false)).thenReturn(response());
+
+        mvc.perform(get("/api/bookings/BK-TEST").with(auth(5L, "UC-C6")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingCode").value("BK-TEST"));
+
+        verify(queryService).getByCode(5L, "BK-TEST", false);
+    }
+
+    @Test
+    void managerWithUcC5MayOpenAnyBooking() throws Exception {
+        when(queryService.getByCode(9L, "BK-OTHER", true)).thenReturn(response());
+
+        mvc.perform(get("/api/bookings/BK-OTHER").with(auth(9L, "UC-C5")))
+                .andExpect(status().isOk());
+
+        verify(queryService).getByCode(9L, "BK-OTHER", true);
+    }
+
+    @Test
+    void cancelWithoutUcC4IsForbidden() throws Exception {
+        mvc.perform(post("/api/bookings/BK-TEST/cancel")
+                        .with(auth(5L, "UC-C3"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Đổi kế hoạch\"}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(queryService);
+    }
+
+    @Test
+    void customerCancelsOwnBooking() throws Exception {
+        when(queryService.cancel(5L, "BK-TEST", "Đổi kế hoạch")).thenReturn(cancelledResponse());
+
+        mvc.perform(post("/api/bookings/BK-TEST/cancel")
+                        .with(auth(5L, "UC-C4"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Đổi kế hoạch\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancelReason").value("Đổi kế hoạch"));
+
+        verify(queryService).cancel(5L, "BK-TEST", "Đổi kế hoạch");
+    }
+
+    @Test
+    void cancelWithoutBodyIsAccepted() throws Exception {
+        when(queryService.cancel(5L, "BK-TEST", null)).thenReturn(cancelledResponse());
+
+        mvc.perform(post("/api/bookings/BK-TEST/cancel").with(auth(5L, "UC-C4")))
+                .andExpect(status().isOk());
+
+        verify(queryService).cancel(5L, "BK-TEST", null);
+    }
+
+    private static String validBody() {        return """
                 {
                   "roomTypeId": 2,
                   "checkIn": "2035-01-10",
@@ -219,12 +315,25 @@ class BookingApiSecurityTests {
                 LocalDateTime.of(2035, 1, 1, 10, 0),
                 LocalDateTime.of(2035, 1, 1, 9, 30),
                 "Nguyễn An", "customer@hotel.demo", "0900000001", "Tầng cao",
-                List.of(new BookingResponse.AssignedRoom(4L, "201"))
+                List.of(new BookingResponse.AssignedRoom(4L, "201")),
+                null, null
         );
     }
 
-    private static RequestPostProcessor auth(long userId, String... authorities) {
-        AuthUserDetails principal = mock(AuthUserDetails.class);
+    private static BookingResponse cancelledResponse() {
+        BookingResponse created = response();
+        return new BookingResponse(
+                created.bookingId(), created.id(), created.bookingCode(), created.customerId(),
+                created.hotelId(), created.roomTypeId(), created.roomTypeName(),
+                created.checkIn(), created.checkOut(), created.nights(), created.guests(),
+                created.rooms(), created.pricePerNight(), created.totalAmount(),
+                created.depositRequired(), created.depositPaid(), "CANCELLED",
+                created.holdExpiresAt(), created.createdAt(), created.customerName(),
+                created.email(), created.phone(), created.specialRequests(),
+                created.assignedRooms(), "Đổi kế hoạch", LocalDateTime.of(2035, 1, 2, 8, 0));
+    }
+
+    private static RequestPostProcessor auth(long userId, String... authorities) {        AuthUserDetails principal = mock(AuthUserDetails.class);
         when(principal.getId()).thenReturn(userId);
         when(principal.getUsername()).thenReturn("customer@sba.example");
         var token = new UsernamePasswordAuthenticationToken(principal, null,

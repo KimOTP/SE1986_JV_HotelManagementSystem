@@ -1,12 +1,12 @@
-import { Nav } from 'react-bootstrap';
 import { NavLink, useLocation } from 'react-router';
 import { sidebarMenu } from '../sidebarMenu';
 import { useAuth } from '../../provider/AuthsContext.jsx';
+import promoImage from '../../../assets/images/hotel-promo.svg';
 
 const matchesPath = (pathname, to) =>
   pathname === to || pathname.startsWith(`${to}/`);
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const auth = useAuth();
   const { pathname } = useLocation();
 
@@ -43,31 +43,62 @@ export default function Sidebar() {
     .sort((a, b) => b.to.length - a.to.length)[0];
 
   return (
-    <aside className="app-sidebar bg-light border-end p-3">
-      <Nav className="flex-column gap-1">
-        {visibleGroups.map((group) => (
-          <div key={group.groupLabel} className="mb-4">
-            <h6 className="text-muted text-uppercase fw-bold small px-2 mb-2">
-              {group.groupLabel}
-            </h6>
+    <aside className="hms-sidebar">
+      <nav className="hms-sidebar__nav" aria-label="Danh mục chức năng">
+        {visibleGroups.map((group) => {
+          const HeadingIcon = group.heading?.icon;
 
-            {group.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                aria-current={item === activeItem ? 'page' : undefined}
-                className={`nav-link px-3 py-2 rounded mb-1 fw-medium ${
-                  item === activeItem
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-secondary'
-                }`}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        ))}
-      </Nav>
+          return (
+            <div
+              key={group.groupLabel}
+              className="hms-sidebar__section"
+              aria-label={group.groupLabel}
+              role="group"
+            >
+              {group.heading && (
+                <h2 className="hms-sidebar__heading">
+                  {HeadingIcon && (
+                    <HeadingIcon
+                      className="hms-sidebar__icon"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span>{group.heading.label}</span>
+                </h2>
+              )}
+
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = item === activeItem;
+
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={onNavigate}
+                    aria-current={active ? 'page' : undefined}
+                    className={`hms-sidebar__link${active ? ' is-active' : ''}`}
+                  >
+                    {Icon && (
+                      <Icon className="hms-sidebar__icon" aria-hidden="true" />
+                    )}
+                    <span>{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+
+      <div className="hms-sidebar__promo">
+        <img
+          src={promoImage}
+          alt="Khu nghỉ dưỡng HMS về đêm"
+          className="hms-sidebar__promo-img"
+          loading="lazy"
+        />
+      </div>
     </aside>
   );
 }

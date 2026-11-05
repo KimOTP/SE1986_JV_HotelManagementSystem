@@ -1,0 +1,182 @@
+.hms-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.hms-service-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.15rem;
+  background: #fff;
+  border: 1px solid var(--hms-border);
+  border-radius: 14px;
+  box-shadow: var(--hms-shadow-sm);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.hms-service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hms-shadow-md);
+}
+
+.hms-service-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: var(--hms-blue-soft);
+  color: var(--hms-blue);
+  font-size: 1.15rem;
+}
+
+.hms-service-card__title {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--hms-ink);
+}
+
+.hms-service-card__desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--hms-muted);
+}
+
+.hms-service-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+}
+
+.hms-service-card__price {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--hms-blue-strong);
+}
+
+.hms-service-card__link {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--hms-blue);
+  text-decoration: none;
+}
+
+.hms-service-card__link:hover {
+  text-decoration: underline;
+}
+
+.hms-feedback-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(120deg, #eef4ff, #f8fbff);
+  border: 1px solid #dbe7fb;
+  border-radius: 14px;
+}
+
+.hms-feedback-cta__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--hms-ink);
+}
+
+.hms-feedback-cta__desc {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--hms-muted);
+}
+
+.hms-feedback-cta__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hms-contact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.hms-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hms-info-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.hms-info-list__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--hms-blue-soft);
+  color: var(--hms-blue);
+  font-size: 0.95rem;
+}
+
+.hms-info-list__label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hms-muted);
+}
+
+.hms-info-list__value {
+  display: block;
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--hms-ink);
+  overflow-wrap: anywhere;
+}
+
+.hms-contact-form .form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--hms-ink);
+  margin-bottom: 0.3rem;
+}
+
+.hms-contact-form .form-control {
+  font-size: 0.87rem;
+  border-color: var(--hms-border);
+}
+
+.hms-contact-form .form-control:focus {
+  border-color: #9cc0f5;
+  box-shadow: 0 0 0 0.2rem rgba(26, 115, 232, 0.12);
+}
+
+@media (max-width: 767.98px) {
+  .hms-contact-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
