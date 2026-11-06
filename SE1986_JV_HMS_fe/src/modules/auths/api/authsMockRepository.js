@@ -324,52 +324,6 @@ export const authsMockRepository = {
     return toPublicUser(newUser);
   },
 
-  async requestPasswordReset({ email }) {
-    const normalizedEmail = normalizeEmail(email);
-    const users = getStoredUsers();
-
-    const user = users.find(
-      (item) => normalizeEmail(item.email) === normalizedEmail,
-    );
-
-    if (!user || user.enabled === false) {
-      throw new Error("Email không tồn tại hoặc tài khoản đã bị vô hiệu hóa.");
-    }
-
-    return {
-      email: user.email,
-      message: "Email hợp lệ. Bạn có thể đặt mật khẩu mới.",
-    };
-  },
-
-  async resetPassword({ email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    const users = getStoredUsers();
-
-    const userIndex = users.findIndex(
-      (item) => normalizeEmail(item.email) === normalizedEmail,
-    );
-
-    if (userIndex === -1) {
-      throw new Error("Email không tồn tại trong hệ thống.");
-    }
-
-    if (users[userIndex].enabled === false) {
-      throw new Error("Tài khoản đã bị vô hiệu hóa.");
-    }
-
-    const updatedUsers = users.map((user, index) =>
-      index === userIndex
-        ? { ...user, password }
-        : user,
-    );
-    saveUsers(updatedUsers);
-
-    return {
-      email: normalizedEmail,
-      message: "Đổi mật khẩu thành công.",
-    };
-  },
   async updateProfile({ userId, fullName }) {
   const users = getStoredUsers();
 

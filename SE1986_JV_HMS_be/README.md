@@ -352,6 +352,8 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 ### Cài đặt local
 
+0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
+   `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
 1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
    Thiếu biến này app vẫn chạy nhưng tự sinh khóa tạm, nên phải đăng nhập lại sau mỗi lần restart.
 2. Tài khoản seed: `admin@sba.example`, `manager@sba.example`, `reception@sba.example`,

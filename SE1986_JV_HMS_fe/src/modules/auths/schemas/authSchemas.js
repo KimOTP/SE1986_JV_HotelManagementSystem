@@ -33,19 +33,6 @@ export const registerSchema = z
     path: ['confirmPassword'],
   });
 
-export const resetPasswordSchema = z
-  .object({
-    email: emailSchema,
-    password: passwordSchema,
-    confirmPassword: z
-      .string()
-      .min(1, 'Vui lòng xác nhận mật khẩu mới.'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Mật khẩu xác nhận không khớp.',
-    path: ['confirmPassword'],
-  });
-
 // Validate thông tin cá nhân
 export const profileSchema = z.object({
   fullName: z
