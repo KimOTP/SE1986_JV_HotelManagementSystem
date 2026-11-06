@@ -1,13 +1,64 @@
-# Module B — kết quả kiểm tra ngày 01/11/2026
+# Module B — kết quả kiểm tra
+
+## Upload ảnh loại phòng — 04/11/2026
+
+Đã thêm RoomImageController, RoomImageStorageService, UploadedRoomImage và chọn file trên RoomTypeForm.
+UC-B1 kiểm soát upload; đọc ảnh public. Binary JPG/PNG lưu thư mục riêng ngoài repo/target,
+URL vẫn lưu trong room_type_images qua JPA hiện có. Không đổi schema, dependency, multipart/security chung.
+Giới hạn 5 MB/file, 6 ảnh/loại phòng, kiểm tra định dạng thực và pixel, re-encode trước khi lưu,
+tên UUID, chặn đọc path tùy ý. Ảnh vẫn đọc được sau khi tạo lại service với cùng thư mục.
+
+Đã chạy `-Dtest=Inventory*Tests,RoomImageStorageTests`: **58 test, 39 đạt, 19 skip, 0 lỗi**.
+19 skip gồm 18 test fixture cần DB riêng và 1 test chỉ đọc DB local chưa bật opt-in trong lượt này;
+kết quả kiểm tra chỉ đọc DB local trước đó ở phần JPA bên dưới.
+9 test FE đạt; `npm run build`, `npm run lint`, Prettier check file sửa và `git diff --check` đạt.
+Test lưu file dùng thư mục tạm do JUnit quản lý; không tạo file ảnh hoặc fixture trong DB/môi trường người dùng.
+Chưa thao tác upload end-to-end trên trình duyệt. Khi thử thực tế: restart backend, mở form loại phòng,
+chọn JPG/PNG, chờ preview, bấm Lưu và refresh để xác nhận URL còn trong database.
+File không còn liên kết sau khi hủy form/gỡ URL chưa được tự động dọn; xem chính sách lưu trữ trong tài liệu API.
+
+## Chuyển sang Spring Data JPA — 04/11/2026
+
+Catalog đã chuyển sang RoomType/Room/Amenity/RoomTypeImage/RoomImage và CatalogAudit.
+Năm interface JpaRepository xử lý persistence, InventoryRepository giữ vai trò facade,
+InventoryReferenceRepository dùng EntityManager cho procedure/booking/khóa hotel.
+AvailableRoom chuyển sang dto. API/DTO, scope và quyền UC giữ nguyên.
+Entity dùng tên Catalog* riêng và quan hệ không cascade xóa sang module khác.
+Không thay pom/dependency/config dùng chung, schema SQL hoặc nghiệp vụ A/C/D/E.
+Thay đổi format Rooms có sẵn trước công việc JPA được bảo toàn.
+
+Đã chạy:
+
+```powershell
+.\mvnw.cmd '-Dmaven.repo.local=C:/Users/tran_linh/.m2/repository' '-Dtest=Inventory*Tests' '-Dinventory.verify-local-schema=true' clean test
+```
+
+Kết quả: **49 test, 31 đạt, 18 skip, 0 lỗi**. Hibernate metadata xác nhận entity names,
+JPQL/derived queries, mapping read-only của status/rowversion/hotelId và JDBC generated keys cho IDENTITY.
+Test repository kiểm tra mapping entity/DTO, cập nhật trạng thái không bị ghi đè, default refresh,
+thay ảnh theo đúng thứ tự để không xung đột unique, ID/decimal và icon legacy.
+
+Đã kiểm tra **SQL Server local bằng thao tác chỉ đọc**: metadata inventory, schema validation JPA,
+các truy vấn catalog/rooms/amenities/image relations và procedure availability với roomTypeId null/cụ thể.
+Định nghĩa procedure local được đối chiếu DDL SELECT-only trước khi gọi. Không tạo fixture, booking/hold,
+không chạy seed/migration hoặc thay dữ liệu DB local/nhóm.
+
+18 test có ghi fixture qua JPA vẫn skip vì chưa cấu hình DB riêng `_inventory_test`.
+Vì vậy **chưa xác minh insert/update/delete JPA trên SQL Server thực**, bao gồm hành vi trigger khi ghi.
+Metadata test về generated keys không thay thế kiểm thử ghi thực tế.
+`git diff --check` đạt; danh sách thay đổi chỉ thuộc source/test/tài liệu Module B.
+
+Các mục dưới đây là báo cáo ban đầu và lần tái cấu trúc package trước JPA, giữ để tham khảo lịch sử.
 
 ## Cập nhật tái cấu trúc package
 
 Các lớp production hiện được chia trong rooms.controller, dto, entity, repository,
 security và service. InventoryExceptionHandler nằm trong controller,
 InventoryWebConfiguration trong security, InventoryMapper trong service.
-InventoryService sở hữu logic nghiệp vụ
-và transaction; InventoryRepository chỉ phụ trách JDBC/SQL. AvailableRoom là projection
-chỉ đọc từ procedure, không thay mapping JPA hoặc schema của module khác.
+InventoryService sở hữu logic nghiệp vụ và transaction. Catalog hiện dùng Spring Data JPA:
+RoomType/Room/Amenity/RoomTypeImage/RoomImage là entity có tên riêng Catalog*;
+InventoryRepository điều phối JpaRepository, InventoryReferenceRepository gọi procedure/đọc booking bằng EntityManager.
+AvailableRoom đã chuyển sang DTO, không còn là entity. Không thay entity/schema của module khác.
 Danh sách file ở phần báo cáo ban đầu bên dưới là theo tên lớp; vị trí package hiện tại
 xem cây thư mục trong module-b-api.md. Các test đã được cập nhật import và dependency service.
 Sau tái cấu trúc đã chạy Maven Wrapper `clean test` với `-Dtest=Inventory*Tests`:

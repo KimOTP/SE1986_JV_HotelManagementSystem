@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Card, Col, Form, Pagination, Row } from 'react-bo
 import { getAssignmentContext } from '../api/issueAssignmentsApi';
 import { getCustomerFeedbackContext, getFeedback } from '../api/feedbackApi';
 import FeedbackFormModal from '../components/FeedbackFormModal';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 const empty = { rating: '0', status: '' };
@@ -13,7 +14,7 @@ export default function FeedbackManagement() {
   const { hasRole, hasPermission } = useAuth();
   const customer = hasRole(ROLES.CUSTOMER);
   const allowed =
-    hasPermission('UC-E6') && (customer || (hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER)));
+    hasPermission('UC-E6') && (customer || hasRole(ROLES.ADMIN) || hasRole(ROLES.MANAGER));
   const [draft, setDraft] = useState(empty);
   const [filters, setFilters] = useState(empty);
   const [page, setPage] = useState(0);
@@ -47,7 +48,8 @@ export default function FeedbackManagement() {
             loading: false,
             context: null,
             items: [],
-            error: 'Không tải được đánh giá. Kiểm tra backend và tài khoản đang đăng nhập rồi thử lại.',
+            error:
+              'Không tải được đánh giá. Kiểm tra backend và tài khoản đang đăng nhập rồi thử lại.',
           });
       }
     };
@@ -76,25 +78,22 @@ export default function FeedbackManagement() {
     );
   return (
     <div>
-      <div className="d-flex justify-content-between gap-2 mb-3">
-        <h2>{customer ? 'Đánh giá của tôi' : 'Đánh giá của khách'}</h2>
-        <div className="d-flex gap-2">
-          <Button variant="outline-primary" onClick={refresh} disabled={state.loading}>
-            Tải lại
+      <OperationsPageHeader title={customer ? 'Đánh giá của tôi' : 'Đánh giá của khách'}>
+        <Button variant="outline-primary" onClick={refresh} disabled={state.loading}>
+          Tải lại
+        </Button>
+        {customer && (
+          <Button
+            disabled={state.loading || !state.context?.enabled}
+            onClick={() => {
+              setSuccess(null);
+              setModal({ creating: true });
+            }}
+          >
+            Gửi đánh giá
           </Button>
-          {customer && (
-            <Button
-              disabled={state.loading || !state.context?.enabled}
-              onClick={() => {
-                setSuccess(null);
-                setModal({ creating: true });
-              }}
-            >
-              Gửi đánh giá
-            </Button>
-          )}
-        </div>
-      </div>
+        )}
+      </OperationsPageHeader>
       <Alert variant="info">
         Mỗi booking đã trả phòng được đánh giá một lần. Bạn có thể xem đánh giá và phản hồi tại đây.
       </Alert>
@@ -119,7 +118,7 @@ export default function FeedbackManagement() {
       )}
       {!customer && (
         <Form
-          className="p-3 border bg-light rounded mb-3"
+          className="operations-filter-panel"
           onSubmit={(event) => {
             event.preventDefault();
             apply(draft);

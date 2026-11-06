@@ -13,6 +13,7 @@ import {
 } from 'react-bootstrap';
 import { getIssueWorkContext } from '../api/issueProgressApi';
 import { getMyDatabaseTasks, updateMyTask } from '../api/myTasksApi';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 
@@ -127,12 +128,11 @@ export default function MyTasks() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between mb-3">
-        <h2>Công việc của tôi</h2>
+      <OperationsPageHeader title="Công việc của tôi">
         <Button variant="outline-primary" onClick={refresh} disabled={result.loading || saving}>
           Tải lại
         </Button>
-      </div>
+      </OperationsPageHeader>
       <Alert variant="info">
         Nhận và hoàn thành các công việc được giao. Công việc bảo trì và sự cố liên quan được theo
         dõi riêng.
@@ -164,7 +164,7 @@ export default function MyTasks() {
         </Alert>
       )}
       <Form
-        className="bg-light p-3 border rounded mb-3"
+        className="operations-filter-panel"
         onSubmit={(event) => {
           event.preventDefault();
           apply(draft);
@@ -250,7 +250,9 @@ export default function MyTasks() {
             </tr>
           ) : !result.context?.enabled ? (
             <tr>
-              <td colSpan={7}>Tài khoản hiện tại cần hồ sơ nhân viên đang hoạt động để xem công việc.</td>
+              <td colSpan={7}>
+                Tài khoản hiện tại cần hồ sơ nhân viên đang hoạt động để xem công việc.
+              </td>
             </tr>
           ) : !result.items.length ? (
             <tr>

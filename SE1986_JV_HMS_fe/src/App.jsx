@@ -28,6 +28,8 @@ import ProfilePage from './modules/auths/pages/ProfilePage';
 import UserManagementPage from './modules/auths/pages/UserManagementPage';
 import RoleManagementPage from './modules/auths/pages/RoleManagementPage';
 import { getHomePath } from './modules/auths/utils/homePath';
+import ServicesPage from './modules/services/pages/ServicesPage';
+import ContactPage from './modules/services/pages/ContactPage';
 import {
   BookingHandoffPage,
   BookingDetailPage,
@@ -87,6 +89,8 @@ export default function App() {
         >
           <Route index element={<RoleHomeRedirect />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="services" element={<ServicesPage />} />
+          <Route path="contact" element={<ContactPage />} />
           <Route
             path="users"
             element={

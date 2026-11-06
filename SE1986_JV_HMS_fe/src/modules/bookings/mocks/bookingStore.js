@@ -1,3 +1,5 @@
+import { HOLD_MINUTES, isHoldExpired } from '../utils/bookingUtils';
+
 const STORAGE_KEY = 'se1986.moduleC.bookings.v1';
 const DEMO_CUSTOMER_KEY = 'demo-customer';
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -39,6 +41,7 @@ const seedBookings = [
     paymentMethod: '',
     status: 'PENDING',
     createdAt: now(),
+    holdExpiresAt: new Date(Date.now() + HOLD_MINUTES * 60 * 1000).toISOString(),
     timeline: [{ status: 'PENDING', label: 'Đặt phòng được tạo', at: now() }],
   },
   {
@@ -104,7 +107,31 @@ const read = () => {
     );
   }
   if (!Array.isArray(bookings)) throw new Error('Dữ liệu booking demo không hợp lệ.');
-  return bookings;
+
+  // Booking PENDING quá hạn giữ chỗ bị chuyển EXPIRED ngay khi đọc, mô phỏng
+  // job nhả phòng của backend (15 phút).
+  const withExpiredHolds = bookings.map((booking) => {
+    if (booking.status !== 'PENDING' || !isHoldExpired(booking)) {
+      return booking;
+    }
+    return {
+      ...booking,
+      status: 'EXPIRED',
+      timeline: [
+        ...(booking.timeline || []),
+        {
+          status: 'EXPIRED',
+          label: 'Hết hạn giữ chỗ — phòng đã được nhả cho khách khác',
+          at: now(),
+        },
+      ],
+    };
+  });
+
+  if (withExpiredHolds.some((booking, index) => booking !== bookings[index])) {
+    write(withExpiredHolds);
+  }
+  return withExpiredHolds;
 };
 
 const write = (bookings) => {
@@ -180,6 +207,7 @@ export const createBooking = (input) => {
     depositPaid: 0,
     paymentMethod: '',
     createdAt: now(),
+    holdExpiresAt: new Date(Date.now() + HOLD_MINUTES * 60 * 1000).toISOString(),
     timeline: [{ status: 'PENDING', label: 'Đặt phòng được tạo', at: now() }],
   };
   write([booking, ...bookings]);
@@ -191,8 +219,12 @@ export const payBookingDeposit = (id, paymentMethod) => {
   const booking = getByIdOrThrow(bookings, id);
   if (booking.status !== 'PENDING')
     throw new Error('Chỉ đặt phòng đang chờ mới có thể thanh toán cọc.');
-  if (!['BANK_TRANSFER', 'CREDIT_CARD', 'CASH'].includes(paymentMethod))
-    throw new Error('Vui lòng chọn phương thức thanh toán hợp lệ.');
+  if (isHoldExpired(booking))
+    throw new Error(
+      'Đặt phòng đã hết hạn giữ chỗ và phòng đã được nhả. Vui lòng đặt lại đơn mới.',
+    );
+  if (!['BANK_TRANSFER', 'CREDIT_CARD', 'E_WALLET'].includes(paymentMethod))
+    throw new Error('Vui lòng chọn phương thức thanh toán trực tuyến hợp lệ.');
   const updated = {
     ...booking,
     depositPaid: booking.depositRequired,

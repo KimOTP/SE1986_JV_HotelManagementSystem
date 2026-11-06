@@ -1,4 +1,4 @@
-import { Container, Form, Button, Alert } from 'react-bootstrap';
+import { Form, Button, Alert } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
@@ -11,6 +11,7 @@ import {
   getIssueRooms,
   getIssueReportingContext,
 } from '../api/issueReportsApi';
+import OperationsPageHeader from '../components/OperationsPageHeader';
 
 const defaults = { roomId: '', issueTypeId: '', title: '', description: '', priority: 'NORMAL' };
 export default function ReportIssueForm() {
@@ -105,12 +106,15 @@ export default function ReportIssueForm() {
   };
 
   return (
-    <Container className="mt-4" style={{ maxWidth: 700 }}>
-      <Button variant="link" className="px-0 mb-3" onClick={() => navigate(-1)}>
-        ← Quay lại
-      </Button>
-      <h2 className="fw-bold">Báo cáo sự cố</h2>
-      <p className="text-muted">Chọn phòng và nhập thông tin để gửi báo cáo vào hệ thống.</p>
+    <div className="operations-report-page">
+      <OperationsPageHeader
+        title="Báo cáo sự cố"
+        description="Chọn phòng và nhập thông tin để gửi báo cáo vào hệ thống."
+      >
+        <Button variant="outline-secondary" disabled={isSubmitting} onClick={() => navigate(-1)}>
+          ← Quay lại
+        </Button>
+      </OperationsPageHeader>
       {catalog.loading && (
         <Alert variant="info" role="status">
           Đang tải phòng, danh mục và tài khoản người báo cáo...
@@ -141,7 +145,10 @@ export default function ReportIssueForm() {
         </Alert>
       )}
       {!catalog.loading && !catalog.error && (!catalog.rooms.length || !catalog.types.length) && (
-        <Alert variant="warning">Chưa có phòng thuộc phạm vi tài khoản hoặc loại sự cố đang hoạt động. Khách hàng cần booking đã check-in để báo sự cố cho phòng đang lưu trú.</Alert>
+        <Alert variant="warning">
+          Chưa có phòng thuộc phạm vi tài khoản hoặc loại sự cố đang hoạt động. Khách hàng cần
+          booking đã check-in để báo sự cố cho phòng đang lưu trú.
+        </Alert>
       )}
       {created && (
         <Alert variant="success">
@@ -157,9 +164,9 @@ export default function ReportIssueForm() {
       <Form
         noValidate
         onSubmit={(event) => handleSubmit(onSubmit)(event)}
-        className="bg-white p-4 rounded shadow-sm border mb-5"
+        className="operations-report-form bg-white rounded border"
       >
-        <fieldset disabled={disabled || isSubmitting}>
+        <fieldset className="operations-report-fields" disabled={disabled || isSubmitting}>
           <Form.Group controlId="issue-room" className="mb-3">
             <Form.Label>Phòng</Form.Label>
             <Form.Select {...register('roomId')} isInvalid={!!errors.roomId}>
@@ -206,7 +213,7 @@ export default function ReportIssueForm() {
             </Form.Select>
             <Form.Control.Feedback type="invalid">{errors.priority?.message}</Form.Control.Feedback>
           </Form.Group>
-          <Form.Group controlId="issue-description" className="mb-4">
+          <Form.Group controlId="issue-description" className="operations-report-description mb-0">
             <Form.Label>Mô tả chi tiết</Form.Label>
             <Form.Control
               as="textarea"
@@ -219,17 +226,16 @@ export default function ReportIssueForm() {
               {errors.description?.message}
             </Form.Control.Feedback>
           </Form.Group>
-          <Button type="submit">{isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}</Button>
         </fieldset>
-        <Button
-          className="mt-3"
-          variant="outline-secondary"
-          disabled={isSubmitting}
-          onClick={() => navigate(-1)}
-        >
-          Hủy
-        </Button>
+        <div className="operations-report-actions">
+          <Button variant="outline-secondary" disabled={isSubmitting} onClick={() => navigate(-1)}>
+            Hủy
+          </Button>
+          <Button type="submit" disabled={disabled || isSubmitting}>
+            {isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+          </Button>
+        </div>
       </Form>
-    </Container>
+    </div>
   );
 }

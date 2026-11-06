@@ -10,27 +10,34 @@ Thiết kế ảnh/notes đã được chủ Module B đồng ý trong phiên l�
 ```text
 com.hotel.hms.rooms
 ├── controller   InventoryController, InventoryExceptionHandler
-├── dto          InventoryDtos, InventoryIdDeserializer, InventoryIntegerDeserializer
-├── entity       AvailableRoom
-├── repository   InventoryRepository
+├── dto          InventoryDtos, AvailableRoom, InventoryIdDeserializer, InventoryIntegerDeserializer
+├── entity       RoomType, Room, Amenity, RoomTypeImage, RoomImage, CatalogAudit
+├── repository   InventoryRepository, RoomTypeRepository, RoomRepository,
+│                AmenityRepository, RoomTypeImageRepository, RoomImageRepository,
+│                InventoryReferenceRepository
 ├── security     InventoryScope, InventoryWebConfiguration
 └── service      InventoryService, InventoryMapper
 ```
 
+Upload ảnh có thêm `RoomImageController`, `UploadedRoomImage` và `RoomImageStorageService`
+trong các package controller/dto/service tương ứng.
+
 Controller gọi service. Service chứa quy tắc catalog/availability và transaction;
-repository chứa JDBC/SQL, stored procedure và thao tác khóa dữ liệu.
-AvailableRoom là projection chỉ đọc cho kết quả procedure JDBC, không phải JPA entity mới.
-DTO REST giữ tách biệt với projection nội bộ này. Endpoint và schema không đổi khi chuyển package.
+Catalog dùng Spring Data JPA (`JpaRepository`), facade InventoryRepository điều phối persistence;
+InventoryReferenceRepository dùng EntityManager để gọi procedure, đọc booking và khóa hotel.
+AvailableRoom là DTO chỉ đọc cho kết quả procedure, không phải JPA entity.
+Entity REST không serialize trực tiếp. Scope principal vẫn dùng adapter đọc identity riêng Module B.
+Endpoint và schema không đổi khi chuyển sang JPA.
 Tên package Java hiện là `rooms` để đồng nhất với FE. Schema SQL `inventory`,
 API `/api/inventory` và các biến `INVENTORY_*` vẫn giữ nguyên để tương thích cấu hình hiện tại.
 
 ## Chạy trên Windows
 
 1. Dùng Java 21 và database hiện có `HotelManagement_SBA`. Không chạy lại schema/seed trên DB nhóm.
-2. Kiểm tra đúng server/database, chạy script chỉ đọc `docs/sql/module_b_metadata.sql` để đối chiếu DDL.
-3. Sau khi kiểm tra/backup theo quy trình nhóm, chạy thủ công `docs/sql/03_module_b_extensions.sql`
-   một lần trong SSMS. Script idempotent khi cấu trúc đích đúng; nếu đã có cột/bảng khác cấu trúc,
-   phải đối chiếu metadata trước. Không tự sửa một cấu trúc khác thiết kế.
+2. Kiểm tra database đã có `inventory.rooms.notes NVARCHAR(2000)` và `inventory.room_type_images`
+   đúng thiết kế. Bản schema hoàn chỉnh trong `docs/sql/01_schema_complete_module_b.sql` đã có cả hai.
+3. Database tạo bằng schema cũ phải bổ sung notes và ảnh trước khi khởi động JPA.
+   Không chạy lại schema hoàn chỉnh trên DB đã có dữ liệu. Không dùng ddl-auto=update để bỏ qua migration.
 4. Đặt credential qua môi trường; không đặt password trong file có version control.
 
 ```powershell
@@ -49,10 +56,10 @@ kiểm tra user/hotel active. Admin không có staff dùng khách sạn cấu h�
 Không nhận hotelId từ request; không tự chọn một khách sạn khi nhiều khách sạn tồn tại.
 Amenities là danh mục toàn hệ thống theo DDL, chỉ người có UC-B3 được quản trị.
 
-`INVENTORY_EXTENSIONS_ENABLED` mặc định false. Khi chưa bật, API vẫn phục vụ catalog/procedure
-trên schema gốc nhưng trả 409 nếu ghi ảnh/notes có dữ liệu; không báo lưu thành công giả.
-Chỉ bật true sau migration. Giữ `ddl-auto=validate`, `sql.init.mode=never`.
-Mapping JDBC riêng Module B không được Hibernate validate: phải chạy metadata và integration suite.
+`INVENTORY_EXTENSIONS_ENABLED` mặc định false; bật true để dùng ảnh/notes đầy đủ.
+Entity JPA luôn ánh xạ notes và bảng ảnh, vì vậy **schema phải đầy đủ ngay khi khởi động**,
+kể cả khi flag false. Flag chỉ kiểm soát chức năng, không bỏ qua schema validation.
+Giữ `ddl-auto=validate`, `sql.init.mode=never`; Hibernate kiểm tra mapping mà không thay schema.
 
 Frontend `.env.local` (cấu hình thủ công, không chứa secret):
 
@@ -94,6 +101,8 @@ không dùng ID mock và không ép ID thành JS Number. Số tiền basePrice r
 | PATCH | `/admin/{resource}/{id}/active` | Cùng quyền; body `{isActive: false}`; 200 + DTO |
 | DELETE | `/admin/{resource}/{id}` | Cùng quyền; 204 khi xóa thành công |
 | GET | `/room-map` | UC-B6; `{rooms, roomTypes, amenities: []}` trong phạm vi khách sạn |
+| POST | `/admin/images` | UC-B1; binary JPG/PNG tối đa 5 MB; 201 `{url}` |
+| GET | `/public/images/{name}` | Guest; đọc ảnh đã upload, MIME đúng và `nosniff` |
 
 Public không yêu cầu JWT. Nội bộ: Guest 401; có JWT nhưng thiếu authority UC trả 403.
 Theo seed Admin có B1–B6; Manager/Staff có B6, Customer không có B6.
@@ -143,11 +152,18 @@ Không dùng inventory.room_images để lưu ảnh loại phòng. Bảng ảnh 
 SQL mới thêm cột nullable và bảng riêng không cascade; không ghi row_version/audit từ client.
 Không có optimistic locking: không tuyên bố chống lost update bằng rowversion.
 
-CRUD dùng transaction tại InventoryService cùng DataSource hiện có. Adapter JDBC nằm trong rooms.repository,
-không thêm entity/bean trùng với HotelRoom/RoomTypeRef/IssueRoom. Giữ JPA của module khác.
-Insert dùng JDBC RETURN_GENERATED_KEYS, không dùng Hibernate OUTPUT INSERTED trên bảng có trigger;
-đường này có test opt-in trên SQL Server, chưa coi là đã xác minh nếu suite bị skip.
-Chuỗi insert dùng setNString, chuỗi update đi qua JDBC driver SQL Server mặc định Unicode.
+CRUD dùng transaction tại InventoryService và repository Spring Data JPA cùng DataSource hiện có.
+Entity dùng tên rõ ràng CatalogRoomType/CatalogRoom/CatalogAmenity/CatalogRoomTypeImage/CatalogRoomImage,
+ánh xạ đúng bảng hiện có và không đụng entity HotelRoom/RoomTypeRef/IssueRoom của module khác.
+Quan hệ type–amenity dùng ManyToMany qua room_type_amenities; room/type/images dùng ManyToOne LAZY,
+không cascade sang bảng của module khác. Amenities được batch fetch bằng EntityGraph, ảnh query theo hotel,
+không N+1 hoặc join nhiều bag. Ảnh cũ được xóa/flush trước khi tái dùng sort_order unique.
+ID dùng GenerationType.IDENTITY, chỉ identifier được đánh dấu generated trong Hibernate;
+row_version và timestamps insert là read-only, không @Generated hoặc @Version.
+Metadata test xác nhận SQLServerDialect dùng GetGeneratedKeysDelegate, tránh OUTPUT INSERTED trên bảng có trigger.
+Kiểm thử insert/update thực trên SQL Server vẫn cần suite opt-in trên DB riêng.
+@Nationalized ánh xạ NVARCHAR; icon/status giữ VARCHAR. Phòng mới refresh sau saveAndFlush để đọc default DB.
+operational_status/housekeeping_status có insertable=false, updatable=false, không bị catalog ghi đè.
 
 Unique loại phòng theo hotel/name, tiện nghi toàn bảng và room number theo trigger DB.
 Không chỉ dựa exists-check; SQL error 2601/2627/547/51001/51002 và deadlock 1205 thành 409.
@@ -163,6 +179,36 @@ Không khóa hay sửa booking; cạnh tranh với tạo booking phải được
 
 Icon DB ↔ FE: wifi↔Wifi, snow↔Snow, tv↔Tv, water↔Droplet, cup-hot↔CupHot,
 shield-lock↔ShieldLock, sun↔Sun. Icon lạ giữ nguyên giá trị; FE fallback CheckCircle và có option giữ icon cũ.
+
+## Upload ảnh loại phòng từ máy
+
+Form loại phòng trong FE API mode có nút chọn một/nhiều ảnh. JPG/PNG, mỗi file tối đa 5 MB,
+tổng ảnh có sẵn + ảnh chọn + URL đang nhập tối đa 6. Upload xong hiển thị preview;
+**bấm Lưu** để lưu URL vào `inventory.room_type_images`. Không đổi schema và vẫn nhập URL ngoài được.
+File nhị phân lưu trên ổ đĩa backend, database chỉ giữ URL. Mặc định:
+`${user.home}/.hotel-management/room-images`, nằm ngoài repository và ngoài target.
+Khởi động lại backend vẫn đọc được file cũ nếu giữ nguyên thư mục.
+
+Cấu hình tùy chọn trong `.env` backend (Windows dùng dấu `/` trong đường dẫn):
+
+```dotenv
+INVENTORY_EXTENSIONS_ENABLED=true
+# Không bắt buộc, chỉ thêm khi muốn đổi nơi lưu hoặc URL triển khai:
+# INVENTORY_IMAGE_DIRECTORY=D:/HotelManagementData/room-images
+# INVENTORY_IMAGE_BASE_URL=http://localhost:8080/api/inventory/public/images
+```
+
+Upload gửi **nội dung binary của một file** với Content-Type image/jpeg hoặc image/png,
+không dùng multipart; backend đọc stream giới hạn dung lượng, không sửa giới hạn multipart dùng chung.
+Ảnh được kiểm tra định dạng thực, kích thước tối đa 20 megapixel/mỗi chiều 8192 px rồi re-encode,
+bỏ metadata/nội dung nối thêm. Tên file do server sinh UUID, không dùng tên/path do client gửi.
+API trả 400 ảnh hỏng/kích thước pixel quá lớn, 413 quá 5 MB, 415 loại file không hỗ trợ,
+401/403 thiếu đăng nhập/quyền, 409 chưa bật chức năng ảnh, 500 lỗi ghi file với message an toàn.
+Ảnh public có cache immutable vì mỗi file dùng URL riêng. Không chấp nhận SVG/HTML.
+
+Xóa ảnh trên form chỉ gỡ liên kết khi Lưu; không tự xóa file vì URL có thể đang được dùng nơi khác.
+File upload nhưng hủy form có thể chưa có liên kết DB, cần quản lý dung lượng/backup thư mục lưu ảnh
+theo môi trường chạy. Chưa có job tự xóa file hoặc cloud storage; không lưu binary trong Git hay SQL Server.
 
 ## Availability và Room Map
 
@@ -215,7 +261,7 @@ npm run lint
 node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs
 ```
 
-SQL integration chỉ chạy với DB **riêng**, tên kết thúc `_inventory_test`, đã có schema/procedure/migration.
+SQL integration có fixture chỉ chạy với DB **riêng**, tên kết thúc `_inventory_test`, đã có schema/procedure/migration.
 Tạo DB/schema từ bản sao script khởi tạo dành riêng môi trường test, thay tên DB trong bản sao;
 không sửa script gốc hoặc chạy script trên DB nhóm. Không cần seed vì test tự tạo fixture trong transaction rollback.
 Suite không đọc DB_* và không dùng HotelManagement_SBA.
@@ -231,3 +277,22 @@ maintenance, occupied tương lai, dirty/cleaning, capacity, distinct count, gen
 notes/images Unicode, bảo toàn trạng thái và FK delete. Không có URL test thì **skip**, không phải pass SQL.
 SQL trigger/concurrency/procedure và CRUD-refresh end-to-end cần chạy trên môi trường thật phù hợp.
 Không tạo/xóa fixture tùy tiện trên DB nhóm; ngày seed theo UTC lúc seed, không mặc định là hôm nay.
+
+Kiểm tra riêng JPA metadata + các query không cần DB: `InventoryJpaMappingTests`.
+Kiểm tra JPA mapping và thay đổi entity/DTO với repository mock: `InventoryJpaRepositoryTests`.
+Đối chiếu **chỉ đọc** trên DB local từ `.env` có thể chạy riêng:
+
+```powershell
+.\mvnw.cmd '-Dtest=InventoryJpaSchemaTests' '-Dinventory.verify-local-schema=true' test
+```
+
+Test này dùng Hibernate validate, so sánh procedure local với DDL SELECT-only đã review trước khi gọi;
+không tạo fixture/hold/booking, không thay dữ liệu. Mặc định skip nếu không bật rõ property.
+
+Test upload/file storage/phân quyền và FE adapter:
+
+```powershell
+.\mvnw.cmd '-Dtest=Inventory*Tests,RoomImageStorageTests' test
+# Trong thư mục FE:
+node --test src/modules/rooms/tests/*.test.mjs
+```
