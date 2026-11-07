@@ -53,7 +53,7 @@ export const changePasswordSchema = z
     newPassword: z
       .string()
       .min(6, 'Mật khẩu mới phải có ít nhất 6 ký tự.')
-      .max(100, 'Mật khẩu mới không được vượt quá 100 ký tự.'),
+      .max(72, 'Mật khẩu mới không được vượt quá 72 ký tự.'),
 
     confirmPassword: z
       .string()

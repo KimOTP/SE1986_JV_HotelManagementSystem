@@ -1,7 +1,12 @@
 const ROLE_LABELS = {
+  ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý',
   STAFF: 'Nhân viên',
+  CUSTOMER: 'Khách hàng',
 };
+
+// UC-A5 chỉ tạo/sửa/khóa tài khoản nội bộ; đặt lại mật khẩu áp dụng cho mọi tài khoản.
+const EDITABLE_ROLES = ['MANAGER', 'STAFF'];
 
 export default function UserList({
   users,
@@ -15,6 +20,8 @@ export default function UserList({
   onStatusFilterChange,
   onEdit,
   onToggleStatus,
+  onResetPassword,
+  canEditAccounts,
 }) {
   return (
     <div>
@@ -39,8 +46,10 @@ export default function UserList({
             aria-label="Lọc theo vai trò"
           >
             <option value="ALL">Tất cả vai trò</option>
-            <option value="MANAGER">Manager</option>
+            <option value="ADMIN">Quản trị viên</option>
+            <option value="MANAGER">Quản lý</option>
             <option value="STAFF">Nhân viên</option>
+            <option value="CUSTOMER">Khách hàng</option>
           </select>
         </div>
 
@@ -86,11 +95,15 @@ export default function UserList({
                 const isAdminTarget = item.role === 'ADMIN';
 
                 const canManageTarget =
-                  actorRole === 'ADMIN' ||
-                  !isAdminTarget;
+                  canEditAccounts &&
+                  EDITABLE_ROLES.includes(item.role);
 
                 const canToggle =
                   !isSelf && canManageTarget;
+
+                const canResetPassword =
+                  !isSelf &&
+                  (actorRole === 'ADMIN' || !isAdminTarget);
 
                 return (
                   <tr key={item.id}>
@@ -148,6 +161,15 @@ export default function UserList({
                         >
                           {item.enabled ? 'Vô hiệu hóa' : 'Kích hoạt'}
                         </button>
+
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => onResetPassword(item)}
+                          disabled={!canResetPassword}
+                        >
+                          Đặt lại mật khẩu
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -159,8 +181,8 @@ export default function UserList({
       </div>
 
       <p className="small text-muted mb-0">
-        Danh sách chỉ hiển thị tài khoản nội bộ. Bạn không thể tự vô hiệu hóa
-        tài khoản của mình.
+        Bạn không thể tự vô hiệu hóa hoặc đặt lại mật khẩu của chính mình; hãy
+        đổi mật khẩu trong trang Hồ sơ.
       </p>
     </div>
   );

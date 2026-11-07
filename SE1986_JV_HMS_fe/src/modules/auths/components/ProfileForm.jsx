@@ -100,6 +100,7 @@ export default function ProfileForm() {
 
     try {
       await authsApi.changePassword({
+        // Chỉ mock dùng userId; backend lấy người dùng từ JWT.
         userId: user.id,
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,

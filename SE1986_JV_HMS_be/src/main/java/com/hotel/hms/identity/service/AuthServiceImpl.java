@@ -3,7 +3,9 @@ package com.hotel.hms.identity.service;
 import com.hotel.hms.common.exception.ApiException;
 import com.hotel.hms.common.exception.BadRequestException;
 import com.hotel.hms.common.exception.ConflictException;
+import com.hotel.hms.common.exception.NotFoundException;
 import com.hotel.hms.identity.dto.AuthResponse;
+import com.hotel.hms.identity.dto.ChangePasswordRequest;
 import com.hotel.hms.identity.dto.LoginRequest;
 import com.hotel.hms.identity.dto.RegisterRequest;
 import com.hotel.hms.identity.dto.UserResponse;
@@ -17,6 +19,7 @@ import com.hotel.hms.identity.repository.UserRepository;
 import com.hotel.hms.identity.security.AuthUserDetails;
 import com.hotel.hms.identity.security.AuthUserDetailsService;
 import com.hotel.hms.identity.security.JwtService;
+import com.hotel.hms.identity.security.PasswordPolicy;
 import com.hotel.hms.identity.security.TokenHasher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +35,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Locale;
@@ -44,8 +46,6 @@ public class AuthServiceImpl implements AuthService {
 
     private static final String TOKEN_TYPE = "Bearer";
     private static final String CUSTOMER_ROLE = "CUSTOMER";
-    // BCrypt chỉ dùng được 72 byte đầu; ký tự tiếng Việt có thể chiếm nhiều byte.
-    private static final int BCRYPT_MAX_BYTES = 72;
 
     private final AuthenticationManager authenticationManager;
     private final AuthUserDetailsService userDetailsService;
@@ -58,9 +58,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (request.password().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
-            throw new BadRequestException("PASSWORD_TOO_LONG", "Mật khẩu quá dài.");
-        }
+        PasswordPolicy.assertFitsBcrypt(request.password());
         String email = request.email().toLowerCase(Locale.ROOT);
         if (userRepository.existsByEmail(email)) {
             throw emailTaken();
@@ -155,6 +153,28 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public UserResponse me(AuthUserDetails currentUser) {
         return UserResponse.from(currentUser);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse changePassword(AuthUserDetails currentUser, ChangePasswordRequest request) {
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy tài khoản."));
+        // Trả 400 chứ không phải 401: phiên vẫn hợp lệ, FE không được coi là hết hạn đăng nhập.
+        if (user.getPasswordHash() == null
+                || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("WRONG_PASSWORD", "Mật khẩu hiện tại không chính xác.");
+        }
+        if (request.currentPassword().equals(request.newPassword())) {
+            throw new BadRequestException("SAME_PASSWORD", "Mật khẩu mới phải khác mật khẩu hiện tại.");
+        }
+        PasswordPolicy.assertFitsBcrypt(request.newPassword());
+
+        LocalDateTime now = now();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        user.setUpdatedAt(now);
+        authTokenRepository.revokeAllActive(user.getId(), TokenPurpose.REFRESH, now);
+        return issueTokens(currentUser);
     }
 
     private AuthResponse issueTokens(AuthUserDetails user) {

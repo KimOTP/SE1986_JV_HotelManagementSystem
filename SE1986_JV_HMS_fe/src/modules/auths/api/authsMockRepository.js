@@ -388,6 +388,16 @@ export const authsMockRepository = {
 
   return { success: true };
   },
+  async resetUserPassword({ userId }) {
+    const users = getStoredUsers();
+    const target = users.find((item) => String(item.id) === String(userId));
+    if (!target) {
+      throw new Error('Không tìm thấy tài khoản.');
+    }
+    const temporaryPassword = `tmp-${Math.random().toString(36).slice(2, 10)}`;
+    saveUsers(users.map((item) => (item === target ? { ...item, password: temporaryPassword } : item)));
+    return { temporaryPassword };
+  },
   async createInternalUser({
   actorPermissions,
   fullName,

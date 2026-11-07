@@ -72,6 +72,10 @@ public class AuthUserDetails implements UserDetails {
     }
 
     public String getPrimaryRole() {
+        return primaryRole(roles);
+    }
+
+    public static String primaryRole(Set<String> roles) {
         return ROLE_PRIORITY.stream().filter(roles::contains).findFirst()
                 .orElse(roles.stream().findFirst().orElse(null));
     }

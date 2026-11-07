@@ -371,10 +371,19 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
 | POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
 | GET | `/api/auth/me` | — | `user` (cần Bearer token) |
+| PUT | `/api/users/me/password` | `{ currentPassword, newPassword }` | Cặp token mới; mọi phiên cũ bị thu hồi (UC-A4) |
+| GET | `/api/admin/users` | — | Danh sách tài khoản (UC-A5) |
+| POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
 `user` gồm `id, fullName, email, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified`.
 Access token sống 15 phút, refresh token 7 ngày. FE (`axiosClient`) tự gắn
 `Authorization: Bearer ...` và tự refresh khi gặp 401.
+
+### Quên mật khẩu
+
+Hệ thống không gửi mail. Người dùng liên hệ quản trị viên; quản trị viên bấm "Đặt lại mật khẩu" trong
+màn Quản lý tài khoản để nhận mật khẩu tạm, người dùng đăng nhập rồi đổi trong trang Hồ sơ.
+Access token đã phát trước đó vẫn dùng được tới khi hết hạn (tối đa 15 phút).
 
 ### Dùng trong module khác
 
