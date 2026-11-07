@@ -4,6 +4,7 @@ import com.hotel.hms.identity.dto.AuthResponse;
 import com.hotel.hms.identity.dto.ChangePasswordRequest;
 import com.hotel.hms.identity.dto.LoginRequest;
 import com.hotel.hms.identity.dto.RegisterRequest;
+import com.hotel.hms.identity.dto.UpdateProfileRequest;
 import com.hotel.hms.identity.dto.UserResponse;
 import com.hotel.hms.identity.security.AuthUserDetails;
 
@@ -20,6 +21,8 @@ public interface AuthService {
     void logout(String refreshToken);
 
     UserResponse me(AuthUserDetails currentUser);
+
+    UserResponse updateProfile(AuthUserDetails currentUser, UpdateProfileRequest request);
 
     /** Đổi mật khẩu, đăng xuất mọi phiên cũ và trả cặp token mới cho phiên hiện tại. */
     AuthResponse changePassword(AuthUserDetails currentUser, ChangePasswordRequest request);

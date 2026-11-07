@@ -3,8 +3,8 @@ import { AUTH_STORAGE_KEYS } from '../constants/authConstants';
 import { authsMockRepository } from './authsMockRepository';
 
 // Đăng ký (UC-A1), đăng nhập, refresh, đăng xuất và /me (UC-A2) gọi backend thật.
-// Đổi mật khẩu (UC-A4), danh sách tài khoản và đặt lại mật khẩu (UC-A3) cũng gọi backend.
-// Các UC còn lại (sửa hồ sơ, tạo/sửa/khóa tài khoản, role) tạm dùng mock cho tới khi có API.
+// Hồ sơ và đổi mật khẩu (UC-A4), danh sách tài khoản và đặt lại mật khẩu (UC-A3) cũng gọi backend.
+// Các UC còn lại (tạo/sửa/khóa tài khoản, role) tạm dùng mock cho tới khi có API.
 export const authsHttpRepository = {
   ...authsMockRepository,
 
@@ -40,6 +40,11 @@ export const authsHttpRepository = {
 
   async resetUserPassword({ userId }) {
     const { data } = await axiosClient.post(`/admin/users/${userId}/reset-password`);
+    return data;
+  },
+
+  async updateProfile({ fullName, phone }) {
+    const { data } = await axiosClient.put('/users/me/profile', { fullName, phone });
     return data;
   },
 

@@ -371,11 +371,12 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
 | POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
 | GET | `/api/auth/me` | — | `user` (cần Bearer token) |
+| PUT | `/api/users/me/profile` | `{ fullName, phone }` | `user` sau khi cập nhật; không đổi được email và role (UC-A4) |
 | PUT | `/api/users/me/password` | `{ currentPassword, newPassword }` | Cặp token mới; mọi phiên cũ bị thu hồi (UC-A4) |
 | GET | `/api/admin/users` | — | Danh sách tài khoản (UC-A5) |
 | POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
-`user` gồm `id, fullName, email, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified`.
+`user` gồm `id, fullName, email, phone, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified, enabled`.
 Access token sống 15 phút, refresh token 7 ngày. FE (`axiosClient`) tự gắn
 `Authorization: Bearer ...` và tự refresh khi gặp 401.
 

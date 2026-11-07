@@ -2,6 +2,8 @@ package com.hotel.hms.identity.controller;
 
 import com.hotel.hms.identity.dto.AuthResponse;
 import com.hotel.hms.identity.dto.ChangePasswordRequest;
+import com.hotel.hms.identity.dto.UpdateProfileRequest;
+import com.hotel.hms.identity.dto.UserResponse;
 import com.hotel.hms.identity.security.AuthUserDetails;
 import com.hotel.hms.identity.service.AuthService;
 import jakarta.validation.Valid;
@@ -18,6 +20,12 @@ import org.springframework.web.bind.annotation.*;
 public class UserAccountController {
 
     private final AuthService authService;
+
+    @PutMapping("/profile")
+    public UserResponse updateProfile(@AuthenticationPrincipal AuthUserDetails currentUser,
+                                      @Valid @RequestBody UpdateProfileRequest request) {
+        return authService.updateProfile(currentUser, request);
+    }
 
     @PutMapping("/password")
     public AuthResponse changePassword(@AuthenticationPrincipal AuthUserDetails currentUser,

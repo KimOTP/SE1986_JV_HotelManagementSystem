@@ -324,7 +324,7 @@ export const authsMockRepository = {
     return toPublicUser(newUser);
   },
 
-  async updateProfile({ userId, fullName }) {
+  async updateProfile({ userId, fullName, phone }) {
   const users = getStoredUsers();
 
   const userIndex = users.findIndex(
@@ -344,6 +344,7 @@ export const authsMockRepository = {
   users[userIndex] = {
     ...users[userIndex],
     fullName: normalizedFullName,
+    phone: phone?.trim() || null,
   };
 
   saveUsers(users);

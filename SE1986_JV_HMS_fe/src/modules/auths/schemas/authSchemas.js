@@ -41,6 +41,13 @@ export const profileSchema = z.object({
     .trim()
     .min(2, 'Họ và tên phải có ít nhất 2 ký tự.')
     .max(100, 'Họ và tên không được vượt quá 100 ký tự.'),
+  // Không bắt buộc; khớp kiểm tra ở backend.
+  phone: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || /^[0-9+() -]{8,20}$/.test(value), {
+      message: 'Số điện thoại không hợp lệ.',
+    }),
 });
 
 // Validate đổi mật khẩu

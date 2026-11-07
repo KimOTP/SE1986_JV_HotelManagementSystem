@@ -43,6 +43,7 @@ export default function ProfileForm() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: user?.fullName || '',
+      phone: user?.phone || '',
     },
   });
 
@@ -64,12 +65,13 @@ export default function ProfileForm() {
     },
   });
 
-  // Đồng bộ tên khi user trong AuthContext thay đổi
+  // Đồng bộ form khi user trong AuthContext thay đổi
   useEffect(() => {
     resetProfile({
       fullName: user?.fullName || '',
+      phone: user?.phone || '',
     });
-  }, [user?.fullName, resetProfile]);
+  }, [user?.fullName, user?.phone, resetProfile]);
 
   // Cập nhật thông tin cá nhân
   const onUpdateProfile = async (data) => {
@@ -79,12 +81,14 @@ export default function ProfileForm() {
     try {
       await updateProfile({
         fullName: data.fullName,
+        phone: data.phone,
       });
 
       setProfileSuccess('Cập nhật thông tin cá nhân thành công.');
 
       resetProfile({
         fullName: data.fullName.trim(),
+        phone: data.phone.trim(),
       });
     } catch (error) {
       setProfileError(
@@ -168,6 +172,29 @@ export default function ProfileForm() {
             )}
           </div>
 
+          {/* Phone */}
+          <div className="mb-3">
+            <label htmlFor="profilePhone" className="form-label">
+              Số điện thoại
+            </label>
+
+            <input
+              id="profilePhone"
+              type="tel"
+              autoComplete="tel"
+              className={`form-control ${
+                profileErrors.phone ? 'is-invalid' : ''
+              }`}
+              {...registerProfile('phone')}
+            />
+
+            {profileErrors.phone && (
+              <div className="invalid-feedback">
+                {profileErrors.phone.message}
+              </div>
+            )}
+          </div>
+
           {/* Email */}
           <div className="mb-3">
             <label htmlFor="profileEmail" className="form-label">
@@ -212,7 +239,7 @@ export default function ProfileForm() {
               id="profileStatus"
               type="text"
               className="form-control"
-              value={user?.enabled ? 'Đang hoạt động' : 'Đã vô hiệu hóa'}
+              value={user?.enabled === false ? 'Đã vô hiệu hóa' : 'Đang hoạt động'}
               readOnly
             />
           </div>

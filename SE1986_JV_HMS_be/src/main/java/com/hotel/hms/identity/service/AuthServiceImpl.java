@@ -8,6 +8,7 @@ import com.hotel.hms.identity.dto.AuthResponse;
 import com.hotel.hms.identity.dto.ChangePasswordRequest;
 import com.hotel.hms.identity.dto.LoginRequest;
 import com.hotel.hms.identity.dto.RegisterRequest;
+import com.hotel.hms.identity.dto.UpdateProfileRequest;
 import com.hotel.hms.identity.dto.UserResponse;
 import com.hotel.hms.identity.entity.AuthToken;
 import com.hotel.hms.identity.entity.Role;
@@ -153,6 +154,18 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public UserResponse me(AuthUserDetails currentUser) {
         return UserResponse.from(currentUser);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateProfile(AuthUserDetails currentUser, UpdateProfileRequest request) {
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy tài khoản."));
+        user.setFullName(request.fullName());
+        user.setPhone(request.phone());
+        user.setUpdatedAt(now());
+        // Đọc lại để trả đúng dữ liệu mới, kể cả role và quyền.
+        return UserResponse.from(userDetailsService.loadUserByUsername(user.getEmail()));
     }
 
     @Override
