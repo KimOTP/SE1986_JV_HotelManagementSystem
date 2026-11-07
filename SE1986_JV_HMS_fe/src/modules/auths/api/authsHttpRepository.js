@@ -1,10 +1,15 @@
 import axiosClient from '../../../shared/api/axiosClient';
 import { authsMockRepository } from './authsMockRepository';
 
-// Đăng nhập, refresh, đăng xuất và /me gọi backend thật (UC-A2).
-// Các UC còn lại (đăng ký, hồ sơ, quản lý user/role) tạm dùng mock cho tới khi có API.
+// Đăng ký (UC-A1), đăng nhập, refresh, đăng xuất và /me (UC-A2) gọi backend thật.
+// Các UC còn lại (hồ sơ, quản lý user/role) tạm dùng mock cho tới khi có API.
 export const authsHttpRepository = {
   ...authsMockRepository,
+
+  async register({ fullName, email, password }) {
+    const { data } = await axiosClient.post('/auth/register', { fullName, email, password });
+    return data;
+  },
 
   async login({ email, password }) {
     const { data } = await axiosClient.post('/auth/login', { email, password });

@@ -11,4 +11,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Nạp luôn role và permission để dựng quyền đăng nhập trong một truy vấn.
     @EntityGraph(attributePaths = {"roles", "roles.permissions"})
     Optional<User> findWithRolesByEmail(String email);
+
+    boolean existsByEmail(String email);
 }

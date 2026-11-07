@@ -6,6 +6,7 @@ import { getHomePath } from '../utils/homePath';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const message = location.state?.message;
 
   const handleSuccess = (user) => {
     const requestedLocation = location.state?.from;
@@ -29,6 +30,12 @@ export default function LoginPage() {
                   Đăng nhập vào hệ thống quản lý khách sạn
                 </p>
               </div>
+
+              {message && (
+                <div className="alert alert-success" role="status">
+                  {message}
+                </div>
+              )}
 
               <LoginForm onSuccess={handleSuccess} />
               <div className="text-end mt-2">

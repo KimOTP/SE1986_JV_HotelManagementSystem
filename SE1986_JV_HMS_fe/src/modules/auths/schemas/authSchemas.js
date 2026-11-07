@@ -5,10 +5,11 @@ const emailSchema = z
   .trim()
   .email('Email không hợp lệ.');
 
+// Backend băm bằng BCrypt, chỉ dùng được tối đa 72 byte.
 const passwordSchema = z
   .string()
   .min(6, 'Mật khẩu phải có ít nhất 6 ký tự.')
-  .max(100, 'Mật khẩu không được vượt quá 100 ký tự.');
+  .max(72, 'Mật khẩu không được vượt quá 72 ký tự.');
 
 export const loginSchema = z.object({
   email: emailSchema,

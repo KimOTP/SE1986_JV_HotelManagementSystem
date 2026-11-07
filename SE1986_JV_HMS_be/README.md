@@ -366,6 +366,7 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 | Method | URL | Body | Kết quả |
 | --- | --- | --- | --- |
+| POST | `/api/auth/register` | `{ fullName, email, password }` | 201 kèm `user`; tạo CUSTOMER, đăng nhập được ngay (không xác thực qua email). Trùng email trả 409 |
 | POST | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken, tokenType, expiresIn, user }` |
 | POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
 | POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
