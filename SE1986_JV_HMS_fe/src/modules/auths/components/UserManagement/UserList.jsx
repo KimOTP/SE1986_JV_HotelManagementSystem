@@ -21,7 +21,6 @@ export default function UserList({
   onEdit,
   onToggleStatus,
   onResetPassword,
-  canEditAccounts,
 }) {
   return (
     <div>
@@ -95,7 +94,6 @@ export default function UserList({
                 const isAdminTarget = item.role === 'ADMIN';
 
                 const canManageTarget =
-                  canEditAccounts &&
                   EDITABLE_ROLES.includes(item.role);
 
                 const canToggle =
@@ -122,6 +120,9 @@ export default function UserList({
 
                     <td>
                       {ROLE_LABELS[item.role] || item.role}
+                      {item.jobTitle && (
+                        <div className="small text-muted">{item.jobTitle}</div>
+                      )}
                     </td>
 
                     <td>

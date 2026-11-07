@@ -37,7 +37,7 @@ class PasswordManagementTests {
     private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
 
     private final UserAdminServiceImpl admin =
-            new UserAdminServiceImpl(users, mock(StaffRepository.class), tokens, encoder);
+            new UserAdminServiceImpl(users, mock(StaffRepository.class), tokens, encoder, mock(RoleRepository.class));
     private final AuthServiceImpl auth = new AuthServiceImpl(
             mock(AuthenticationManager.class),
             mock(AuthUserDetailsService.class),

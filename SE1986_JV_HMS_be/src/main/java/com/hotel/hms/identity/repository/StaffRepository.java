@@ -11,6 +11,11 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
 
     Optional<Staff> findByUser_IdAndActiveTrue(Long userId);
 
-    @Query("select s from Staff s join fetch s.user where s.active = true")
+    Optional<Staff> findByUser_Id(Long userId);
+
+    @Query("select s from Staff s join fetch s.user")
     List<Staff> findAllWithUser();
+
+    @Query(value = "select hotel_id from identity_access.hotels where is_active = 1", nativeQuery = true)
+    List<Long> findActiveHotelIds();
 }

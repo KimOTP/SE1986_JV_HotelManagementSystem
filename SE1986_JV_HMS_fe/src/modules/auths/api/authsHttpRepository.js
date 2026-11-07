@@ -3,8 +3,8 @@ import { AUTH_STORAGE_KEYS } from '../constants/authConstants';
 import { authsMockRepository } from './authsMockRepository';
 
 // Đăng ký (UC-A1), đăng nhập, refresh, đăng xuất và /me (UC-A2) gọi backend thật.
-// Hồ sơ và đổi mật khẩu (UC-A4), danh sách tài khoản và đặt lại mật khẩu (UC-A3) cũng gọi backend.
-// Các UC còn lại (tạo/sửa/khóa tài khoản, role) tạm dùng mock cho tới khi có API.
+// Hồ sơ và đổi mật khẩu (UC-A4), quản lý tài khoản (UC-A5) và đặt lại mật khẩu (UC-A3) cũng gọi backend.
+// Riêng vai trò và quyền (UC-A6) tạm dùng mock cho tới khi có API.
 export const authsHttpRepository = {
   ...authsMockRepository,
 
@@ -35,6 +35,21 @@ export const authsHttpRepository = {
 
   async getUsers() {
     const { data } = await axiosClient.get('/admin/users');
+    return data;
+  },
+
+  async createInternalUser({ fullName, email, role, jobTitle, password }) {
+    const { data } = await axiosClient.post('/admin/users', { fullName, email, role, jobTitle, password });
+    return data;
+  },
+
+  async updateInternalUser({ userId, fullName, email, role, jobTitle }) {
+    const { data } = await axiosClient.put(`/admin/users/${userId}`, { fullName, email, role, jobTitle });
+    return data;
+  },
+
+  async setInternalUserStatus({ userId, enabled }) {
+    const { data } = await axiosClient.patch(`/admin/users/${userId}/status`, { enabled });
     return data;
   },
 

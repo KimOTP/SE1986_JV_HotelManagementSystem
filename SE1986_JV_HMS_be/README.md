@@ -374,6 +374,9 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | PUT | `/api/users/me/profile` | `{ fullName, phone }` | `user` sau khi cập nhật; không đổi được email và role (UC-A4) |
 | PUT | `/api/users/me/password` | `{ currentPassword, newPassword }` | Cặp token mới; mọi phiên cũ bị thu hồi (UC-A4) |
 | GET | `/api/admin/users` | — | Danh sách tài khoản (UC-A5) |
+| POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/STAFF kèm dòng `staff` (UC-A5) |
+| PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/STAFF; không tự đổi vai trò của mình (UC-A5) |
+| PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/STAFF; khóa thì thu hồi mọi phiên (UC-A5) |
 | POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
 `user` gồm `id, fullName, email, phone, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified, enabled`.

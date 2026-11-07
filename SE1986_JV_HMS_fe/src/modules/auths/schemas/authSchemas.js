@@ -102,5 +102,11 @@ export const changePasswordSchema = z
     },
   ),
 
+  jobTitle: z
+    .string()
+    .trim()
+    .max(100, 'Chức danh không được vượt quá 100 ký tự.')
+    .optional(),
+
   password: z.string().optional(),
 });

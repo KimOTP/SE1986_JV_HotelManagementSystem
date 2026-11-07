@@ -404,6 +404,7 @@ export const authsMockRepository = {
   fullName,
   email,
   role,
+  jobTitle,
   password,
 }) {
   if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
@@ -430,6 +431,7 @@ export const authsMockRepository = {
     email: normalizedEmail,
     password,
     role,
+    jobTitle: jobTitle?.trim() || null,
     enabled: true,
   };
 
@@ -445,6 +447,7 @@ export const authsMockRepository = {
   fullName,
   email,
   role,
+  jobTitle,
 }) {
   if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
     throw new Error('Bạn không có UC-A5 để cập nhật tài khoản nội bộ.');
@@ -493,6 +496,7 @@ export const authsMockRepository = {
     fullName: fullName.trim(),
     email: normalizedEmail,
     role,
+    jobTitle: jobTitle?.trim() || null,
   };
 
   saveUsers(users);

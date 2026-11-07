@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
-import { authsApi, authsDataSource } from '../api/authsApi';
+import { authsApi } from '../api/authsApi';
 import UserForm from '../components/UserManagement/UserForm';
 import UserList from '../components/UserManagement/UserList';
 
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
-
-// Tạo/sửa/khóa tài khoản chưa có API; không để giao diện ghi vào mock trong khi danh sách lấy từ DB.
-const canEditAccounts = authsDataSource !== 'api';
 
 export default function UserManagementPage() {
   const { user, role, permissions } = useAuth();
@@ -149,6 +146,7 @@ export default function UserManagementPage() {
           fullName: formData.fullName,
           email: formData.email,
           role: formData.role,
+          jobTitle: formData.jobTitle,
         });
 
         setPageSuccess('Cập nhật tài khoản thành công.');
@@ -158,6 +156,7 @@ export default function UserManagementPage() {
           fullName: formData.fullName,
           email: formData.email,
           role: formData.role,
+          jobTitle: formData.jobTitle,
           password: formData.password,
         });
 
@@ -231,7 +230,6 @@ export default function UserManagementPage() {
           type="button"
           className="btn btn-primary"
           onClick={openCreateForm}
-          disabled={!canEditAccounts}
         >
           + Tạo tài khoản
         </button>
@@ -313,7 +311,6 @@ export default function UserManagementPage() {
               onEdit={openEditForm}
               onToggleStatus={handleToggleStatus}
               onResetPassword={handleResetPassword}
-              canEditAccounts={canEditAccounts}
             />
           )}
         </div>
