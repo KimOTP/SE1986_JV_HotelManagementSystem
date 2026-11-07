@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PRIORITIES } from '../constants/operationsLabels';
 import { Alert, Button, Form, Modal, Row, Col } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -123,8 +124,8 @@ export default function CreateTaskModal({ managerName, onClose, onCreated }) {
       <Form noValidate onSubmit={(event) => handleSubmit(submit)(event)}>
         <Modal.Body>
           <Alert variant="info">
-            Người giao việc: <strong>{managerName}</strong>. Phiên đăng nhập hiện tại. Nhập lịch theo giờ địa
-            phương.
+            Người giao việc: <strong>{managerName}</strong>. Phiên đăng nhập hiện tại. Nhập lịch
+            theo giờ địa phương.
           </Alert>
           {rooms.loading && (
             <Alert variant="info" role="status">
@@ -218,10 +219,11 @@ export default function CreateTaskModal({ managerName, onClose, onCreated }) {
                 <Form.Group controlId="task-create-priority">
                   <Form.Label>Ưu tiên</Form.Label>
                   <Form.Select {...register('priority')} isInvalid={!!errors.priority}>
-                    <option value="LOW">Thấp</option>
-                    <option value="NORMAL">Bình thường</option>
-                    <option value="HIGH">Cao</option>
-                    <option value="URGENT">Khẩn cấp</option>
+                    {Object.entries(PRIORITIES).map(([code, definition]) => (
+                      <option key={code} value={code}>
+                        {definition.label}
+                      </option>
+                    ))}
                   </Form.Select>
                   <Form.Control.Feedback type="invalid">
                     {errors.priority?.message}

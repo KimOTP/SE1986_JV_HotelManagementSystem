@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Table,
-  Badge,
   Button,
   Form,
   Row,
@@ -17,27 +16,17 @@ import { getIssueTypes } from '../api/issueTypesApi';
 import AssignIssueModal from '../components/AssignIssueModal';
 import IssueProgressModal from '../components/IssueProgressModal';
 import OperationsPageHeader from '../components/OperationsPageHeader';
+import StatusBadge from '../components/IssueStatusBadge';
+import {
+  ISSUE_STATUSES as statuses,
+  getIssueStatus,
+  getPriority,
+} from '../constants/operationsLabels';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import { ROLES } from '../../auths/constants/authConstants';
 
-const statuses = {
-  OPEN: { label: 'Mới báo cáo', color: 'danger' },
-  ASSIGNED: { label: 'Đã phân công', color: 'info' },
-  IN_PROGRESS: { label: 'Đang xử lý', color: 'warning' },
-  RESOLVED: { label: 'Đã xử lý', color: 'success' },
-  CLOSED: { label: 'Đã đóng', color: 'secondary' },
-};
-const priorities = { LOW: 'Thấp', NORMAL: 'Bình thường', HIGH: 'Cao', URGENT: 'Khẩn cấp' };
 const emptyFilters = { room: '', status: '', category: '' };
 const pageSize = 5;
-const StatusBadge = ({ status }) => (
-  <Badge
-    bg={statuses[status].color}
-    text={['ASSIGNED', 'IN_PROGRESS'].includes(status) ? 'dark' : 'white'}
-  >
-    {statuses[status].label}
-  </Badge>
-);
 // SQL DATETIME2 is stored as UTC, but the API currently returns it without an offset.
 const formatDate = (value) =>
   new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`).toLocaleString('vi-VN');
@@ -131,8 +120,8 @@ export default function IssueManagementBoard() {
       )}
       {progressSuccess && (
         <Alert variant="success" dismissible onClose={() => setProgressSuccess(null)}>
-          Đã cập nhật sự cố #{progressSuccess.id}: {statuses[progressSuccess.status].label}. Bộ lọc
-          hiện tại vẫn được giữ nguyên.
+          Đã cập nhật sự cố #{progressSuccess.id}: {getIssueStatus(progressSuccess.status).label}.
+          Bộ lọc hiện tại vẫn được giữ nguyên.
         </Alert>
       )}
       {result.error && (
@@ -325,7 +314,7 @@ export default function IssueManagementBoard() {
                 <strong>Mô tả:</strong> {selectedIssue.description}
               </ListGroup.Item>
               <ListGroup.Item>
-                <strong>Độ ưu tiên:</strong> {priorities[selectedIssue.priority]}
+                <strong>Độ ưu tiên:</strong> {getPriority(selectedIssue.priority).label}
               </ListGroup.Item>
               <ListGroup.Item>
                 <strong>Người báo cáo:</strong> {selectedIssue.reportedBy}

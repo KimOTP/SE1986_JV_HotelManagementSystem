@@ -15,6 +15,9 @@ import { Link } from 'react-router';
 import { getAssignmentContext } from '../api/issueAssignmentsApi';
 import { getHousekeepingDashboard } from '../api/dashboardApi';
 import OperationsPageHeader from '../components/OperationsPageHeader';
+import IssueStatusBadge from '../components/IssueStatusBadge';
+import PriorityBadge from '../components/PriorityBadge';
+import { TASK_STATUSES } from '../constants/operationsLabels';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 const today = () => {
@@ -72,10 +75,10 @@ export default function HousekeepingDashboard() {
   const stats = data
     ? [
         ['Tổng công việc', data.summary.total],
-        ['Chờ xử lý', data.summary.pending],
-        ['Đang thực hiện', data.summary.inProgress],
-        ['Hoàn thành', data.summary.completed],
-        ['Đã hủy', data.summary.cancelled],
+        [TASK_STATUSES.PENDING.label, data.summary.pending],
+        [TASK_STATUSES.IN_PROGRESS.label, data.summary.inProgress],
+        [TASK_STATUSES.COMPLETED.label, data.summary.completed],
+        [TASK_STATUSES.CANCELLED.label, data.summary.cancelled],
         ['Quá hạn', data.summary.overdue],
       ]
     : [];
@@ -198,7 +201,7 @@ export default function HousekeepingDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6}>Chưa có nhân viên hoặc task.</td>
+                  <td colSpan={6}>Chưa có nhân viên hoặc công việc.</td>
                 </tr>
               )}
             </tbody>
@@ -208,19 +211,19 @@ export default function HousekeepingDashboard() {
               <Card>
                 <Card.Body>
                   <h5>Ưu tiên cao chưa xong ({data.summary.highPriorityOpen})</h5>
-                  <small>Hiển thị tối đa 5 task trong phạm vi thống kê.</small>
+                  <small>Hiển thị tối đa 5 công việc trong phạm vi thống kê.</small>
                   <ListGroup variant="flush">
                     {data.urgentTasks.map((task) => (
                       <ListGroup.Item key={task.id} className="text-break">
                         Phòng {task.roomNumber}: {task.title}
                         <br />
                         <small>
-                          {task.assignedTo} · {task.priority}
+                          {task.assignedTo} · <PriorityBadge priority={task.priority} />
                         </small>
                       </ListGroup.Item>
                     ))}
                   </ListGroup>
-                  {!data.urgentTasks.length && <p>Không có task ưu tiên cao đang chờ.</p>}
+                  {!data.urgentTasks.length && <p>Không có công việc ưu tiên cao đang chờ.</p>}
                   <Button as={Link} to="/operations/tasks" variant="link">
                     Bảng công việc
                   </Button>
@@ -237,7 +240,7 @@ export default function HousekeepingDashboard() {
                       <ListGroup.Item key={issue.id} className="text-break">
                         Phòng {issue.roomNumber}: {issue.title}
                         <br />
-                        <small>{issue.status}</small>
+                        <IssueStatusBadge status={issue.status} />
                       </ListGroup.Item>
                     ))}
                   </ListGroup>
