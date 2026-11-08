@@ -5,7 +5,8 @@ import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingError from '../components/BookingError';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
-import { cancelBooking, getBooking } from '../mocks/bookingStore';
+import { bookingsApi } from '../api/bookingsApi';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { displayDate } from '../utils/bookingUtils';
 
 export default function CancelBookingPage() {
@@ -13,27 +14,40 @@ export default function CancelBookingPage() {
   const canCancelBooking = hasPermission('UC-C4');
   const { id } = useParams();
   const navigate = useNavigate();
-  const [booking, setBooking] = useState(() => getBooking(id));
+  const { data: booking, loading, error: loadError } = useAsyncData(
+    () => bookingsApi.getByCode(id),
+    [id],
+  );
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     setError('');
+    setSubmitting(true);
     try {
-      const updated = cancelBooking(id, reason.trim());
-      setBooking(updated);
+      const updated = await bookingsApi.cancel(id, reason.trim());
       setShowConfirm(false);
-      navigate(`/bookings/${updated.id}`);
+      navigate(`/bookings/${updated.bookingCode || updated.id}`);
     } catch (caught) {
       setError(caught.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (!booking) {
+  if (loading) {
+    return (
+      <div className="bookings-module booking-page">
+        <Alert variant="secondary">Đang tải đặt phòng…</Alert>
+      </div>
+    );
+  }
+  if (loadError || !booking) {
     return (
       <Alert variant="warning">
-        Không tìm thấy đặt phòng. <Link to="/bookings">Quay lại</Link>
+        {loadError || 'Không tìm thấy đặt phòng.'} <Link to="/bookings">Quay lại</Link>
       </Alert>
     );
   }
@@ -87,7 +101,7 @@ export default function CancelBookingPage() {
             <Button variant="outline-secondary" as={Link} to={`/bookings/${booking.id}`}>
               Giữ đặt phòng
             </Button>
-            <Button variant="danger" onClick={() => setShowConfirm(true)} disabled={!canCancelBooking}>
+            <Button variant="danger" onClick={() => setShowConfirm(true)} disabled={!canCancelBooking || submitting}>
               Tiếp tục hủy
             </Button>
           </div>
@@ -104,8 +118,8 @@ export default function CancelBookingPage() {
           <Button variant="outline-secondary" onClick={() => setShowConfirm(false)}>
             Quay lại
           </Button>
-          <Button variant="danger" onClick={confirmCancel} disabled={!canCancelBooking}>
-            Xác nhận hủy đặt phòng
+          <Button variant="danger" onClick={confirmCancel} disabled={!canCancelBooking || submitting}>
+            {submitting ? 'Đang hủy…' : 'Xác nhận hủy đặt phòng'}
           </Button>
         </Modal.Footer>
       </Modal>

@@ -70,9 +70,40 @@ public class BookingQueryService {
                 .toList();
     }
 
+    /**
+     * Danh sách cho console quản lý (UC-2.9 / UC-C5): mọi booking, lọc theo
+     * trạng thái và từ khóa (mã, tên, email, điện thoại). Trả kèm tổng số bản
+     * ghi để FE phân trang.
+     */
     @Transactional(readOnly = true)
-    public BookingResponse getByCode(long viewerId, String bookingCode, boolean canViewAnyBooking) {
-        BookingRow booking = requireBooking(bookingCode);
+    public ManagedBookings listForManagement(String status, String keyword, int page, int size) {
+        validatePaging(page, size);
+        String normalizedStatus = normalizeStatus(status);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+
+        int offset = page * size;
+        List<BookingRow> rows = repository.findForManagement(normalizedStatus, normalizedKeyword, offset, size);
+        long total = repository.countForManagement(normalizedStatus, normalizedKeyword);
+        if (rows.isEmpty()) {
+            return new ManagedBookings(List.of(), total);
+        }
+
+        Map<Long, List<BookingRoomRow>> roomsByBooking = repository
+                .findRooms(rows.stream().map(BookingRow::bookingId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(BookingRoomRow::bookingId));
+
+        List<BookingResponse> items = rows.stream()
+                .map(row -> toResponse(row, roomsByBooking.getOrDefault(row.bookingId(), List.of())))
+                .toList();
+        return new ManagedBookings(items, total);
+    }
+
+    public record ManagedBookings(List<BookingResponse> items, long total) {
+    }
+
+    @Transactional(readOnly = true)
+    public BookingResponse getByCode(long viewerId, String bookingCode, boolean canViewAnyBooking) {        BookingRow booking = requireBooking(bookingCode);
         if (!canViewAnyBooking && booking.customerId() != viewerId) {
             // 404 thay vì 403: không xác nhận mã đặt phòng của người khác có tồn tại.
             throw new ApiException(NOT_FOUND, "BOOKING_NOT_FOUND",

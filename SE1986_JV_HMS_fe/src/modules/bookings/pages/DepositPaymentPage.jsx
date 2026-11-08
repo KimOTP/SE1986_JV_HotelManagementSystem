@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Button, Form } from 'react-bootstrap';
+import { useMemo, useState } from 'react';
+import { Alert, Button, Form } from 'react-bootstrap';
 import {
   Bank,
   Calendar3,
@@ -15,7 +15,8 @@ import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingError from '../components/BookingError';
 import BookingStatus from '../components/BookingStatus';
-import { getBookings, payBookingDeposit } from '../mocks/bookingStore';
+import { bookingsApi } from '../api/bookingsApi';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { displayDate, isHoldExpired, money, nightsBetween } from '../utils/bookingUtils';
 import '../styles/deposit-payment.css';
 
@@ -51,7 +52,11 @@ export default function DepositPaymentPage() {
   const { hasPermission } = useAuth();
   const canPayDeposit = hasPermission('UC-C2');
   const [params] = useSearchParams();
-  const [bookings, setBookings] = useState(() => getBookings());
+  const { data, loading, error: loadError, refetch } = useAsyncData(
+    () => bookingsApi.listMine({ status: 'PENDING', size: 100 }),
+    [],
+  );
+  const bookings = useMemo(() => data || [], [data]);
   const [selectedId, setSelectedId] = useState(params.get('bookingId') || '');
   const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
   const [error, setError] = useState('');
@@ -70,7 +75,7 @@ export default function DepositPaymentPage() {
     ? Math.max(0, Number(selected.totalAmount) - Number(selected.depositRequired))
     : 0;
 
-  const pay = () => {
+  const pay = async () => {
     if (!canPayDeposit) {
       setError('Bạn không có quyền UC-C2 để thanh toán tiền cọc.');
       return;
@@ -89,13 +94,13 @@ export default function DepositPaymentPage() {
     setError('');
     setPaying(true);
     try {
-      payBookingDeposit(selected.id, paymentMethod);
-      setBookings(getBookings());
+      const result = await bookingsApi.payDeposit(selected.id, paymentMethod);
       setPaid({
-        id: selected.id,
-        amount: selected.depositRequired,
+        id: result.bookingCode || selected.id,
+        amount: result.depositPaid ?? selected.depositRequired,
         method: paymentMethod,
       });
+      refetch();
     } catch (caught) {
       setError(caught.message);
     } finally {
@@ -126,7 +131,19 @@ export default function DepositPaymentPage() {
 
       <BookingError error={error} />
 
-      {paid ? (
+      {loading ? (
+        <Alert variant="secondary">Đang tải đặt phòng chờ thanh toán…</Alert>
+      ) : loadError ? (
+        <Alert
+          variant="danger"
+          className="d-flex flex-wrap justify-content-between align-items-center gap-3"
+        >
+          <span>{loadError}</span>
+          <Button variant="outline-danger" size="sm" onClick={refetch}>
+            Thử lại
+          </Button>
+        </Alert>
+      ) : paid ? (
         <section className="deposit-success">
           <span className="deposit-success__icon">
             <CheckCircle aria-hidden="true" />

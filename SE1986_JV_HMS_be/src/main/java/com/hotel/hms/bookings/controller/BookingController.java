@@ -11,6 +11,7 @@ import com.hotel.hms.common.exception.ApiException;
 import com.hotel.hms.identity.security.AuthUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -68,6 +69,24 @@ public class BookingController {
                                           @RequestParam(defaultValue = "") String status) {
         requireUser(currentUser);
         return queryService.listMine(currentUser.getId(), status, page, size);
+    }
+
+    /**
+     * UC-2.9 / UC-C5 – console quản lý đặt phòng: mọi khách, lọc trạng thái và
+     * từ khóa. Tổng số bản ghi nằm ở header {@code X-Total-Count}.
+     */
+    @GetMapping("/manage")
+    @PreAuthorize("hasAuthority('UC-C5')")
+    public ResponseEntity<List<BookingResponse>> manage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "") String keyword) {
+        BookingQueryService.ManagedBookings result =
+                queryService.listForManagement(status, keyword, page, size);
+        return ResponseEntity.ok()
+                .header("X-Total-Count", Long.toString(result.total()))
+                .body(result.items());
     }
 
     /**

@@ -24,6 +24,8 @@ public class CorsConfig {
                 HttpHeaders.CONTENT_TYPE,
                 HttpHeaders.ACCEPT
         ));
+        // FE cần đọc tổng số bản ghi khi phân trang danh sách quản lý booking.
+        configuration.setExposedHeaders(List.of("X-Total-Count"));
         // Token đi qua header Authorization, không dùng cookie nên không cần credentials.
         configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);

@@ -28,7 +28,7 @@ import { useAuth } from '../../../app/provider/AuthsContext';
 import { roomsApi } from '../../rooms/api/roomsApi';
 import { imageOrFallback, validateSearch } from '../../rooms/utils/roomUtils';
 import BookingError from '../components/BookingError';
-import { createBooking } from '../mocks/bookingStore';
+import { bookingsApi } from '../api/bookingsApi';
 import { money, nightsBetween, today } from '../utils/bookingUtils';
 
 const HOTEL_NAME = 'SkyVista Hotel';
@@ -189,16 +189,21 @@ export default function CreateBookingPage() {
         checkOut: form.checkOut,
         guests: form.guests,
       })
-      .then((availabilityResult) => {
+      .then(async (availabilityResult) => {
         const availableRooms = Number(availabilityResult?.availableRooms || 0);
         if (availableRooms < Number(form.rooms))
           throw new Error(`Chỉ còn ${availableRooms} phòng phù hợp trong khoảng ngày đã chọn.`);
-        const booking = createBooking({
-          ...form,
-          specialRequests: form.specialRequests.trim(),
+        const booking = await bookingsApi.create({
+          roomTypeId: Number(roomType.id),
+          checkIn: form.checkIn,
+          checkOut: form.checkOut,
           guests: Number(form.guests),
           rooms: Number(form.rooms),
-          roomTypeId: roomType.id,
+          customerName: form.customerName,
+          email: form.email,
+          phone: form.phone,
+          specialRequests: form.specialRequests.trim(),
+          // Mock cần thêm dữ liệu hiển thị; API mode bỏ qua các trường này.
           roomTypeName: roomType.name,
           roomPrice: roomType.basePrice,
           roomCapacity: roomType.capacity,
@@ -206,7 +211,7 @@ export default function CreateBookingPage() {
           depositRequired: deposit,
           availableRooms,
         });
-        navigate(`/bookings/${booking.id}`);
+        navigate(`/bookings/${booking.bookingCode || booking.id}`);
       })
       .catch((caught) => setError(caught?.response?.data?.message || caught.message))
       .finally(() => setSubmitting(false));

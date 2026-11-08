@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -79,6 +80,60 @@ public class BookingQueryRepository {
                 """.formatted(BOOKING_COLUMNS, DEPOSIT_PAID_SUBQUERY);
 
         return jdbc.query(sql, (rs, rowNum) -> mapRow(rs), bookingCode).stream().findFirst();
+    }
+
+    /**
+     * Danh sách cho console quản lý (UC-2.9 / UC-C5): mọi khách hàng, lọc theo
+     * trạng thái và từ khóa (mã đơn, tên, email, điện thoại).
+     */
+    public List<BookingRow> findForManagement(String status, String keyword, int offset, int limit) {
+        QueryParts filter = managementFilter(status, keyword);
+        String sql = """
+                SELECT %s %s
+                FROM booking.bookings b
+                %s
+                ORDER BY b.created_at DESC, b.booking_id DESC
+                OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+                """.formatted(BOOKING_COLUMNS, DEPOSIT_PAID_SUBQUERY, filter.where());
+
+        List<Object> args = new ArrayList<>(filter.args());
+        args.add(offset);
+        args.add(limit);
+        return jdbc.query(sql, (rs, rowNum) -> mapRow(rs), args.toArray());
+    }
+
+    public long countForManagement(String status, String keyword) {
+        QueryParts filter = managementFilter(status, keyword);
+        String sql = "SELECT COUNT(*) FROM booking.bookings b " + filter.where();
+        Long total = jdbc.queryForObject(sql, Long.class, filter.args().toArray());
+        return total == null ? 0 : total;
+    }
+
+    private static QueryParts managementFilter(String status, String keyword) {
+        StringBuilder where = new StringBuilder("WHERE 1 = 1");
+        List<Object> args = new ArrayList<>();
+
+        if (status != null && !status.isBlank()) {
+            where.append(" AND b.status = ?");
+            args.add(status);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            where.append("""
+                     AND (LOWER(b.booking_code) LIKE ?
+                          OR LOWER(b.contact_name) LIKE ?
+                          OR LOWER(b.contact_email) LIKE ?
+                          OR b.contact_phone LIKE ?)
+                    """);
+            String like = "%" + keyword.trim().toLowerCase(java.util.Locale.ROOT) + "%";
+            args.add(like);
+            args.add(like);
+            args.add(like);
+            args.add(like);
+        }
+        return new QueryParts(where.toString(), args);
+    }
+
+    private record QueryParts(String where, List<Object> args) {
     }
 
     /**

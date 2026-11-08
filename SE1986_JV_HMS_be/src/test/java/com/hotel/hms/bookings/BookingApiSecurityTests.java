@@ -51,6 +51,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -348,6 +349,27 @@ class BookingApiSecurityTests {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(depositService);
+    }
+
+    @Test
+    void manageListWithoutUcC5IsForbidden() throws Exception {
+        mvc.perform(get("/api/bookings/manage").with(auth(5L, "UC-C3")))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(queryService);
+    }
+
+    @Test
+    void managerListsAllBookingsWithTotalHeader() throws Exception {
+        when(queryService.listForManagement("", "", 0, 20))
+                .thenReturn(new BookingQueryService.ManagedBookings(List.of(response()), 3));
+
+        mvc.perform(get("/api/bookings/manage").with(auth(9L, "UC-C5")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "3"))
+                .andExpect(jsonPath("$[0].id").value("BK-TEST"));
+
+        verify(queryService).listForManagement("", "", 0, 20);
     }
 
     private static String validBody() {        return """

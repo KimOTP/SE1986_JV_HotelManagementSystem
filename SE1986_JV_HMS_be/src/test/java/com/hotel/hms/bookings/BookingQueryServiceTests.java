@@ -201,6 +201,45 @@ class BookingQueryServiceTests {
         verify(repository, never()).insertCancellationHistory(anyLong(), any(), anyLong(), any());
     }
 
+    @Test
+    void listsAllBookingsForManagementWithTotal() {
+        when(repository.findForManagement("PENDING", "an", 0, 20))
+                .thenReturn(List.of(booking("PENDING")));
+        when(repository.countForManagement("PENDING", "an")).thenReturn(7L);
+        when(repository.findRooms(List.of(99L))).thenReturn(rooms());
+
+        BookingQueryService.ManagedBookings result =
+                service.listForManagement(" pending ", " an ", 0, 20);
+
+        assertEquals(7L, result.total());
+        assertEquals(1, result.items().size());
+        assertEquals("BK-TEST", result.items().get(0).bookingCode());
+        verify(repository).findForManagement("PENDING", "an", 0, 20);
+    }
+
+    @Test
+    void managementListKeepsTotalWhenPageIsEmpty() {
+        when(repository.findForManagement(null, null, 0, 20)).thenReturn(List.of());
+        when(repository.countForManagement(null, null)).thenReturn(0L);
+
+        BookingQueryService.ManagedBookings result = service.listForManagement("", "  ", 0, 20);
+
+        assertTrue(result.items().isEmpty());
+        assertEquals(0L, result.total());
+        verify(repository, never()).findRooms(any());
+    }
+
+    @Test
+    void managementListValidatesStatusAndPaging() {
+        assertEquals("BOOKING_INVALID_STATUS",
+                assertThrows(ApiException.class,
+                        () -> service.listForManagement("DONE", null, 0, 20)).getCode());
+        assertEquals("BOOKING_INVALID_PAGE_SIZE",
+                assertThrows(ApiException.class,
+                        () -> service.listForManagement(null, null, 0, 500)).getCode());
+        verify(repository, never()).findForManagement(any(), any(), anyInt(), anyInt());
+    }
+
     private static BookingRow booking(String status) {
         return new BookingRow(99L, "BK-TEST", 5L, 1L, CHECK_IN, CHECK_OUT, 2, status,
                 "Nguyễn An", "customer@hotel.demo", "0900000001", "Tầng cao",

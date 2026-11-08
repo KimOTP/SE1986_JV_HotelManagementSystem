@@ -5,8 +5,10 @@ import { Link, useParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
-import { DEMO_BOOKING_CUSTOMER_KEY, getBooking } from '../mocks/bookingStore';
+import { bookingsApi } from '../api/bookingsApi';
+import { useAsyncData } from '../hooks/useAsyncData';
 import {
+  BOOKING_STATUS,
   displayDate,
   displayDateTime,
   formatHoldTime,
@@ -20,7 +22,10 @@ export default function BookingDetailPage() {
   const canManageBookings = hasPermission('UC-C5');
   const canCancelBooking = hasPermission('UC-C4');
   const canPayDeposit = hasPermission('UC-C2');
-  const booking = getBooking(id);
+  const { data: booking, loading, error } = useAsyncData(
+    () => bookingsApi.getByCode(id),
+    [id],
+  );
   const [, setTick] = useState(0);
   const holdDeadline = booking?.holdExpiresAt;
   const bookingStatus = booking?.status;
@@ -36,23 +41,50 @@ export default function BookingDetailPage() {
 
   const remaining = booking ? holdRemainingSeconds(booking) : null;
 
-  if (!booking) {
+  if (loading) {
     return (
-      <Alert variant="warning">
-        Không tìm thấy đặt phòng <strong>{id}</strong>. <Link to="/bookings">Về danh sách</Link>
-      </Alert>
+      <div className="bookings-module booking-page">
+        <Alert variant="secondary">Đang tải chi tiết đặt phòng…</Alert>
+      </div>
     );
   }
-  const canViewAllBookings = canManageBookings;
-  const belongsToCurrentCustomer = booking.customerKey === DEMO_BOOKING_CUSTOMER_KEY;
-  if (!canViewAllBookings && !belongsToCurrentCustomer) {
-    return <Alert variant="danger">Bạn không có UC-C6 để xem đặt phòng này.</Alert>;
+  if (error || !booking) {
+    return (
+      <Alert variant="warning">
+        {error || (
+          <>
+            Không tìm thấy đặt phòng <strong>{id}</strong>.
+          </>
+        )}{' '}
+        <Link to="/bookings">Về danh sách</Link>
+      </Alert>
+    );
   }
   const holdExpired =
     booking.status === 'PENDING' && remaining !== null && remaining <= 0;
   const displayStatus = holdExpired ? 'EXPIRED' : booking.status;
   const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status) && !holdExpired;
   const canPay = booking.status === 'PENDING' && !holdExpired;
+  const timeline =
+    booking.timeline?.length > 0
+      ? booking.timeline
+      : [
+          {
+            status: 'PENDING',
+            label: 'Đặt phòng được tạo',
+            at: booking.createdAt,
+          },
+          ...(booking.status === 'PENDING'
+            ? []
+            : [
+                {
+                  status: booking.status,
+                  label:
+                    BOOKING_STATUS[booking.status]?.label || booking.status,
+                  at: booking.cancelledAt || booking.createdAt,
+                },
+              ]),
+        ];
 
   return (
     <div className="bookings-module booking-page">
@@ -144,7 +176,7 @@ export default function BookingDetailPage() {
             <Card.Body>
               <h3 className="booking-section-title">Dòng thời gian</h3>
               <ol className="booking-timeline">
-                {booking.timeline.map((event, index) => (
+                {timeline.map((event, index) => (
                   <li className="booking-timeline-item" key={`${event.status}-${index}`}>
                     <span className={`booking-timeline-dot status-${event.status.toLowerCase()}`} />
                     <div>

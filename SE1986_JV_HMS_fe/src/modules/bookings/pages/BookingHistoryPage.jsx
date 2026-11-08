@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Form, Pagination } from 'react-bootstrap';
+import { Alert, Button, Form, Pagination } from 'react-bootstrap';
 import {
   ArrowRepeat,
   Calendar3,
@@ -16,7 +16,8 @@ import {
 import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
-import { DEMO_BOOKING_CUSTOMER_KEY, getBookings } from '../mocks/bookingStore';
+import { bookingsApi } from '../api/bookingsApi';
+import { useAsyncData } from '../hooks/useAsyncData';
 import {
   BOOKING_GROUPS,
   bookingGroup,
@@ -145,26 +146,40 @@ export default function BookingHistoryPage() {
   const canPayDeposit = hasPermission('UC-C2');
   const canCancel = hasPermission('UC-C4');
 
-  const [bookings, setBookings] = useState(() => getBookings());
+  // Khách chỉ thấy đơn của mình (backend đã scope theo JWT); quản lý thấy toàn bộ.
+  const { data, loading, error, refetch } = useAsyncData(
+    () =>
+      canManageBookings
+        ? bookingsApi.listAll({ size: 200 })
+        : bookingsApi.listMine({ size: 200 }),
+    [canManageBookings],
+  );
+
   const [params, setParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState('');
   const [, setTick] = useState(0);
 
-  // Cập nhật đồng hồ đếm ngược và tự chuyển PENDING → EXPIRED khi hết 15 phút.
+  const bookings = useMemo(
+    () => (canManageBookings ? data?.items || [] : data || []),
+    [canManageBookings, data],
+  );
+
+  // Đếm ngược hiển thị; khi có đơn quá 15 phút thì tải lại để nhận trạng thái EXPIRED.
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTick((value) => value + 1);
-      setBookings((current) =>
-        current.some(
-          (booking) => booking.status === 'PENDING' && isHoldExpired(booking),
-        )
-          ? getBookings()
-          : current,
-      );
-    }, 15000);
+    const timer = setInterval(() => setTick((value) => value + 1), 15000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (
+      bookings.some(
+        (booking) => booking.status === 'PENDING' && isHoldExpired(booking),
+      )
+    ) {
+      refetch();
+    }
+  }, [bookings, refetch]);
 
   const rawGroup = params.get('status') || 'ALL';
   const groupFilter = BOOKING_GROUPS.some((group) => group.key === rawGroup)
@@ -172,34 +187,24 @@ export default function BookingHistoryPage() {
     : 'ALL';
   const isCustomerView = role === 'CUSTOMER' || !canManageBookings;
 
-  const visible = useMemo(
-    () =>
-      canManageBookings
-        ? bookings
-        : bookings.filter(
-            (booking) => booking.customerKey === DEMO_BOOKING_CUSTOMER_KEY,
-          ),
-    [bookings, canManageBookings],
-  );
-
   const counts = useMemo(() => {
-    const result = { ALL: visible.length };
+    const result = { ALL: bookings.length };
     BOOKING_GROUPS.forEach((group) => {
       result[group.key] = 0;
     });
-    visible.forEach((booking) => {
+    bookings.forEach((booking) => {
       result[bookingGroup(booking)] += 1;
     });
     return result;
-  }, [visible]);
+  }, [bookings]);
 
   const filtered = useMemo(() => {
     const text = query.trim().toLowerCase();
-    return visible
+    return bookings
       .filter((booking) => groupFilter === 'ALL' || bookingGroup(booking) === groupFilter)
       .filter((booking) => !text || booking.id.toLowerCase().includes(text))
       .sort(compareBookings);
-  }, [visible, groupFilter, query]);
+  }, [bookings, groupFilter, query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -220,7 +225,7 @@ export default function BookingHistoryPage() {
   };
 
   const reload = () => {
-    setBookings(getBookings());
+    refetch();
     setPage(1);
   };
 
@@ -332,7 +337,25 @@ export default function BookingHistoryPage() {
         </button>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="bh-empty" role="status">
+          <span className="bh-empty__icon">
+            <ArrowRepeat aria-hidden="true" />
+          </span>
+          <h2 className="bh-empty__title">Đang tải đặt phòng…</h2>
+          <p className="bh-empty__desc">Vui lòng chờ trong giây lát.</p>
+        </div>
+      ) : error ? (
+        <Alert
+          variant="danger"
+          className="d-flex flex-wrap justify-content-between align-items-center gap-3"
+        >
+          <span>{error}</span>
+          <Button variant="outline-danger" size="sm" onClick={refetch}>
+            Thử lại
+          </Button>
+        </Alert>
+      ) : filtered.length === 0 ? (
         <div className="bh-empty">
           <span className="bh-empty__icon">
             <CalendarCheck aria-hidden="true" />

@@ -384,3 +384,27 @@ curl -X POST "http://localhost:8080/api/bookings/BK-33B7AD6A0B7844A8A450E587/dep
 - Hủy booking không hoàn tiền tự động; hoàn cọc thuộc luồng billing (Module D) chưa nối.
 - Thanh toán cọc đã có endpoint thật (`POST …/deposit`), FE chỉ cần thay mock
   `payBookingDeposit` bằng lời gọi API và hiển thị lỗi theo `code` trả về.
+
+### 11.8 Quản lý đặt phòng (UC-2.9 / UC-C5)
+
+| Thuộc tính | Giá trị |
+| --- | --- |
+| Method / path | `GET /api/bookings/manage` |
+| Quyền | `UC-C5` (Manager/Admin) |
+| Query | `page` (0-based), `size` (1–100), `status`, `keyword` |
+| Thành công | `200` + mảng `BookingResponse`, tổng số bản ghi ở header `X-Total-Count` |
+
+- `keyword` tìm trong mã đặt phòng, tên khách, email và số điện thoại (không phân biệt hoa thường).
+- Sắp xếp mới nhất trước (`created_at DESC, booking_id DESC`), phân trang tại database.
+- Cùng shape `BookingResponse` với màn của khách nên FE dùng chung component hiển thị.
+- Header `X-Total-Count` đã được expose qua CORS (`CorsConfig`).
+
+```bash
+curl "http://localhost:8080/api/bookings/manage?page=0&size=10&status=PENDING&keyword=an" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" -i
+```
+
+Kiểm chứng: `BookingQueryServiceTests` (15 test) phủ lọc/tổng số/trang rỗng;
+`BookingApiSecurityTests` (20 test) phủ 403 khi thiếu UC-C5 và header `X-Total-Count`.
+Toàn bộ Module C hiện có **57 test** pass (`BookingDepositServiceTests` 10,
+`BookingHoldExpiryServiceTests` 3, `BookingServiceTests` 9).
