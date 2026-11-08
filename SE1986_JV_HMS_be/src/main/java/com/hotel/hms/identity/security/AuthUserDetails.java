@@ -30,6 +30,7 @@ public class AuthUserDetails implements UserDetails {
     private final Long id;
     private final String email;
     private final String fullName;
+    private final String phone;
     private final String passwordHash;
     private final boolean active;
     private final boolean emailVerified;
@@ -43,6 +44,7 @@ public class AuthUserDetails implements UserDetails {
         this.id = user.getId();
         this.email = user.getEmail();
         this.fullName = user.getFullName();
+        this.phone = user.getPhone();
         this.passwordHash = user.getPasswordHash();
         this.active = Boolean.TRUE.equals(user.getActive());
         this.emailVerified = Boolean.TRUE.equals(user.getEmailVerified());
@@ -72,6 +74,10 @@ public class AuthUserDetails implements UserDetails {
     }
 
     public String getPrimaryRole() {
+        return primaryRole(roles);
+    }
+
+    public static String primaryRole(Set<String> roles) {
         return ROLE_PRIORITY.stream().filter(roles::contains).findFirst()
                 .orElse(roles.stream().findFirst().orElse(null));
     }

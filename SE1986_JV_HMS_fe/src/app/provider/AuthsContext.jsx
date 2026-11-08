@@ -125,7 +125,13 @@ export function AuthProvider({ children }) {
     if (!user) return undefined;
     let active = true;
     const refresh = async () => {
-      const permissions = await authsApi.getPermissionsForRoles(user.roles);
+      let permissions;
+      try {
+        permissions = await authsApi.getPermissionsForRoles(user.roles);
+      } catch {
+        // Lỗi mạng: giữ quyền hiện tại; 401 đã được axiosClient xử lý (refresh/đăng xuất).
+        return;
+      }
       if (!active) return;
       const updatedUser = { ...user, permissions };
       setUser(updatedUser);
@@ -178,6 +184,8 @@ export function AuthProvider({ children }) {
       const updatedUser = { ...user, permissions };
       setUser(updatedUser);
       localStorage.setItem(AUTH_STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+    }).catch(() => {
+      // Lỗi mạng: giữ quyền hiện tại; 401 đã được axiosClient xử lý (refresh/đăng xuất).
     });
 
     return () => {
