@@ -4,16 +4,14 @@ import { getAssignmentContext } from '../api/issueAssignmentsApi';
 import { getManagedTasks } from '../api/taskManagementApi';
 import CreateTaskModal from '../components/CreateTaskModal';
 import OperationsPageHeader from '../components/OperationsPageHeader';
+import {
+  TASK_STATUSES as columns,
+  getTaskStatus,
+  getPriority,
+} from '../constants/operationsLabels';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 
-const columns = {
-  PENDING: ['Chờ xử lý', 'secondary'],
-  IN_PROGRESS: ['Đang thực hiện', 'warning'],
-  COMPLETED: ['Đã hoàn thành', 'success'],
-  CANCELLED: ['Đã hủy', 'dark'],
-};
-const priorities = { LOW: 'Thấp', NORMAL: 'Bình thường', HIGH: 'Cao', URGENT: 'Khẩn cấp' };
 const types = { CLEANING: 'Dọn phòng', MAINTENANCE: 'Bảo trì' };
 const empty = { room: '', status: '', type: '' };
 const size = 12;
@@ -153,7 +151,7 @@ export default function HousekeepingTaskBoard() {
                 <option value="">Tất cả</option>
                 {Object.entries(columns).map(([key, value]) => (
                   <option key={key} value={key}>
-                    {value[0]}
+                    {value.label}
                   </option>
                 ))}
               </Form.Select>
@@ -203,14 +201,14 @@ export default function HousekeepingTaskBoard() {
               </Alert>
             )}
             <Row className="g-3">
-              {Object.entries(columns).map(([status, [label, color]]) => {
+              {Object.entries(columns).map(([status, { label, color, text }]) => {
                 const items = result.items.filter((task) => task.status === status);
                 return (
                   <Col md={6} xl={3} key={status}>
                     <div className="bg-light border rounded p-3 h-100">
                       <h5>
                         {label}{' '}
-                        <Badge bg={color} text={status === 'IN_PROGRESS' ? 'dark' : 'white'}>
+                        <Badge bg={color} text={text}>
                           {items.length}
                         </Badge>
                       </h5>
@@ -221,7 +219,7 @@ export default function HousekeepingTaskBoard() {
                             <Card.Text>
                               {task.hotelName} — Phòng {task.roomNumber}
                               <br />
-                              {types[task.taskType]} · {priorities[task.priority]}
+                              {types[task.taskType]} · {getPriority(task.priority).label}
                               <br />
                               Nhân viên: {task.assignedTo}
                               <br />
@@ -288,7 +286,7 @@ export default function HousekeepingTaskBoard() {
                 {detail.description || 'Chưa có mô tả'}
               </p>
               <p>
-                Loại: {types[detail.taskType]} · Ưu tiên: {priorities[detail.priority]}
+                Loại: {types[detail.taskType]} · Ưu tiên: {getPriority(detail.priority).label}
               </p>
               <p>
                 Nhân viên: {detail.assignedTo}
@@ -298,7 +296,7 @@ export default function HousekeepingTaskBoard() {
               <p>
                 Lịch: {formatDate(detail.scheduledAt)}
                 <br />
-                Trạng thái: {columns[detail.status][0]}
+                Trạng thái: {getTaskStatus(detail.status).label}
               </p>
             </>
           )}

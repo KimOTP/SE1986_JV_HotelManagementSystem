@@ -17,14 +17,15 @@ export default function UserManagementPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [pageError, setPageError] = useState('');
   const [pageSuccess, setPageSuccess] = useState('');
+  // Mật khẩu tạm chỉ hiện một lần, không lưu lại ở đâu khác.
+  const [resetResult, setResetResult] = useState(null);
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   const fetchInternalUsers = useCallback(async () => {
-    const result = await authsApi.getUsers();
-    return result.filter((item) => ['MANAGER', 'STAFF'].includes(item.role));
+    return authsApi.getUsers();
   }, []);
 
   const loadUsers = useCallback(async () => {
@@ -89,6 +90,7 @@ export default function UserManagementPage() {
     setSelectedUser(null);
     setPageError('');
     setPageSuccess('');
+    setResetResult(null);
     setIsFormOpen(true);
   };
 
@@ -96,6 +98,7 @@ export default function UserManagementPage() {
     setSelectedUser(targetUser);
     setPageError('');
     setPageSuccess('');
+    setResetResult(null);
     setIsFormOpen(true);
   };
 
@@ -104,10 +107,35 @@ export default function UserManagementPage() {
     setIsFormOpen(false);
   };
 
+  const handleResetPassword = async (targetUser) => {
+    const confirmed = window.confirm(
+      `Đặt lại mật khẩu của ${targetUser.email}? Mật khẩu hiện tại sẽ không dùng được nữa và người này bị đăng xuất.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPageError('');
+    setPageSuccess('');
+    setResetResult(null);
+
+    try {
+      const { temporaryPassword } = await authsApi.resetUserPassword({
+        userId: targetUser.id,
+      });
+
+      setResetResult({ email: targetUser.email, temporaryPassword });
+    } catch (error) {
+      setPageError(error?.message || 'Không thể đặt lại mật khẩu.');
+    }
+  };
+
   const handleSave = async (formData) => {
     setIsSaving(true);
     setPageError('');
     setPageSuccess('');
+    setResetResult(null);
 
     try {
       if (selectedUser) {
@@ -118,6 +146,7 @@ export default function UserManagementPage() {
           fullName: formData.fullName,
           email: formData.email,
           role: formData.role,
+          jobTitle: formData.jobTitle,
         });
 
         setPageSuccess('Cập nhật tài khoản thành công.');
@@ -127,6 +156,7 @@ export default function UserManagementPage() {
           fullName: formData.fullName,
           email: formData.email,
           role: formData.role,
+          jobTitle: formData.jobTitle,
           password: formData.password,
         });
 
@@ -160,6 +190,7 @@ export default function UserManagementPage() {
 
     setPageError('');
     setPageSuccess('');
+    setResetResult(null);
 
     try {
       await authsApi.setInternalUserStatus({
@@ -191,7 +222,7 @@ export default function UserManagementPage() {
           <h2 className="mb-1">Quản lý tài khoản</h2>
 
           <p className="text-muted mb-0">
-            UC-A5 · Quản lý tài khoản nhân viên và quản lý.
+            UC-A5 · Quản lý tài khoản và đặt lại mật khẩu khi người dùng quên.
           </p>
         </div>
 
@@ -216,6 +247,17 @@ export default function UserManagementPage() {
         </div>
       )}
 
+      {resetResult && (
+        <div className="alert alert-warning" role="status">
+          <div className="fw-semibold mb-1">
+            Mật khẩu tạm của {resetResult.email}:{' '}
+            <code className="fs-6">{resetResult.temporaryPassword}</code>
+          </div>
+          Hãy gửi cho người dùng ngay. Mật khẩu này chỉ hiện một lần; người dùng
+          nên đăng nhập và đổi lại trong trang Hồ sơ.
+        </div>
+      )}
+
       {isFormOpen && (
         <div className="card shadow-sm mb-4">
           <div className="card-body p-4">
@@ -236,7 +278,7 @@ export default function UserManagementPage() {
       <div className="card shadow-sm">
         <div className="card-body p-3 p-lg-4">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5 className="mb-0">Danh sách MANAGER và STAFF</h5>
+            <h5 className="mb-0">Danh sách tài khoản</h5>
 
             <span className="badge text-bg-secondary">
               {filteredUsers.length} tài khoản
@@ -268,6 +310,7 @@ export default function UserManagementPage() {
               onStatusFilterChange={setStatusFilter}
               onEdit={openEditForm}
               onToggleStatus={handleToggleStatus}
+              onResetPassword={handleResetPassword}
             />
           )}
         </div>

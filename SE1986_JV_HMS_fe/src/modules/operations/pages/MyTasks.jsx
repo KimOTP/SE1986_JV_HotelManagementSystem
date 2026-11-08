@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Table,
-  Badge,
   Form,
   Row,
   Col,
@@ -14,17 +13,16 @@ import {
 import { getIssueWorkContext } from '../api/issueProgressApi';
 import { getMyDatabaseTasks, updateMyTask } from '../api/myTasksApi';
 import OperationsPageHeader from '../components/OperationsPageHeader';
+import TaskStatusBadge from '../components/TaskStatusBadge';
+import {
+  TASK_STATUSES as statuses,
+  getTaskStatus,
+  getPriority,
+} from '../constants/operationsLabels';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { ROLES } from '../../auths/constants/authConstants';
 
-const statuses = {
-  PENDING: ['Chờ xử lý', 'secondary'],
-  IN_PROGRESS: ['Đang thực hiện', 'warning'],
-  COMPLETED: ['Đã hoàn thành', 'success'],
-  CANCELLED: ['Đã hủy', 'dark'],
-};
 const types = { CLEANING: 'Dọn phòng', MAINTENANCE: 'Bảo trì' };
-const priorities = { LOW: 'Thấp', NORMAL: 'Bình thường', HIGH: 'Cao', URGENT: 'Khẩn cấp' };
 const defaults = { room: '', status: '', type: '' };
 const size = 5;
 const formatDate = (value) =>
@@ -151,8 +149,8 @@ export default function MyTasks() {
       )}
       {success && (
         <Alert variant="success" dismissible onClose={() => setSuccess(null)}>
-          Đã cập nhật công việc #{success.id}: {statuses[success.status][0]}. Bộ lọc hiện tại vẫn
-          được giữ.
+          Đã cập nhật công việc #{success.id}: {getTaskStatus(success.status).label}. Bộ lọc hiện
+          tại vẫn được giữ.
         </Alert>
       )}
       {result.error && (
@@ -189,7 +187,7 @@ export default function MyTasks() {
                 <option value="">Tất cả</option>
                 {Object.entries(statuses).map(([key, value]) => (
                   <option key={key} value={key}>
-                    {value[0]}
+                    {value.label}
                   </option>
                 ))}
               </Form.Select>
@@ -265,14 +263,9 @@ export default function MyTasks() {
                 <td>{task.roomNumber}</td>
                 <td>{task.title}</td>
                 <td>{types[task.taskType]}</td>
-                <td>{priorities[task.priority]}</td>
+                <td>{getPriority(task.priority).label}</td>
                 <td>
-                  <Badge
-                    bg={statuses[task.status][1]}
-                    text={task.status === 'IN_PROGRESS' ? 'dark' : 'white'}
-                  >
-                    {statuses[task.status][0]}
-                  </Badge>
+                  <TaskStatusBadge status={task.status} />
                 </td>
                 <td>
                   <Button size="sm" variant="outline-primary" onClick={() => setDetail(task)}>

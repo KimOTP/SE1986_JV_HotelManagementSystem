@@ -121,7 +121,7 @@ export default function RoleManagementPage() {
       <div className="mb-4">
         <h2 className="mb-1">Quản lý vai trò & quyền</h2>
         <p className="text-muted mb-0">
-          UC-A6 · Ma trận quyền theo UC. Admin có toàn quyền; Manager, Staff và Customer chỉnh theo quy trình dự án. Bản demo lưu trên trình duyệt.
+          UC-A6 · Ma trận quyền theo UC. Admin luôn có toàn quyền; thay đổi quyền của các vai trò khác có hiệu lực ngay với mọi tài khoản thuộc vai trò đó.
         </p>
       </div>
 
@@ -172,7 +172,7 @@ export default function RoleManagementPage() {
                         <span className="form-check-label">
                           <span className="d-block fw-semibold">{label}</span>
                           {isLockedAdminAccess && (
-                            <span className="small text-muted">Quyền UC mặc định của ADMIN đang được khóa trong bản demo.</span>
+                            <span className="small text-muted">ADMIN luôn giữ đủ quyền.</span>
                           )}
                         </span>
                       </label>

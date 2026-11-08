@@ -5,10 +5,11 @@ const emailSchema = z
   .trim()
   .email('Email không hợp lệ.');
 
+// Backend băm bằng BCrypt, chỉ dùng được tối đa 72 byte.
 const passwordSchema = z
   .string()
   .min(6, 'Mật khẩu phải có ít nhất 6 ký tự.')
-  .max(100, 'Mật khẩu không được vượt quá 100 ký tự.');
+  .max(72, 'Mật khẩu không được vượt quá 72 ký tự.');
 
 export const loginSchema = z.object({
   email: emailSchema,
@@ -33,19 +34,6 @@ export const registerSchema = z
     path: ['confirmPassword'],
   });
 
-export const resetPasswordSchema = z
-  .object({
-    email: emailSchema,
-    password: passwordSchema,
-    confirmPassword: z
-      .string()
-      .min(1, 'Vui lòng xác nhận mật khẩu mới.'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Mật khẩu xác nhận không khớp.',
-    path: ['confirmPassword'],
-  });
-
 // Validate thông tin cá nhân
 export const profileSchema = z.object({
   fullName: z
@@ -53,6 +41,13 @@ export const profileSchema = z.object({
     .trim()
     .min(2, 'Họ và tên phải có ít nhất 2 ký tự.')
     .max(100, 'Họ và tên không được vượt quá 100 ký tự.'),
+  // Không bắt buộc; khớp kiểm tra ở backend.
+  phone: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || /^[0-9+() -]{8,20}$/.test(value), {
+      message: 'Số điện thoại không hợp lệ.',
+    }),
 });
 
 // Validate đổi mật khẩu
@@ -65,7 +60,7 @@ export const changePasswordSchema = z
     newPassword: z
       .string()
       .min(6, 'Mật khẩu mới phải có ít nhất 6 ký tự.')
-      .max(100, 'Mật khẩu mới không được vượt quá 100 ký tự.'),
+      .max(72, 'Mật khẩu mới không được vượt quá 72 ký tự.'),
 
     confirmPassword: z
       .string()
@@ -106,6 +101,12 @@ export const changePasswordSchema = z
       }),
     },
   ),
+
+  jobTitle: z
+    .string()
+    .trim()
+    .max(100, 'Chức danh không được vượt quá 100 ký tự.')
+    .optional(),
 
   password: z.string().optional(),
 });

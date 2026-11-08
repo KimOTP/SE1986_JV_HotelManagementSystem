@@ -51,9 +51,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout")
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout")
                         .permitAll()
-                        .requestMatchers("/api/auth/**", "/api/operations/**").authenticated()
+                        .requestMatchers("/api/auth/**", "/api/operations/**", "/api/admin/users/**", "/api/admin/roles/**", "/api/users/**").authenticated()
                         // Giai đoạn chuyển tiếp: các module chưa nối đăng nhập thật nên chưa khóa mặc định.
                         // Module nào cần bảo vệ thì dùng @PreAuthorize trên controller/method.
                         // TODO: chuyển thành .anyRequest().authenticated() khi FE các module dùng JWT.

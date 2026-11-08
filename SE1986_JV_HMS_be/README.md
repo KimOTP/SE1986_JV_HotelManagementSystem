@@ -352,6 +352,8 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 ### Cài đặt local
 
+0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
+   `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
 1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
    Thiếu biến này app vẫn chạy nhưng tự sinh khóa tạm, nên phải đăng nhập lại sau mỗi lần restart.
 2. Tài khoản seed: `admin@sba.example`, `manager@sba.example`, `reception@sba.example`,
@@ -364,14 +366,30 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 | Method | URL | Body | Kết quả |
 | --- | --- | --- | --- |
+| POST | `/api/auth/register` | `{ fullName, email, password }` | 201 kèm `user`; tạo CUSTOMER, đăng nhập được ngay (không xác thực qua email). Trùng email trả 409 |
 | POST | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken, tokenType, expiresIn, user }` |
 | POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
 | POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
 | GET | `/api/auth/me` | — | `user` (cần Bearer token) |
+| PUT | `/api/users/me/profile` | `{ fullName, phone }` | `user` sau khi cập nhật; không đổi được email và role (UC-A4) |
+| PUT | `/api/users/me/password` | `{ currentPassword, newPassword }` | Cặp token mới; mọi phiên cũ bị thu hồi (UC-A4) |
+| GET | `/api/admin/users` | — | Danh sách tài khoản (UC-A5) |
+| POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/STAFF kèm dòng `staff` (UC-A5) |
+| PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/STAFF; không tự đổi vai trò của mình (UC-A5) |
+| PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/STAFF; khóa thì thu hồi mọi phiên (UC-A5) |
+| GET | `/api/admin/roles` | — | Danh sách role kèm mã UC (UC-A6) |
+| PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN luôn giữ đủ 30 quyền (UC-A6) |
+| POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
-`user` gồm `id, fullName, email, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified`.
+`user` gồm `id, fullName, email, phone, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified, enabled`.
 Access token sống 15 phút, refresh token 7 ngày. FE (`axiosClient`) tự gắn
 `Authorization: Bearer ...` và tự refresh khi gặp 401.
+
+### Quên mật khẩu
+
+Hệ thống không gửi mail. Người dùng liên hệ quản trị viên; quản trị viên bấm "Đặt lại mật khẩu" trong
+màn Quản lý tài khoản để nhận mật khẩu tạm, người dùng đăng nhập rồi đổi trong trang Hồ sơ.
+Access token đã phát trước đó vẫn dùng được tới khi hết hạn (tối đa 15 phút).
 
 ### Dùng trong module khác
 

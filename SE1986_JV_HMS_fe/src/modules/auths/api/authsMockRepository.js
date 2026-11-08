@@ -324,53 +324,7 @@ export const authsMockRepository = {
     return toPublicUser(newUser);
   },
 
-  async requestPasswordReset({ email }) {
-    const normalizedEmail = normalizeEmail(email);
-    const users = getStoredUsers();
-
-    const user = users.find(
-      (item) => normalizeEmail(item.email) === normalizedEmail,
-    );
-
-    if (!user || user.enabled === false) {
-      throw new Error("Email không tồn tại hoặc tài khoản đã bị vô hiệu hóa.");
-    }
-
-    return {
-      email: user.email,
-      message: "Email hợp lệ. Bạn có thể đặt mật khẩu mới.",
-    };
-  },
-
-  async resetPassword({ email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    const users = getStoredUsers();
-
-    const userIndex = users.findIndex(
-      (item) => normalizeEmail(item.email) === normalizedEmail,
-    );
-
-    if (userIndex === -1) {
-      throw new Error("Email không tồn tại trong hệ thống.");
-    }
-
-    if (users[userIndex].enabled === false) {
-      throw new Error("Tài khoản đã bị vô hiệu hóa.");
-    }
-
-    const updatedUsers = users.map((user, index) =>
-      index === userIndex
-        ? { ...user, password }
-        : user,
-    );
-    saveUsers(updatedUsers);
-
-    return {
-      email: normalizedEmail,
-      message: "Đổi mật khẩu thành công.",
-    };
-  },
-  async updateProfile({ userId, fullName }) {
+  async updateProfile({ userId, fullName, phone }) {
   const users = getStoredUsers();
 
   const userIndex = users.findIndex(
@@ -390,6 +344,7 @@ export const authsMockRepository = {
   users[userIndex] = {
     ...users[userIndex],
     fullName: normalizedFullName,
+    phone: phone?.trim() || null,
   };
 
   saveUsers(users);
@@ -434,11 +389,22 @@ export const authsMockRepository = {
 
   return { success: true };
   },
+  async resetUserPassword({ userId }) {
+    const users = getStoredUsers();
+    const target = users.find((item) => String(item.id) === String(userId));
+    if (!target) {
+      throw new Error('Không tìm thấy tài khoản.');
+    }
+    const temporaryPassword = `tmp-${Math.random().toString(36).slice(2, 10)}`;
+    saveUsers(users.map((item) => (item === target ? { ...item, password: temporaryPassword } : item)));
+    return { temporaryPassword };
+  },
   async createInternalUser({
   actorPermissions,
   fullName,
   email,
   role,
+  jobTitle,
   password,
 }) {
   if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
@@ -465,6 +431,7 @@ export const authsMockRepository = {
     email: normalizedEmail,
     password,
     role,
+    jobTitle: jobTitle?.trim() || null,
     enabled: true,
   };
 
@@ -480,6 +447,7 @@ export const authsMockRepository = {
   fullName,
   email,
   role,
+  jobTitle,
 }) {
   if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
     throw new Error('Bạn không có UC-A5 để cập nhật tài khoản nội bộ.');
@@ -528,6 +496,7 @@ export const authsMockRepository = {
     fullName: fullName.trim(),
     email: normalizedEmail,
     role,
+    jobTitle: jobTitle?.trim() || null,
   };
 
   saveUsers(users);

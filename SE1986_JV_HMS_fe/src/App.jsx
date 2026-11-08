@@ -27,6 +27,7 @@ import ResetPasswordPage from './modules/auths/pages/ResetPasswordPage';
 import ProfilePage from './modules/auths/pages/ProfilePage';
 import UserManagementPage from './modules/auths/pages/UserManagementPage';
 import RoleManagementPage from './modules/auths/pages/RoleManagementPage';
+import { getHomePath } from './modules/auths/utils/homePath';
 import ServicesPage from './modules/services/pages/ServicesPage';
 import ContactPage from './modules/services/pages/ContactPage';
 import {
@@ -40,15 +41,8 @@ import {
 } from './modules/bookings/pages';
 
 function RoleHomeRedirect() {
-  const { hasPermission } = useAuth();
-  const destinations = [
-    ['/users', 'UC-A5'],
-    ['/bookings', 'UC-C3'],
-    ['/operations/my-tasks', 'UC-E2'],
-    ['/rooms', 'UC-B4'],
-    ['/profile', 'UC-A4'],
-  ];
-  return <Navigate to={destinations.find(([, permission]) => hasPermission(permission))?.[0] || '/profile'} replace />;
+  const { permissions } = useAuth();
+  return <Navigate to={getHomePath(permissions)} replace />;
 }
 
 function NotFound() {
@@ -260,7 +254,7 @@ export default function App() {
           <Route
             path="frontdesk/invoices"
             element={
-              <PermissionRoute permission="UC-D6">
+              <PermissionRoute permission="UC-D4">
                 <InvoiceListPage />
               </PermissionRoute>
             }

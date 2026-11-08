@@ -116,7 +116,7 @@ export const sidebarMenu = [
         label: 'Hóa đơn',
         to: '/frontdesk/invoices',
         icon: Receipt,
-        requiredPermission: 'UC-D6',
+        requiredPermission: 'UC-D4',
       },
     ],
   },

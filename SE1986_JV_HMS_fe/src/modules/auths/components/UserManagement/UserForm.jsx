@@ -30,6 +30,7 @@ export default function UserForm({
     fullName: '',
     email: '',
     role: 'STAFF',
+    jobTitle: '',
     password: '',
   },
 });
@@ -39,6 +40,7 @@ export default function UserForm({
       fullName: selectedUser?.fullName || '',
       email: selectedUser?.email || '',
       role: selectedUser?.role || 'STAFF',
+      jobTitle: selectedUser?.jobTitle || '',
       password: '',
     });
   }, [selectedUser, reset]);
@@ -52,10 +54,10 @@ export default function UserForm({
     return;
   }
 
-  if (!isEditing && data.password.length < 6) {
+  if (!isEditing && (data.password.length < 6 || data.password.length > 72)) {
     setError('password', {
       type: 'manual',
-      message: 'Mật khẩu phải có ít nhất 6 ký tự.',
+      message: 'Mật khẩu phải có từ 6 đến 72 ký tự.',
     });
     return;
   }
@@ -64,6 +66,7 @@ export default function UserForm({
     fullName: data.fullName,
     email: data.email,
     role: data.role,
+    jobTitle: data.jobTitle,
     ...(isEditing ? {} : { password: data.password }),
   });
 };
@@ -137,6 +140,27 @@ export default function UserForm({
         )}
       </div>
 
+      <div className="mb-3">
+        <label htmlFor="internalJobTitle" className="form-label">
+          Chức danh
+        </label>
+
+        <input
+          id="internalJobTitle"
+          placeholder="Ví dụ: Lễ tân, Dọn phòng"
+          className={`form-control ${
+            errors.jobTitle ? 'is-invalid' : ''
+          }`}
+          {...register('jobTitle')}
+        />
+
+        {errors.jobTitle && (
+          <div className="invalid-feedback">
+            {errors.jobTitle.message}
+          </div>
+        )}
+      </div>
+
       {!isEditing && (
         <div className="mb-3">
           <label htmlFor="internalPassword" className="form-label">
@@ -154,7 +178,7 @@ export default function UserForm({
           />
 
           <div className="form-text">
-            Mật khẩu phải có ít nhất 6 ký tự.
+            Mật khẩu phải có từ 6 đến 72 ký tự.
           </div>
 
           {errors.password && (

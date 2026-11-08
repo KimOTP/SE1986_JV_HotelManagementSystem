@@ -61,26 +61,29 @@ export const PERMISSION_CATALOG = [
   { code: PERMISSIONS.BOOKING_MANAGE, label: 'Quản lý đặt phòng (legacy)' },
 ];
 
+// Khớp bảng identity_access.role_permissions trong database seed, để chế độ mock
+// hiển thị giống khi đăng nhập bằng backend (VITE_AUTH_DATA_SOURCE=api).
 export const ROLE_PERMISSION_DEFAULTS = {
-  [ROLES.ADMIN]: [...new Set([...DATABASE_PERMISSION_CODES, 'UC-C3'])],
+  [ROLES.ADMIN]: [...DATABASE_PERMISSION_CODES],
   [ROLES.MANAGER]: [
     'UC-A2', 'UC-A3', 'UC-A4',
-    'UC-B1', 'UC-B2', 'UC-B3', 'UC-B6',
-    'UC-C3', 'UC-C5', 'UC-C6',
-    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5', 'UC-D6',
-    'UC-E1', 'UC-E3', 'UC-E5', 'UC-E6',
+    'UC-B4', 'UC-B5', 'UC-B6',
+    'UC-C5', 'UC-C6',
+    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5',
+    'UC-E1', 'UC-E3', 'UC-E4', 'UC-E5', 'UC-E6',
   ],
   [ROLES.STAFF]: [
     'UC-A2', 'UC-A3', 'UC-A4',
-    'UC-B4', 'UC-B5', 'UC-B6', 'UC-C6',
-    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5', 'UC-D6',
+    'UC-B4', 'UC-B5', 'UC-B6',
+    'UC-C6',
+    'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4',
     'UC-E2', 'UC-E4', 'UC-E5',
   ],
   [ROLES.CUSTOMER]: [
     'UC-A1', 'UC-A2', 'UC-A3', 'UC-A4',
     'UC-B4', 'UC-B5',
     'UC-C1', 'UC-C2', 'UC-C3', 'UC-C4', 'UC-C6',
-    'UC-D4', 'UC-E4', 'UC-E6',
+    'UC-E4', 'UC-E6',
   ],
 };
 
@@ -107,7 +110,8 @@ export const UC_SCREEN_PERMISSIONS = {
   '/frontdesk/invoices/new': 'UC-D3',
   '/frontdesk/invoices/:id': 'UC-D4',
   '/frontdesk/invoices/:id/edit': 'UC-D5',
-  '/frontdesk/invoices': 'UC-D6',
+  // Danh sách hóa đơn cần quyền xem (khớp API GET /api/frontdesk/invoices); xóa vẫn cần UC-D6.
+  '/frontdesk/invoices': 'UC-D4',
   '/operations/tasks': 'UC-E1',
   '/operations/my-tasks': 'UC-E2',
   '/operations/dashboard': 'UC-E3',
