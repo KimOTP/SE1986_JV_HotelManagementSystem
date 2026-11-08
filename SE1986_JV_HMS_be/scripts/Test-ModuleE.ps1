@@ -113,6 +113,7 @@ if ($reporter.enabled) {
     Assert-That (@($issues | Where-Object { $_.id -eq $issue.id -and $_.resolutionNote -and $_.resolvedAt }).Count -eq 1) 'Resolution note/time did not persist.'
     Write-Output 'PASS: Issue create -> assign -> start -> resolve.'
 }
+$script:headers = $managerHeaders
 $dashboard = Read-Api "/dashboard?date=$day&zone=Asia%2FBangkok&allTime=true"
 Assert-That ($dashboard.summary.completed -ge 1) 'Dashboard did not include completed task.'
 Write-Output 'PASS: dashboard reflects write test. Only operations tasks/issues were written; login may create auth refresh-token records.'

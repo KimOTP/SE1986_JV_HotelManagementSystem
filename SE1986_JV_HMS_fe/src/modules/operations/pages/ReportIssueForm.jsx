@@ -12,6 +12,7 @@ import {
   getIssueReportingContext,
 } from '../api/issueReportsApi';
 import OperationsPageHeader from '../components/OperationsPageHeader';
+import { PRIORITIES } from '../constants/operationsLabels';
 
 const defaults = { roomId: '', issueTypeId: '', title: '', description: '', priority: 'NORMAL' };
 export default function ReportIssueForm() {
@@ -206,10 +207,11 @@ export default function ReportIssueForm() {
           <Form.Group controlId="issue-priority" className="mb-3">
             <Form.Label>Độ ưu tiên</Form.Label>
             <Form.Select {...register('priority')} isInvalid={!!errors.priority}>
-              <option value="LOW">Thấp</option>
-              <option value="NORMAL">Bình thường</option>
-              <option value="HIGH">Cao</option>
-              <option value="URGENT">Khẩn cấp</option>
+              {Object.entries(PRIORITIES).map(([code, definition]) => (
+                <option key={code} value={code}>
+                  {definition.label}
+                </option>
+              ))}
             </Form.Select>
             <Form.Control.Feedback type="invalid">{errors.priority?.message}</Form.Control.Feedback>
           </Form.Group>
