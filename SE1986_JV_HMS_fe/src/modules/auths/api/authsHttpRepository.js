@@ -3,8 +3,8 @@ import { AUTH_STORAGE_KEYS } from '../constants/authConstants';
 import { authsMockRepository } from './authsMockRepository';
 
 // Đăng ký (UC-A1), đăng nhập, refresh, đăng xuất và /me (UC-A2) gọi backend thật.
-// Hồ sơ và đổi mật khẩu (UC-A4), quản lý tài khoản (UC-A5) và đặt lại mật khẩu (UC-A3) cũng gọi backend.
-// Riêng vai trò và quyền (UC-A6) tạm dùng mock cho tới khi có API.
+// Hồ sơ và đổi mật khẩu (UC-A4), quản lý tài khoản (UC-A5), đặt lại mật khẩu (UC-A3)
+// và vai trò, quyền (UC-A6) cũng gọi backend.
 export const authsHttpRepository = {
   ...authsMockRepository,
 
@@ -51,6 +51,16 @@ export const authsHttpRepository = {
   async setInternalUserStatus({ userId, enabled }) {
     const { data } = await axiosClient.patch(`/admin/users/${userId}/status`, { enabled });
     return data;
+  },
+
+  async getRoles() {
+    const { data } = await axiosClient.get('/admin/roles');
+    return data.map((role) => ({ ...role, permissions: [...role.permissions] }));
+  },
+
+  async updateRolePermissions({ role, permissions }) {
+    const { data } = await axiosClient.put(`/admin/roles/${role}/permissions`, { permissions });
+    return { ...data, permissions: [...data.permissions] };
   },
 
   async resetUserPassword({ userId }) {

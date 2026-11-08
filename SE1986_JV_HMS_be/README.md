@@ -377,6 +377,8 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/STAFF kèm dòng `staff` (UC-A5) |
 | PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/STAFF; không tự đổi vai trò của mình (UC-A5) |
 | PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/STAFF; khóa thì thu hồi mọi phiên (UC-A5) |
+| GET | `/api/admin/roles` | — | Danh sách role kèm mã UC (UC-A6) |
+| PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN luôn giữ đủ 30 quyền (UC-A6) |
 | POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
 `user` gồm `id, fullName, email, phone, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified, enabled`.
