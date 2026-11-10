@@ -258,7 +258,7 @@ cd SE1986_JV_HMS_be
 cd ../SE1986_JV_HMS_fe
 npm run build
 npm run lint
-node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs
+node --test src/modules/rooms/tests/roomsApi.test.mjs
 ```
 
 SQL integration có fixture chỉ chạy với DB **riêng**, tên kết thúc `_inventory_test`, đã có schema/procedure/migration.

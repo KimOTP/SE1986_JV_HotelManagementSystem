@@ -16,7 +16,7 @@ globalThis.__roomsTestClient = Object.fromEntries(
     },
   ]),
 );
-const source = (await readFile(new URL('../api/roomsHttpRepository.js', import.meta.url), 'utf8'))
+const source = (await readFile(new URL('../api/roomsApi.js', import.meta.url), 'utf8'))
   .replace(
     "import axiosClient from '../../../shared/api/axiosClient';",
     'const axiosClient = globalThis.__roomsTestClient;',
@@ -25,7 +25,7 @@ const source = (await readFile(new URL('../api/roomsHttpRepository.js', import.m
     "'../utils/roomImageUpload.js'",
     JSON.stringify(new URL('../utils/roomImageUpload.js', import.meta.url).href),
   );
-const { roomsHttpRepository: api } = await import(
+const { roomsApi: api } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
 );
 

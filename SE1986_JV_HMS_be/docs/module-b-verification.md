@@ -84,7 +84,7 @@ Sau khi được môi trường cấp quyền dùng cache/tải dependency, Mave
 | `.\mvnw.cmd '-Dmaven.repo.local=C:/Users/tran_linh/.m2/repository' '-Dtest=Inventory*Tests' test` | BUILD SUCCESS; 39 test: **21 đạt, 18 skip**, 0 lỗi |
 | `npm run build` | Thành công; còn cảnh báo bundle >500 kB |
 | `npm run lint` | Thành công toàn FE, 0 lỗi/0 cảnh báo |
-| `node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs` | 5/5 đạt |
+| `node --test src/modules/rooms/tests/roomsApi.test.mjs` | 5/5 đạt |
 | `git diff --check` | Thành công |
 
 Không có DB_USERNAME/DB_PASSWORD trong môi trường chạy và không có cấu hình DB test riêng.
@@ -119,8 +119,7 @@ Tài liệu: module-b-api.md, module-b-verification.md và FE docs/module-b-fron
 
 FE sửa trong `src/modules/rooms/`:
 
-- api/roomsApi.js: chọn repository, lazy import mock; API mode không fallback mock.
-- api/roomsHttpRepository.js: contract inventory, ID/decimal/status mapping, whitelist write body.
+- api/roomsApi.js: hiện gộp toàn bộ HTTP contract inventory, ID/decimal/status mapping và whitelist write body; chỉ dùng API.
 - hooks/useRoomsData.js: dữ liệu Room Map riêng.
 - pages/CatalogManagementPage.jsx: tải đúng resource/options, lỗi API và hook dependency.
 - pages/RoomSearchPage.jsx, pages/RoomDetailPage.jsx: public catalog, availability và recheck/handoff.
@@ -128,7 +127,7 @@ FE sửa trong `src/modules/rooms/`:
 - components/AmenityForm.jsx: giữ icon legacy.
 - components/RoomTypeForm.jsx: URL ảnh, chặn >6 ảnh thay vì cắt im lặng.
 - schemas/catalogSchemas.js: giữ độ chính xác giá và cho phép icon legacy.
-- tests/roomsHttpRepository.test.mjs: test adapter bằng Node test runner có sẵn.
+- tests/roomsApi.test.mjs: test API bằng Node test runner có sẵn.
 
 ## Việc cần thực hiện với môi trường thật
 

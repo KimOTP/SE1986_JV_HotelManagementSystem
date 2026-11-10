@@ -40,7 +40,8 @@ roomTypes dùng UC-B1; rooms dùng UC-B2; amenities dùng UC-B3.
 Public search/detail không dùng getAll. Router hiện cho Staff có UC-B6 truy cập trực tiếp Room Map;
 không cần sửa guard/router/sidebar chung.
 
-`roomsHttpRepository` unwrap JSON trực tiếp hoặc envelope data tại boundary, chuẩn hóa mọi ID thành string.
+`api/roomsApi.js` chứa toàn bộ lời gọi HTTP và mapping, unwrap JSON trực tiếp hoặc envelope data tại boundary,
+chuẩn hóa mọi ID thành string. Các trang chỉ import `roomsApi`, không còn file repository HTTP riêng.
 Backend cũng trả ID dạng chuỗi BIGINT. BasePrice dạng chuỗi decimal giữ chính xác khi edit/save;
 hiển thị tiền dùng formatter hiện có. Chỉ gửi whitelist trường catalog, không gửi hotelId/status/audit.
 
@@ -89,7 +90,7 @@ Tạo booking phải kiểm tra availability lại trong transaction của C.
 ```powershell
 npm run build
 npm run lint
-node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs
+node --test src/modules/rooms/tests/roomsApi.test.mjs
 ```
 
 Kiểm tra trên môi trường thật: Guest search/detail không đăng nhập; Admin CRUD từng danh mục,
