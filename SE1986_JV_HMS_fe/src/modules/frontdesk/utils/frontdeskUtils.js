@@ -1,9 +1,11 @@
 export const currency = (n) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(n) || 0);
 
 export const INVOICE_STATUS = {
-  UNPAID: { label: 'Chưa thanh toán', bg: 'danger' },
+  DRAFT: { label: 'Bản nháp', bg: 'secondary' },
+  ISSUED: { label: 'Chờ thanh toán', bg: 'warning' },
   PAID: { label: 'Đã thanh toán', bg: 'success' },
+  VOID: { label: 'Đã hủy', bg: 'secondary' },
 };
 
 export const RESERVATION_STATUS = {
@@ -14,8 +16,7 @@ export const RESERVATION_STATUS = {
 
 export const PAYMENT_METHODS = {
   CASH: 'Tiền mặt',
-  CARD: 'Thẻ',
-  TRANSFER: 'Chuyển khoản',
+  BANK_TRANSFER: 'Chuyển khoản',
 };
 
 export const calcTotals = ({ items = [], discount = 0, taxRate = 0, deposit = 0 }) => {
@@ -24,8 +25,10 @@ export const calcTotals = ({ items = [], discount = 0, taxRate = 0, deposit = 0 
     0,
   );
   const afterDiscount = Math.max(0, subtotal - (Number(discount) || 0));
-  const tax = Math.round((afterDiscount * (Number(taxRate) || 0)) / 100);
+  const tax = Math.round(afterDiscount * (Number(taxRate) || 0)) / 100;
   const total = afterDiscount + tax;
   const due = Math.max(0, total - (Number(deposit) || 0));
   return { subtotal, discount: Number(discount) || 0, tax, total, deposit: Number(deposit) || 0, due };
 };
+
+export const apiError = (error) => error.response?.data?.message || error.message || 'Không thể kết nối máy chủ.';

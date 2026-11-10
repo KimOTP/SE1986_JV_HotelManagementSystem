@@ -27,7 +27,7 @@ public class FrontDeskService {
     @Value("${frontdesk.hotel-zone:Asia/Ho_Chi_Minh}") private String hotelZone;
 
     public BookingStay requireBooking(String code, boolean lock, ActorService.Actor actor) {
-        BookingStay booking = (lock ? bookingRepository.findByCodeForUpdate(code)
+        BookingStay booking = (lock ? bookingRepository.findLockedByCode(code)
                 : bookingRepository.findByCode(code))
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy booking: " + code));
         actorService.requireHotel(actor, booking.getHotelId());
@@ -35,7 +35,7 @@ public class FrontDeskService {
     }
 
     public List<RoomStay> rooms(Long bookingId) {
-        return bookingRoomRepository.findRooms(bookingId);
+        return bookingRoomRepository.findByBooking_IdOrderByIdAsc(bookingId);
     }
 
     private LocalDate today() { return LocalDate.now(ZoneId.of(hotelZone)); }
@@ -112,7 +112,7 @@ public class FrontDeskService {
         if (paymentService.depositPaid(booking.getId()).compareTo(booking.getDepositRequired()) < 0) {
             throw ApiException.conflict("Khách chưa thanh toán đủ tiền cọc.");
         }
-        List<RoomStay> roomStays = bookingRoomRepository.findRoomsForUpdate(booking.getId());
+        List<RoomStay> roomStays = bookingRoomRepository.findLockedByBooking_IdOrderByIdAsc(booking.getId());
         if (roomStays.isEmpty()) throw ApiException.conflict("Booking chưa gán phòng vật lý.");
         if (request == null) throw ApiException.bad("Thiếu thông tin xác minh khách.");
         Map<Long, CheckInRequest.RoomGuest> guests = new HashMap<>();
@@ -150,14 +150,14 @@ public class FrontDeskService {
         List<Long> roomIds = roomStays.stream().map(r -> r.getRoom().getId()).sorted().toList();
         Map<Long, HotelRoom> lockedRooms = new HashMap<>();
         for (Long roomId : roomIds) {
-            lockedRooms.put(roomId, roomRepository.findByIdForUpdate(roomId)
+            lockedRooms.put(roomId, roomRepository.findLockedById(roomId)
                     .orElseThrow(() -> ApiException.notFound("Phòng không tồn tại.")));
         }
         for (RoomStay stay : roomStays) {
             HotelRoom room = lockedRooms.get(stay.getRoom().getId());
             if (!Boolean.TRUE.equals(room.getActive()) || !"AVAILABLE".equals(room.getOperationalStatus())
                     || !"CLEAN".equals(room.getHousekeepingStatus()) || stay.getActualCheckIn() != null
-                    || bookingRoomRepository.countOtherInHouse(room.getId(), booking.getId()) > 0) {
+                    || bookingRoomRepository.countByRoom_IdAndBooking_IdNotAndBooking_Status(room.getId(), booking.getId(), "CHECKED_IN") > 0) {
                 throw ApiException.conflict("Phòng " + room.getRoomNumber() + " chưa sẵn sàng hoặc đã có khách.");
             }
         }
@@ -200,7 +200,7 @@ public class FrontDeskService {
         if (!"CHECKED_IN".equals(booking.getStatus())) {
             throw ApiException.conflict("Booking không ở trạng thái CHECKED_IN.");
         }
-        InvoiceRecord invoice = invoiceRepository.findByBookingIdForUpdate(booking.getId())
+        InvoiceRecord invoice = invoiceRepository.findLockedByBooking_Id(booking.getId())
                 .orElseThrow(() -> ApiException.conflict("Chưa có hóa đơn."));
         if (Boolean.TRUE.equals(invoice.getDeleted()) || !"PAID".equals(invoice.getStatus())) {
             throw ApiException.conflict("Hóa đơn chưa thanh toán.");
@@ -211,7 +211,7 @@ public class FrontDeskService {
         BigDecimal paid = paymentService.depositPaid(booking.getId())
                 .add(paymentService.paidForInvoice(invoice.getId()));
         if (paid.compareTo(total) != 0) throw ApiException.conflict("Tổng tiền thu không khớp hóa đơn.");
-        List<RoomStay> stays = bookingRoomRepository.findRoomsForUpdate(booking.getId());
+        List<RoomStay> stays = bookingRoomRepository.findLockedByBooking_IdOrderByIdAsc(booking.getId());
         if (stays.isEmpty() || stays.stream().anyMatch(s -> s.getActualCheckIn() == null || s.getActualCheckOut() != null)) {
             throw ApiException.conflict("Thông tin phòng check-in/check-out không hợp lệ.");
         }
@@ -219,7 +219,7 @@ public class FrontDeskService {
         List<Long> roomIds = stays.stream().map(s -> s.getRoom().getId()).sorted().toList();
         Map<Long, HotelRoom> lockedRooms = new HashMap<>();
         for (Long id : roomIds) lockedRooms.put(id,
-                roomRepository.findByIdForUpdate(id).orElseThrow(() -> ApiException.notFound("Phòng không tồn tại.")));
+                roomRepository.findLockedById(id).orElseThrow(() -> ApiException.notFound("Phòng không tồn tại.")));
         for (RoomStay stay : stays) {
             stay.setActualCheckOut(at);
             bookingRoomRepository.save(stay);

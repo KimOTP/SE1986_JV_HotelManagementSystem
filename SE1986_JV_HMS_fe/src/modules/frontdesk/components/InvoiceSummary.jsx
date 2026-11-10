@@ -19,6 +19,7 @@ export default function InvoiceSummary({ totals }) {
     ['Thuế VAT', currency(totals.tax)],
     ['Tổng cộng', currency(totals.total), true],
     ['Đã đặt cọc', `- ${currency(totals.deposit)}`],
+    ...(Number(totals.total) - Number(totals.deposit) > Number(totals.due) ? [['Đã thanh toán', `- ${currency(Number(totals.total) - Number(totals.deposit) - Number(totals.due))}`]] : []),
   ];
   return (
     <div className="bg-light border rounded p-3">

@@ -39,7 +39,7 @@ public class InvoiceService {
     }
 
     private InvoiceRecord get(String number, boolean lock) {
-        InvoiceRecord invoice = (lock ? invoiceRepository.findByNumberForUpdate(number)
+        InvoiceRecord invoice = (lock ? invoiceRepository.findLockedByNumber(number)
                 : invoiceRepository.findByNumber(number))
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy hóa đơn: " + number));
         if (Boolean.TRUE.equals(invoice.getDeleted())) throw ApiException.notFound("Hóa đơn đã xóa mềm.");
@@ -75,7 +75,7 @@ public class InvoiceService {
                     .description("Tiền phòng " + room.getRoom().getRoomNumber() + " (" + nights + " đêm)")
                     .quantity(BigDecimal.valueOf(nights)).unitPrice(room.getNightlyRate()).build());
         }
-        for (ServiceCharge service : serviceRepository.findDeliveredByBooking(booking.getId())) {
+        for (ServiceCharge service : serviceRepository.findByBookingRoom_Booking_IdAndStatusOrderByIdAsc(booking.getId(), "DELIVERED")) {
             lines.add(InvoiceItemInput.builder().type("SERVICE").serviceOrderId(service.getId())
                     .description(service.getService().getName())
                     .quantity(service.getQuantity()).unitPrice(service.getUnitPrice()).build());
@@ -173,11 +173,11 @@ public class InvoiceService {
     private void replaceLines(InvoiceRecord invoice, List<InvoiceItemInput> inputs) {
         itemRepository.deleteByInvoice_Id(invoice.getId());
         itemRepository.flush();
-        List<RoomStay> rooms = bookingRoomRepository.findRooms(invoice.getBooking().getId());
+        List<RoomStay> rooms = bookingRoomRepository.findByBooking_IdOrderByIdAsc(invoice.getBooking().getId());
         Map<Long, RoomStay> byRoom = new HashMap<>();
         for (RoomStay room : rooms) byRoom.put(room.getId(), room);
         Map<Long, ServiceCharge> byService = new HashMap<>();
-        for (ServiceCharge charge : serviceRepository.findDeliveredByBooking(invoice.getBooking().getId())) {
+        for (ServiceCharge charge : serviceRepository.findByBookingRoom_Booking_IdAndStatusOrderByIdAsc(invoice.getBooking().getId(), "DELIVERED")) {
             byService.put(charge.getId(), charge);
         }
         List<InvoiceLine> rows = new ArrayList<>();
@@ -202,7 +202,7 @@ public class InvoiceService {
         }
         BookingStay booking = frontDeskService.requireBooking(req.getBookingId().trim(), true, actor);
         if (!"CHECKED_IN".equals(booking.getStatus())) throw ApiException.conflict("Booking chưa CHECKED_IN.");
-        if (invoiceRepository.findByBookingIdForUpdate(booking.getId()).isPresent()) {
+        if (invoiceRepository.findLockedByBooking_Id(booking.getId()).isPresent()) {
             throw ApiException.conflict("Booking đã có hóa đơn, kể cả hóa đơn xóa mềm. Có UNIQUE(booking_id).");
         }
         List<InvoiceItemInput> inputs = validateLines(booking, req);
@@ -313,7 +313,7 @@ public class InvoiceService {
         InvoiceRecord old = invoiceRepository.findByNumber(number)
                 .orElseThrow(() -> ApiException.notFound("Không có hóa đơn."));
         BookingStay booking = frontDeskService.requireBooking(old.getBooking().getCode(), true, actor);
-        InvoiceRecord invoice = invoiceRepository.findByNumberForUpdate(number)
+        InvoiceRecord invoice = invoiceRepository.findLockedByNumber(number)
                 .orElseThrow(() -> ApiException.notFound("Không có hóa đơn."));
         if (!Boolean.TRUE.equals(invoice.getDeleted()) || !"VOID".equals(invoice.getStatus())
                 || !"CHECKED_IN".equals(booking.getStatus())

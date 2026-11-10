@@ -1,6 +1,4 @@
-// Optional adapter for the EXISTING React project.
-// Copy to FE: src/modules/frontdesk/api/frontdeskApi.js
-// IMPORTANT: existing pages must be refactored from synchronous mock to awaited API calls.
+// Module D API. All front desk pages load and write data through this client.
 import axiosClient from '../../../shared/api/axiosClient';
 
 const base = '/frontdesk';

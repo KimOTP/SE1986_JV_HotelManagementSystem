@@ -11,19 +11,32 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class PaymentService {
     @Autowired private PaymentRepository paymentRepository;
 
     public BigDecimal depositPaid(Long bookingId) {
-        BigDecimal value = paymentRepository.sumNetDeposits(bookingId);
-        return value == null ? BigDecimal.ZERO : value;
+        return netAmount(paymentRepository.findByBooking_IdAndStatusAndTransactionTypeIn(
+                bookingId, "SUCCESS", List.of("DEPOSIT", "REFUND")), "DEPOSIT");
     }
 
     public BigDecimal paidForInvoice(Long invoiceId) {
-        BigDecimal value = paymentRepository.sumNetInvoicePayments(invoiceId);
-        return value == null ? BigDecimal.ZERO : value;
+        return netAmount(paymentRepository.findByInvoice_IdAndStatusAndTransactionTypeIn(
+                invoiceId, "SUCCESS", List.of("PAYMENT", "REFUND")), "PAYMENT");
+    }
+
+    private BigDecimal netAmount(List<PaymentTransaction> transactions, String originalType) {
+        return transactions.stream().map(transaction -> {
+            if (originalType.equals(transaction.getTransactionType())) return transaction.getAmount();
+            if ("REFUND".equals(transaction.getTransactionType())
+                    && transaction.getRefundOf() != null
+                    && originalType.equals(transaction.getRefundOf().getTransactionType())) {
+                return transaction.getAmount().negate();
+            }
+            return BigDecimal.ZERO;
+        }).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public String lastPaymentMethod(Long invoiceId) {

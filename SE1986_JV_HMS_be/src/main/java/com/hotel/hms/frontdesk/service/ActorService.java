@@ -47,10 +47,10 @@ public class ActorService {
         if (!Boolean.TRUE.equals(user.getActive())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Tài khoản đã vô hiệu hóa.");
         }
-        if (userRepository.countAllowed(user.getId(), permission) == 0) {
+        if (!userRepository.existsByIdAndActiveTrueAndRoles_ActiveTrueAndRoles_Permissions_Code(user.getId(), permission)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Không có quyền " + permission);
         }
-        boolean admin = userRepository.countAdmin(user.getId()) > 0;
+        boolean admin = userRepository.existsByIdAndRoles_ActiveTrueAndRoles_Code(user.getId(), "ADMIN");
         Long hotelId = staffRepository.findFirstByUser_IdAndActiveTrue(user.getId())
                 .map(StaffAccount::getHotelId).orElse(null);
         return new Actor(user.getId(), hotelId, admin);
