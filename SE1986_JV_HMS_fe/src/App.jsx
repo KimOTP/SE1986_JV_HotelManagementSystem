@@ -1,3 +1,4 @@
+import MyIssueReports from './modules/operations/pages/MyIssueReports';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import MainLayout from './app/layouts/MainLayout';
 import PublicLayout from './app/layouts/PublicLayout';
@@ -58,14 +59,24 @@ function NotFound() {
   );
 }
 
-function PermissionRoute({ permission, children }) {
-  return <ProtectedRoute requiredPermission={permission}>{children}</ProtectedRoute>;
+function PermissionRoute({ permission, roles, children }) {
+  return (
+    <ProtectedRoute requiredPermission={permission} roles={roles}>
+      {children}
+    </ProtectedRoute>
+  );
 }
 
 function PublicPermission({ permission, children }) {
   const { isAuthenticated, hasPermission } = useAuth();
   if (!isAuthenticated || hasPermission(permission)) return children;
-  return <div className="container py-5"><div className="alert alert-danger">403 · Vai trò hiện tại không có quyền mở màn hình này.</div></div>;
+  return (
+    <div className="container py-5">
+      <div className="alert alert-danger">
+        403 · Vai trò hiện tại không có quyền mở màn hình này.
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -76,11 +87,41 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/403" element={<div className="container py-5"><div className="alert alert-danger">403 · Vai trò hiện tại không có quyền mở màn hình này.</div></div>} />
+        <Route
+          path="/403"
+          element={
+            <div className="container py-5">
+              <div className="alert alert-danger">
+                403 · Vai trò hiện tại không có quyền mở màn hình này.
+              </div>
+            </div>
+          }
+        />
         <Route path="/rooms" element={<PublicLayout />}>
-          <Route index element={<PublicPermission permission="UC-B4"><RoomSearchPage /></PublicPermission>} />
-          <Route path="booking-handoff" element={<PublicPermission permission="UC-B4"><BookingHandoffPage /></PublicPermission>} />
-          <Route path=":id" element={<PublicPermission permission="UC-B5"><RoomDetailPage /></PublicPermission>} />
+          <Route
+            index
+            element={
+              <PublicPermission permission="UC-B4">
+                <RoomSearchPage />
+              </PublicPermission>
+            }
+          />
+          <Route
+            path="booking-handoff"
+            element={
+              <PublicPermission permission="UC-B4">
+                <BookingHandoffPage />
+              </PublicPermission>
+            }
+          />
+          <Route
+            path=":id"
+            element={
+              <PublicPermission permission="UC-B5">
+                <RoomDetailPage />
+              </PublicPermission>
+            }
+          />
         </Route>
 
         <Route
@@ -120,7 +161,7 @@ export default function App() {
           <Route
             path="operations/my-tasks"
             element={
-              <PermissionRoute permission="UC-E2">
+              <PermissionRoute permission="UC-E2" roles={['HOUSEKEEPER']}>
                 <MyTasks />
               </PermissionRoute>
             }
@@ -130,6 +171,14 @@ export default function App() {
             element={
               <PermissionRoute permission="UC-E3">
                 <HousekeepingDashboard />
+              </PermissionRoute>
+            }
+          />
+          <Route
+            path="operations/my-reports"
+            element={
+              <PermissionRoute permission="UC-E4">
+                <MyIssueReports />
               </PermissionRoute>
             }
           />

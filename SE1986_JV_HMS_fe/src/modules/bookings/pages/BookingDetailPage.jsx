@@ -1,3 +1,4 @@
+import BookingFeedbackLink from '../../operations/components/BookingFeedbackLink';
 import { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Row } from 'react-bootstrap';
 import { ClockHistory } from 'react-bootstrap-icons';
@@ -18,12 +19,9 @@ import {
 
 export default function BookingDetailPage() {
   const { id } = useParams();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, hasRole } = useAuth();
   const canManageBookings = hasPermission('UC-C5');
-  const { data: booking, loading, error } = useAsyncData(
-    () => bookingsApi.getByCode(id),
-    [id],
-  );
+  const { data: booking, loading, error } = useAsyncData(() => bookingsApi.getByCode(id), [id]);
   const [, setTick] = useState(0);
   const holdDeadline = booking?.holdExpiresAt;
   const bookingStatus = booking?.status;
@@ -58,8 +56,7 @@ export default function BookingDetailPage() {
       </Alert>
     );
   }
-  const holdExpired =
-    booking.status === 'PENDING' && remaining !== null && remaining <= 0;
+  const holdExpired = booking.status === 'PENDING' && remaining !== null && remaining <= 0;
   const displayStatus = holdExpired ? 'EXPIRED' : booking.status;
   const ownsBooking = bookingsDataSource !== 'api' || booking.customerId === user?.id;
   const canCancelBooking = ownsBooking && hasPermission('UC-C4');
@@ -80,8 +77,7 @@ export default function BookingDetailPage() {
             : [
                 {
                   status: booking.status,
-                  label:
-                    BOOKING_STATUS[booking.status]?.label || booking.status,
+                  label: BOOKING_STATUS[booking.status]?.label || booking.status,
                   at: booking.cancelledAt || booking.createdAt,
                 },
               ]),
@@ -107,9 +103,7 @@ export default function BookingDetailPage() {
           <ClockHistory className="booking-hold__icon" aria-hidden="true" />
           <div className="booking-hold__body">
             <strong>
-              {remaining > 0
-                ? `Giữ phòng còn ${formatHoldTime(remaining)}`
-                : 'Đã hết hạn giữ chỗ'}
+              {remaining > 0 ? `Giữ phòng còn ${formatHoldTime(remaining)}` : 'Đã hết hạn giữ chỗ'}
             </strong>
             <span>
               {remaining > 0
@@ -127,8 +121,8 @@ export default function BookingDetailPage() {
 
       {booking.status === 'EXPIRED' && (
         <Alert variant="warning">
-          Đặt phòng đã hết hạn giữ chỗ (quá 15 phút chưa thanh toán cọc) và phòng đã
-          được nhả. Vui lòng đặt lại đơn mới.
+          Đặt phòng đã hết hạn giữ chỗ (quá 15 phút chưa thanh toán cọc) và phòng đã được nhả. Vui
+          lòng đặt lại đơn mới.
         </Alert>
       )}
       <Row className="g-4">
@@ -195,6 +189,13 @@ export default function BookingDetailPage() {
             <Card.Body>
               <h3 className="booking-section-title">Thao tác</h3>
               <div className="booking-actions">
+                {ownsBooking &&
+                  booking.status === 'CHECKED_OUT' &&
+                  hasRole('CUSTOMER') &&
+                  hasPermission('UC-E6') &&
+                  bookingsDataSource === 'api' && (
+                    <BookingFeedbackLink bookingCode={booking.bookingCode || booking.id} />
+                  )}
                 {canPay && canPayDeposit && (
                   <Button as={Link} to={`/bookings/deposit?bookingId=${booking.id}`}>
                     Thanh toán tiền cọc

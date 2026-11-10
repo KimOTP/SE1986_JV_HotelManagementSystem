@@ -106,13 +106,13 @@ public class HousekeepingDashboardService {
                 JOIN inventory.rooms r ON r.room_id = i.room_id
                 JOIN inventory.room_types rt ON rt.room_type_id = r.room_type_id
                 JOIN identity_access.hotels h ON h.hotel_id = rt.hotel_id
-                WHERE (? = 1 OR (i.created_at >= ? AND i.created_at < ?)) AND i.status IN ('OPEN','ASSIGNED','IN_PROGRESS')
+                WHERE i.status IN ('OPEN','ASSIGNED','IN_PROGRESS')
                   AND r.is_active = 1 AND rt.is_active = 1 AND h.is_active = 1
                   AND (? = 1 OR EXISTS (SELECT 1 FROM identity_access.staff ms
                        WHERE ms.user_id = ? AND ms.hotel_id = rt.hotel_id AND ms.is_active = 1))
                 ORDER BY i.created_at DESC, i.issue_id DESC
                 """, (rs, index) -> new OpenIssue(rs.getLong("issue_id"), rs.getString("room_number"), rs.getString("title"), rs.getString("status")),
-                allTime ? 1 : 0, from, to, admin, manager.id());
+                admin, manager.id());
         return new HousekeepingDashboardResponse(date, zoneName, allTime, Instant.now(), summary, workload, urgent, issues);
     }
 }
