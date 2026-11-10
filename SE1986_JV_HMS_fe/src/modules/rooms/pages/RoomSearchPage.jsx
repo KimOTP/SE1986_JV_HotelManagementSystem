@@ -29,15 +29,16 @@ export default function RoomSearchPage() {
     [params],
   );
   const search = async (c) => {
+    const id = ++seq.current;
     const invalid = validateSearch(c);
     setErrors(invalid);
+    setError('');
+    setResults(null);
     if (Object.keys(invalid).length) {
-      setResults(null);
+      setLoading(false);
       return;
     }
-    const id = ++seq.current;
     setLoading(true);
-    setError('');
     try {
       const [found, all] = await Promise.all([roomsApi.search(c), roomsApi.getCatalog()]);
       if (id === seq.current) {
@@ -55,7 +56,16 @@ export default function RoomSearchPage() {
     if (criteria.checkIn || criteria.checkOut || criteria.guests) {
       setForm(criteria);
       search(criteria);
+    } else {
+      setForm({ checkIn: '', checkOut: '', guests: '1' });
+      setResults(null);
+      setErrors({});
+      setError('');
+      setLoading(false);
     }
+    return () => {
+      seq.current += 1;
+    };
   }, [criteria.checkIn, criteria.checkOut, criteria.guests]);
   const submit = (e) => {
     e.preventDefault();
@@ -68,6 +78,12 @@ export default function RoomSearchPage() {
       if (v) next.set(k, v);
     });
     setParams(next);
+    if (
+      form.checkIn === criteria.checkIn &&
+      form.checkOut === criteria.checkOut &&
+      form.guests === criteria.guests
+    )
+      search(form);
   };
   const filtered = useMemo(
     () =>

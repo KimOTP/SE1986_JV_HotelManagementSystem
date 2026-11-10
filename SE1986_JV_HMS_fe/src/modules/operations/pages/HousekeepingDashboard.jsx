@@ -233,8 +233,8 @@ export default function HousekeepingDashboard() {
             <Col md={6}>
               <Card>
                 <Card.Body>
-                  <h5>Sự cố chưa hoàn tất</h5>
-                  <small>Hiển thị tối đa 5 sự cố.</small>
+                  <h5>Sự cố tồn đọng</h5>
+                  <small>Tối đa 5 sự cố chưa xử lý xong, bao gồm các ngày trước.</small>
                   <ListGroup variant="flush">
                     {data.openIssues.map((issue) => (
                       <ListGroup.Item key={issue.id} className="text-break">
@@ -244,9 +244,7 @@ export default function HousekeepingDashboard() {
                       </ListGroup.Item>
                     ))}
                   </ListGroup>
-                  {!data.openIssues.length && (
-                    <p>Không có sự cố đang chờ trong phạm vi thống kê.</p>
-                  )}
+                  {!data.openIssues.length && <p>Không có sự cố tồn đọng.</p>}
                   <Button as={Link} to="/operations/issues" variant="link">
                     Quản lý sự cố
                   </Button>

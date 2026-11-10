@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form } from 'react-bootstrap';
 import {
   Bank,
@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Wallet2,
 } from 'react-bootstrap-icons';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingError from '../components/BookingError';
 import BookingStatus from '../components/BookingStatus';
@@ -54,22 +54,49 @@ const payosEnabled = bookingsDataSource === 'api' &&
 export default function DepositPaymentPage() {
   const { hasPermission } = useAuth();
   const canPayDeposit = hasPermission('UC-C2');
+  const canCancelBooking = hasPermission('UC-C4');
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const payosBooking = payosEnabled ? params.get('payosBooking') : null;
+  const selectedId = params.get('bookingId') || '';
+  const returnedFromCancel = params.get('cancel') === 'true';
+  const payosBooking = payosEnabled
+    ? params.get('payosBooking') || (returnedFromCancel ? selectedId : null)
+    : null;
   const { data, loading, error: loadError, refetch } = useAsyncData(
     () => collectBookingPages(bookingsApi.listPendingDeposits),
     [],
   );
   const bookings = useMemo(() => data || [], [data]);
-  const selectedId = params.get('bookingId') || '';
   const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(null);
   const [paying, setPaying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState('PENDING');
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const payosCancelled = verificationStatus === 'BOOKING_CANCELLABLE';
+
+  const cancelBooking = useCallback(async () => {
+    if (!canCancelBooking) {
+      setCancelError('Bạn không có quyền hủy đặt phòng.');
+      return;
+    }
+    setCancelError('');
+    setCancelling(true);
+    try {
+      await bookingsApi.cancelPayosCheckout(payosBooking);
+      navigate('/bookings', { replace: true });
+    } catch (caught) {
+      setCancelError(caught.message);
+    } finally {
+      setCancelling(false);
+    }
+  }, [canCancelBooking, navigate, payosBooking]);
 
   useEffect(() => {
     if (!payosBooking) return undefined;
+    setVerificationStatus('PENDING');
+    setCancelError('');
     let active = true;
     let retry;
     const checkUntil = Date.now() + 120_000;
@@ -77,9 +104,15 @@ export default function DepositPaymentPage() {
       try {
         const { status, booking } = await bookingsApi.verifyPayosDeposit(payosBooking);
         if (!active) return;
+        if (['BOOKING_CANCELLED', 'CANCELLED', 'EXPIRED'].includes(status)) {
+          navigate('/bookings', { replace: true });
+          return;
+        }
         setVerificationStatus(status);
         if (status === 'PAID' && booking) {
           setPaid({ id: booking.bookingCode, amount: booking.depositPaid, method: 'BANK_TRANSFER' });
+        } else if (status === 'BOOKING_CANCELLABLE') {
+          await cancelBooking();
         } else if (status === 'PENDING' || status === 'PROCESSING') {
           if (Date.now() < checkUntil) retry = setTimeout(check, 5000);
           else setVerificationStatus('WAIT_TIMEOUT');
@@ -96,12 +129,22 @@ export default function DepositPaymentPage() {
       active = false;
       clearTimeout(retry);
     };
-  }, [payosBooking]);
+  }, [cancelBooking, navigate, payosBooking]);
+
+  useEffect(() => {
+    const refreshRestoredPage = (event) => {
+      if (event.persisted) refetch();
+    };
+    window.addEventListener('pageshow', refreshRestoredPage);
+    return () => window.removeEventListener('pageshow', refreshRestoredPage);
+  }, [refetch]);
 
   const payableBookings = bookings.filter(
     (booking) => booking.status === 'PENDING' && !isHoldExpired(booking),
   );
-  const selected = bookings.find((booking) => booking.id === selectedId);
+  const selected = bookings.find(
+    (booking) => booking.id === selectedId && booking.status === 'PENDING',
+  );
   const holdExpired = Boolean(selected && isHoldExpired(selected));
   const nights = selected
     ? nightsBetween(selected.checkIn, selected.checkOut)
@@ -142,6 +185,11 @@ export default function DepositPaymentPage() {
       });
       refetch();
     } catch (caught) {
+      const code = caught.response?.data?.code;
+      if (payosEnabled && ['BOOKING_PAYOS_LINK_NOT_PENDING', 'BOOKING_NOT_PAYABLE'].includes(code)) {
+        setParams({ payosBooking: selected.id }, { replace: true });
+        return;
+      }
       setError(caught.message);
     } finally {
       setPaying(false);
@@ -170,22 +218,24 @@ export default function DepositPaymentPage() {
       </header>
 
       <BookingError error={error} />
+      <BookingError error={cancelError} />
 
-      {payosBooking && !paid ? (
+      {payosBooking && !paid && (cancelling || (returnedFromCancel && !cancelError &&
+        ['PENDING', 'PROCESSING', 'BOOKING_CANCELLABLE'].includes(verificationStatus))) ? (
+        <Alert variant="info" role="status">Đang hủy đặt phòng…</Alert>
+      ) : payosBooking && !paid && payosCancelled ? (
+        cancelError && canCancelBooking && (
+          <Button variant="outline-danger" onClick={cancelBooking}>Thử hủy lại</Button>
+        )
+      ) : payosBooking && !paid && returnedFromCancel ? (
+        verificationStatus === 'WAIT_TIMEOUT' && (
+          <BookingError error="PayOS chưa xác nhận việc hủy. Vui lòng mở lại đơn từ Đặt phòng của tôi." />
+        )
+      ) : payosBooking && !paid ? (
         <Alert variant="info">
-          {['PENDING', 'PROCESSING'].includes(verificationStatus)
-            ? 'Đang chờ payOS xác nhận giao dịch. Bạn có thể giữ trang này mở.'
-            : 'Phiên thanh toán đã kết thúc hoặc cần kiểm tra lại.'}
-          <div className="mt-2">
-            <Button variant="outline-primary" onClick={() => window.location.reload()}>
-              Kiểm tra lại
-            </Button>{' '}
-            <Button as={Link}
-              to={`/bookings/deposit?bookingId=${encodeURIComponent(payosBooking)}`}
-              variant="outline-secondary">
-              Quay lại chọn đơn
-            </Button>
-          </div>
+          {verificationStatus === 'WAIT_TIMEOUT'
+            ? 'PayOS chưa xác nhận thanh toán. Bạn có thể xem lại đơn trong Đặt phòng của tôi.'
+            : 'Đang chờ payOS xác nhận giao dịch.'}
         </Alert>
       ) : !paid && loading ? (
         <Alert variant="secondary">Đang tải đặt phòng chờ thanh toán…</Alert>

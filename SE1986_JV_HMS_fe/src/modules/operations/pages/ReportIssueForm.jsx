@@ -2,7 +2,7 @@ import { Form, Button, Alert } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 import { issueReportSchema } from '../schemas/issueReportSchema';
 import { getIssueTypes } from '../api/issueTypesApi';
@@ -153,7 +153,10 @@ export default function ReportIssueForm() {
       )}
       {created && (
         <Alert variant="success">
-          Đã lưu sự cố #{created.id} vào database, trạng thái Mới báo cáo.{' '}
+          Đã gửi yêu cầu #{created.id}. Khách sạn sẽ tiếp nhận và xử lý.{' '}
+          <Button as={Link} variant="link" to="/operations/my-reports">
+            Theo dõi yêu cầu của tôi
+          </Button>
           {hasPermission('UC-E5') && (
             <Button variant="link" className="p-0" onClick={() => navigate('/operations/issues')}>
               Xem danh sách sự cố

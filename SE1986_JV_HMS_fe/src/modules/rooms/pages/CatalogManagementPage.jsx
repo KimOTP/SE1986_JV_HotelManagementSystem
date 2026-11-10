@@ -9,7 +9,6 @@ import { ActiveBadge, ErrorState, LoadingState, Pager, StatusBadge } from '../co
 import RoomTypeForm from '../components/RoomTypeForm';
 import RoomForm from '../components/RoomForm';
 import AmenityForm from '../components/AmenityForm';
-import AmenityIcon from '../components/AmenityIcon';
 import CatalogDetailView from '../components/CatalogDetailView';
 
 const settings = {
@@ -117,7 +116,7 @@ export default function CatalogManagementPage({ kind }) {
       ? ['Ảnh', 'Tên', 'Giá/đêm', 'Sức chứa', 'Trạng thái', 'Thao tác']
       : kind === 'rooms'
         ? ['Số phòng', 'Tầng', 'Loại phòng', 'Sử dụng', 'Vận hành', 'Thao tác']
-        : ['Icon', 'Tên', 'Mô tả', 'Trạng thái', 'Thao tác'];
+        : ['Tên', 'Mô tả', 'Trạng thái', 'Thao tác'];
   const actions = (x) => (
     <td className="text-nowrap">
       <Button
@@ -176,9 +175,6 @@ export default function CatalogManagementPage({ kind }) {
       );
     return (
       <tr key={x.id}>
-        <td>
-          <AmenityIcon iconKey={x.iconKey} />
-        </td>
         <td className="fw-semibold">{x.name}</td>
         <td>{x.description}</td>
         <td>

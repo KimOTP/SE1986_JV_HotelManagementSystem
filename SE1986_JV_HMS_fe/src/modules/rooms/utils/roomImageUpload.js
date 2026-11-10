@@ -3,7 +3,7 @@ export const MAX_ROOM_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function validateRoomImageSelection(files, existingCount = 0) {
   if (existingCount + files.length > MAX_ROOM_IMAGES) {
-    throw new Error('Tối đa 6 ảnh, bao gồm cả các URL đang nhập.');
+    throw new Error('Tối đa 6 ảnh, bao gồm cả ảnh đã có và ảnh vừa chọn.');
   }
   for (const file of files) {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {

@@ -33,7 +33,6 @@ public final class InventoryDtos {
     }
 
     public record AmenityWrite(@NotBlank @Size(max = 100) String name,
-            @Size(max = 100) @Pattern(regexp = "[\\x20-\\x7E]*") String iconKey,
             @Size(max = 500) String description, @NotNull Boolean isActive) {
         public AmenityWrite {
             name = name == null ? null : name.trim();
@@ -53,6 +52,6 @@ public final class InventoryDtos {
             boolean isActive, String operationalStatus, String housekeepingStatus, String displayStatus) {
     }
 
-    public record AmenityView(String id, String name, String iconKey, String description, boolean isActive) {
+    public record AmenityView(String id, String name, String description, boolean isActive) {
     }
 }

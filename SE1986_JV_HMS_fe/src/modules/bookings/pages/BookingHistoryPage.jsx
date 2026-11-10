@@ -1,3 +1,4 @@
+import BookingFeedbackLink from '../../operations/components/BookingFeedbackLink';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form, Pagination } from 'react-bootstrap';
 import {
@@ -54,10 +55,9 @@ const compareBookings = (first, second) => {
     : second.checkIn.localeCompare(first.checkIn);
 };
 
-function BookingRow({ booking, canPayDeposit, canCancel }) {
+function BookingRow({ booking, canPayDeposit, canCancel, canReview }) {
   const nights = nightsBetween(booking.checkIn, booking.checkOut);
-  const holdRemaining =
-    booking.status === 'PENDING' ? holdRemainingSeconds(booking) : null;
+  const holdRemaining = booking.status === 'PENDING' ? holdRemainingSeconds(booking) : null;
   const holdExpired = booking.status === 'PENDING' && isHoldExpired(booking);
 
   return (
@@ -74,9 +74,7 @@ function BookingRow({ booking, canPayDeposit, canCancel }) {
           <div className="bh-item__status">
             <BookingStatus status={booking.status} />
             {holdRemaining !== null && (
-              <span
-                className={`bh-item__hold${holdExpired ? ' is-expired' : ''}`}
-              >
+              <span className={`bh-item__hold${holdExpired ? ' is-expired' : ''}`}>
                 {holdExpired
                   ? 'Đã hết hạn giữ chỗ'
                   : `Còn ${formatHoldTime(holdRemaining)} để thanh toán cọc`}
@@ -102,8 +100,7 @@ function BookingRow({ booking, canPayDeposit, canCancel }) {
       <div className="bh-item__amount">
         <span className="bh-item__total">{money(booking.totalAmount)}</span>
         <span className="bh-item__deposit">
-          Cọc {money(booking.depositRequired)} ·{' '}
-          {isDepositSettled(booking) ? 'đã thu' : 'chưa thu'}
+          Cọc {money(booking.depositRequired)} · {isDepositSettled(booking) ? 'đã thu' : 'chưa thu'}
         </span>
       </div>
 
@@ -117,17 +114,14 @@ function BookingRow({ booking, canPayDeposit, canCancel }) {
               Thanh toán cọc
             </Link>
           )}
-          <Link
-            className="btn btn-sm btn-outline-primary"
-            to={`/bookings/${booking.id}`}
-          >
+          <Link className="btn btn-sm btn-outline-primary" to={`/bookings/${booking.id}`}>
             Chi tiết
           </Link>
+          {canReview && booking.status === 'CHECKED_OUT' && (
+            <BookingFeedbackLink bookingCode={booking.bookingCode || booking.id} />
+          )}
           {canCancel && canCancelBooking(booking) && (
-            <Link
-              className="btn btn-sm btn-outline-danger"
-              to={`/bookings/${booking.id}/cancel`}
-            >
+            <Link className="btn btn-sm btn-outline-danger" to={`/bookings/${booking.id}/cancel`}>
               Hủy
             </Link>
           )}
@@ -138,7 +132,8 @@ function BookingRow({ booking, canPayDeposit, canCancel }) {
 }
 
 export default function BookingHistoryPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasRole } = useAuth();
+  const canReview = hasRole('CUSTOMER') && hasPermission('UC-E6') && bookingsDataSource === 'api';
   const canCreateBooking = hasPermission('UC-C1');
   const canSearchRooms = hasPermission('UC-B4');
   const canPayDeposit = hasPermission('UC-C2');
@@ -163,19 +158,13 @@ export default function BookingHistoryPage() {
   }, []);
 
   useEffect(() => {
-    if (
-      bookings.some(
-        (booking) => booking.status === 'PENDING' && isHoldExpired(booking),
-      )
-    ) {
+    if (bookings.some((booking) => booking.status === 'PENDING' && isHoldExpired(booking))) {
       refetch();
     }
   }, [bookings, refetch]);
 
   const rawGroup = params.get('status') || 'ALL';
-  const groupFilter = BOOKING_GROUPS.some((group) => group.key === rawGroup)
-    ? rawGroup
-    : 'ALL';
+  const groupFilter = BOOKING_GROUPS.some((group) => group.key === rawGroup) ? rawGroup : 'ALL';
 
   const counts = useMemo(() => {
     const result = { ALL: bookings.length };
@@ -198,10 +187,7 @@ export default function BookingHistoryPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageItems = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const selectGroup = (key) => {
     setPage(1);
@@ -228,9 +214,7 @@ export default function BookingHistoryPage() {
           </span>
           <div>
             <h1 className="hms-page-head__title">Đặt phòng của tôi</h1>
-            <p className="hms-page-head__desc">
-              Theo dõi trạng thái và lịch sử các lần đặt phòng.
-            </p>
+            <p className="hms-page-head__desc">Theo dõi trạng thái và lịch sử các lần đặt phòng.</p>
           </div>
         </div>
 
@@ -255,8 +239,8 @@ export default function BookingHistoryPage() {
             <CalendarCheck aria-hidden="true" />
           </span>
           <span>
-            Đang hiển thị dữ liệu khách demo trên trình duyệt này — chưa kết nối
-            tài khoản hoặc backend.
+            Đang hiển thị dữ liệu khách demo trên trình duyệt này — chưa kết nối tài khoản hoặc
+            backend.
           </span>
         </div>
       )}
@@ -386,6 +370,7 @@ export default function BookingHistoryPage() {
                 booking={booking}
                 canPayDeposit={canPayDeposit}
                 canCancel={canCancel}
+                canReview={canReview}
               />
             ))}
           </ul>
@@ -397,17 +382,15 @@ export default function BookingHistoryPage() {
                   disabled={currentPage === 1}
                   onClick={() => setPage(currentPage - 1)}
                 />
-                {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                  (pageNumber) => (
-                    <Pagination.Item
-                      key={pageNumber}
-                      active={pageNumber === currentPage}
-                      onClick={() => setPage(pageNumber)}
-                    >
-                      {pageNumber}
-                    </Pagination.Item>
-                  ),
-                )}
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <Pagination.Item
+                    key={pageNumber}
+                    active={pageNumber === currentPage}
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </Pagination.Item>
+                ))}
                 <Pagination.Next
                   disabled={currentPage === totalPages}
                   onClick={() => setPage(currentPage + 1)}

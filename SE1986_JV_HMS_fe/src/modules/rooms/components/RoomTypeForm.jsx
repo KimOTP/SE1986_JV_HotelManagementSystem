@@ -15,7 +15,6 @@ const defaults = {
   capacity: '',
   area: '',
   bedType: '',
-  imageText: '',
   amenityIds: [],
   isActive: true,
 };
@@ -28,14 +27,12 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
     register,
     handleSubmit,
     reset,
-    getValues,
     formState: { errors },
   } = useForm({ resolver: zodResolver(roomTypeSchema), defaultValues: defaults });
   useEffect(() => {
     uploadController.current?.abort();
     uploadController.current = null;
-    const value = item ? { ...item, imageText: '' } : defaults;
-    reset(value);
+    reset(item || defaults);
     setImages(item?.images || []);
     setImageError('');
     setUploading(false);
@@ -45,11 +42,8 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
     const files = Array.from(event.target.files || []);
     event.target.value = '';
     if (!files.length) return;
-    const pending = (getValues('imageText') || '')
-      .split(/\r?\n/)
-      .filter((line) => line.trim()).length;
     try {
-      validateRoomImageSelection(files, images.length + pending);
+      validateRoomImageSelection(files, images.length);
     } catch (error) {
       setImageError(error.message);
       return;
@@ -74,16 +68,12 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
   };
   const submit = (v) => {
     if (uploading) return;
-    const added = (v.imageText || '')
-      .split(/\r?\n/)
-      .map((x) => x.trim())
-      .filter(Boolean);
-    if (images.length + added.length > 6) {
-      setImageError('Tối đa 6 ảnh. Hãy xóa bớt URL trước khi lưu.');
+    if (images.length > 6) {
+      setImageError('Tối đa 6 ảnh. Hãy xóa bớt ảnh trước khi lưu.');
       return;
     }
     setImageError('');
-    onSave({ ...item, ...v, images: [...images, ...added] });
+    onSave({ ...item, ...v, images });
   };
   return (
     <Form onSubmit={handleSubmit(submit)} noValidate>
@@ -175,14 +165,6 @@ export default function RoomTypeForm({ item, amenities, onSave, onCancel, saving
               Đang tải ảnh lên…
             </div>
           )}
-          <Form.Text>Dán URL ảnh http/https, mỗi dòng một URL, tối đa 6 ảnh.</Form.Text>
-          <Form.Control
-            as="textarea"
-            rows={2}
-            className="mt-2"
-            disabled={uploading || saving}
-            {...register('imageText')}
-          />
         </Col>
       </Row>
       <Form.Group className="mb-3">

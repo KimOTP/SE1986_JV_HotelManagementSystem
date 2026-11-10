@@ -1,3 +1,4 @@
+import ManageWorkModal from '../components/ManageWorkModal';
 import { useEffect, useState } from 'react';
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row } from 'react-bootstrap';
 import { getAssignmentContext } from '../api/issueAssignmentsApi';
@@ -28,6 +29,7 @@ export default function HousekeepingTaskBoard() {
   const [result, setResult] = useState({ loading: true, items: [], context: null, error: null });
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(null);
+  const [managing, setManaging] = useState(null);
   const [detail, setDetail] = useState(null);
   useEffect(() => {
     if (!canManage) return;
@@ -232,6 +234,18 @@ export default function HousekeepingTaskBoard() {
                             >
                               Chi tiết
                             </Button>
+                            {
+                              <Button
+                                size="sm"
+                                variant="outline-secondary"
+                                className="mt-2"
+                                onClick={() => setManaging(task)}
+                              >
+                                {['PENDING', 'IN_PROGRESS'].includes(task.status)
+                                  ? 'Giao lại / Hủy'
+                                  : 'Lịch sử điều chỉnh'}
+                              </Button>
+                            }
                           </Card.Body>
                         </Card>
                       ))}
@@ -259,6 +273,17 @@ export default function HousekeepingTaskBoard() {
           />
         </Pagination>
       </div>
+      {managing && (
+        <ManageWorkModal
+          kind="tasks"
+          item={managing}
+          onClose={() => setManaging(null)}
+          onSaved={() => {
+            setManaging(null);
+            refresh();
+          }}
+        />
+      )}
       {creating && (
         <CreateTaskModal
           managerName={result.context?.managerName}

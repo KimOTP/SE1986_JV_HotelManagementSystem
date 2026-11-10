@@ -20,10 +20,10 @@ const columns = [
   {
     title: 'Dịch vụ',
     items: [
-      { label: 'Dịch vụ khách sạn', to: '/services' },
       { label: 'Báo cáo sự cố', to: '/operations/report-issue', permission: 'UC-E4' },
       {
-        label: 'Đánh giá & phản hồi',
+        label: 'Đánh giá của khách',
+        customerLabel: 'Đánh giá của tôi',
         to: '/operations/feedbacks',
         permission: 'UC-E6',
       },
@@ -49,12 +49,11 @@ const socialLinks = [
 const badges = ['SWD392-G3', 'FPT University', 'HMS 2026'];
 
 export default function Footer() {
-  const { isAuthenticated, hasPermission } = useAuth();
+  const { isAuthenticated, hasPermission, hasRole } = useAuth();
 
   // Link chỉ hiện khi tài khoản có quyền tương ứng, tránh đưa người dùng tới
   // trang 403 ngay từ footer.
-  const canSee = (item) =>
-    !item.permission || (isAuthenticated && hasPermission(item.permission));
+  const canSee = (item) => !item.permission || (isAuthenticated && hasPermission(item.permission));
 
   return (
     <footer className="hms-footer">
@@ -65,8 +64,8 @@ export default function Footer() {
             <span>Hotel Management System</span>
           </Link>
           <p className="hms-footer__tagline">
-            Nền tảng quản lý đặt phòng, buồng phòng và dịch vụ khách sạn cho
-            khách lưu trú và đội ngũ vận hành.
+            Nền tảng quản lý đặt phòng, buồng phòng và dịch vụ khách sạn cho khách lưu trú và đội
+            ngũ vận hành.
           </p>
 
           <div className="hms-footer__badges">
@@ -104,7 +103,11 @@ export default function Footer() {
                 <ul>
                   {items.map((item) => (
                     <li key={item.to}>
-                      <Link to={item.to}>{item.label}</Link>
+                      <Link to={item.to}>
+                        {hasRole('CUSTOMER') && item.customerLabel
+                          ? item.customerLabel
+                          : item.label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -117,8 +120,7 @@ export default function Footer() {
       <div className="hms-footer__bottom">
         <div className="hms-footer__bottom-inner">
           <span>
-            &copy; {new Date().getFullYear()} Hotel Management System. All
-            rights reserved.
+            &copy; {new Date().getFullYear()} Hotel Management System. All rights reserved.
           </span>
           <span>SWD392-G3 · FPT University</span>
         </div>

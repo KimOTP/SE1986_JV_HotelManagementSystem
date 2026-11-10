@@ -82,4 +82,8 @@ export const bookingsHttpRepository = {
     );
     return data;
   },
+
+  async cancelPayosCheckout(bookingCode) {
+    await axiosClient.post(`/bookings/${encodeURIComponent(bookingCode)}/deposit/payos/cancel`);
+  },
 };

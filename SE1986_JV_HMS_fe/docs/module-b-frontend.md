@@ -7,9 +7,9 @@ Tài liệu này thay thiết kế API đề xuất cũ. Contract chính thức 
 
 | UC | FE kết nối |
 |---|---|
-| B1 | CRUD loại phòng, tiện nghi liên kết, upload JPG/PNG hoặc nhập URL ảnh tối đa 6, active |
+| B1 | CRUD loại phòng, tiện nghi liên kết, upload JPG/PNG tối đa 6 ảnh, active |
 | B2 | CRUD phòng vật lý, tầng âm/0, notes, active; không ghi trạng thái vận hành |
-| B3 | CRUD tiện nghi, active, mapper icon seed và giữ icon cũ |
+| B3 | CRUD tiện nghi: tên, mô tả, trạng thái active |
 | B4 | Public search dùng stored procedure qua backend, không tính từ mock |
 | B5 | Detail dùng roomTypeId; availability/recheck rồi handoff Module C |
 | B6 | Room Map dùng dữ liệu DB, refresh, filter/thống kê, hiển thị hai trạng thái gốc |
@@ -35,11 +35,13 @@ Mọi đường dẫn tương đối bắt đầu `/inventory` vì baseURL đã 
 `getCatalog()` gọi `/public/catalog`, chỉ có roomTypes/amenities, không đọc phòng nội bộ.
 `getAll(kind)` dành cho quản trị, chỉ gọi resource và options cần cho form:
 roomTypes dùng UC-B1; rooms dùng UC-B2; amenities dùng UC-B3.
-`getMap()` gọi `/room-map`, chỉ cần UC-B6, Manager/Staff không cần B1/B2/B3.
-Public search/detail không dùng getAll. Router hiện cho Staff có UC-B6 truy cập trực tiếp Room Map;
+`getMap()` gọi `/room-map`, chỉ cần UC-B6; MANAGER/RECEPTIONIST/HOUSEKEEPER không cần B1/B2/B3.
+Theo seed mới, ADMIN chỉ quản trị B1/B2/B3, không có B6; Module B kiểm tra quyền UC, không hardcode role.
+Public search/detail không dùng getAll. Router cho người có UC-B6 truy cập trực tiếp Room Map;
 không cần sửa guard/router/sidebar chung.
 
-`roomsHttpRepository` unwrap JSON trực tiếp hoặc envelope data tại boundary, chuẩn hóa mọi ID thành string.
+`api/roomsApi.js` chứa toàn bộ lời gọi HTTP và mapping, unwrap JSON trực tiếp hoặc envelope data tại boundary,
+chuẩn hóa mọi ID thành string. Các trang chỉ import `roomsApi`, không còn file repository HTTP riêng.
 Backend cũng trả ID dạng chuỗi BIGINT. BasePrice dạng chuỗi decimal giữ chính xác khi edit/save;
 hiển thị tiền dùng formatter hiện có. Chỉ gửi whitelist trường catalog, không gửi hotelId/status/audit.
 
@@ -52,7 +54,8 @@ Khi backend chưa bật extension, ghi ảnh/notes bị từ chối 409, không 
 ## Upload ảnh
 
 Trong form loại phòng, chọn ảnh từ máy, chờ preview rồi bấm Lưu.
-JPG/PNG, tối đa 5 MB mỗi ảnh và 6 ảnh tổng cộng (tính cả URL đang nhập).
+Chỉ chọn ảnh từ máy, không có ô dán URL. JPG/PNG, tối đa 5 MB mỗi ảnh và 6 ảnh tổng cộng
+(tính cả ảnh đã có và ảnh vừa chọn).
 Client kiểm tra file trước khi gửi; backend kiểm tra nội dung ảnh thực, kích thước và quyền UC-B1.
 File được gửi trực tiếp qua axiosClient/JWT với Content-Type image/jpeg hoặc image/png đến
 `POST /inventory/admin/images`; kết quả `{url}` gắn vào mảng images hiện có.
@@ -62,7 +65,7 @@ Nếu upload nhiều file mà một file lỗi, các ảnh đã upload thành c�
 Binary ảnh nằm trong thư mục bền vững của backend; database lưu URL khi Lưu. Không có thay đổi schema.
 Xóa ảnh khỏi form không tự xóa file trên server. Cấu hình đường dẫn/URL server và giới hạn chi tiết xem tài liệu backend.
 
-## Room Map và icon
+## Room Map và tiện nghi
 
 Backend trả operationalStatus (AVAILABLE/OCCUPIED/MAINTENANCE), housekeepingStatus
 (DIRTY/CLEANING/CLEAN), displayStatus (READY/OCCUPIED/DIRTY/MAINTENANCE).
@@ -71,14 +74,14 @@ cho component UI cũ. Ưu tiên MAINTENANCE, OCCUPIED, DIRTY/CLEANING, READY.
 Modal hiện cả trạng thái gốc; active riêng biệt. Không ghi giá trị hiển thị vào DB.
 Refresh lỗi hiển thị lỗi đồng thời giữ snapshot cũ; không giả vờ đã tải dữ liệu mới.
 
-Icon seed wifi/snow/tv/water ánh xạ Wifi/Snow/Tv/Droplet. Icon khác CupHot/ShieldLock/Sun
-lưu cup-hot/shield-lock/sun. Giá trị lạ hiển thị CheckCircle; form có lựa chọn giữ nguyên,
-không ghi đè icon cũ khi chỉ sửa tên/mô tả.
+Tiện nghi chỉ có tên, mô tả và trạng thái. Các trang quản trị, tìm phòng và chi tiết phòng
+hiển thị tên tiện nghi, không dùng biểu tượng. API đọc/ghi tương ứng với contract backend.
 
 ## Handoff và giới hạn
 
 Luồng search → detail → availability/recheck → `/rooms/booking-handoff` giữ
 roomTypeId/checkIn/checkOut/guests/roomCount. Module B không tạo booking/hold.
+Router dùng trang handoff của Module C; đã gỡ trang placeholder không còn dùng trong Rooms.
 Module C tự chọn mock/API qua `VITE_BOOKING_DATA_SOURCE`; cấu hình của C độc lập với Module B.
 Handoff thành công không chứng minh booking đã ghi SQL Server nếu C chưa bật API.
 Tạo booking phải kiểm tra availability lại trong transaction của C.
@@ -88,12 +91,13 @@ Tạo booking phải kiểm tra availability lại trong transaction của C.
 ```powershell
 npm run build
 npm run lint
-node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs
+node --test src/modules/rooms/tests/*.test.mjs
 ```
 
 Kiểm tra trên môi trường thật: Guest search/detail không đăng nhập; Admin CRUD từng danh mục,
 refresh để xác nhận persistence; thử trùng tên/số phòng, xóa bản ghi tham chiếu, dữ liệu sai;
-Manager/Staff mở trực tiếp `/admin/room-map`, Customer bị chặn; thay đổi trạng thái qua quy trình
+MANAGER/RECEPTIONIST/HOUSEKEEPER mở trực tiếp `/admin/room-map`; ADMIN/CUSTOMER bị chặn theo seed mới.
+Thay đổi trạng thái qua quy trình
 D/E rồi refresh map. Kiểm tra PENDING hết hold mà status chưa đổi, ngày checkout trùng check-in,
 phòng OCCUPIED ở hiện tại khi tìm ngày tương lai và AVAILABLE/DIRTY.
 Không sửa booking thật/chạy lại seed để làm mới hold.
