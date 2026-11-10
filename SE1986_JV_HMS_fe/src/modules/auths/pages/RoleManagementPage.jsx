@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { authsApi } from '../api/authsApi';
-import {
-  DATABASE_PERMISSION_CODES,
-  ROLE_LABELS,
-  ROLES,
-} from '../constants/authConstants';
+import { ROLE_LABELS, ROLES } from '../constants/authConstants';
+import { PERMISSION_GROUPS, PERMISSION_INFO } from '../constants/permissionCatalog';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
-const databasePermissionLabel = (code) => {
-  if (code === 'UC-A5') return 'UC-A5 · Manage Internal Users (Staff/Manager)';
-  if (code === 'UC-A6') return 'UC-A6 · Manage Roles & Permissions';
-  return code;
-};
+const permissionName = (code) => PERMISSION_INFO[code]?.name || code;
 
 export default function RoleManagementPage() {
   const { permissions: actorPermissions, refreshAuthorization } = useAuth();
@@ -54,19 +47,40 @@ export default function RoleManagementPage() {
     [roles, selectedRoleCode],
   );
 
-  const selectedPermissions =
-    permissionDrafts[selectedRoleCode] || selectedRole?.permissions || [];
+  const savedPermissions = useMemo(() => selectedRole?.permissions || [], [selectedRole]);
+  const selectedPermissions = permissionDrafts[selectedRoleCode] || savedPermissions;
+  const isAdminRole = selectedRoleCode === ROLES.ADMIN;
+
+  // So bản nháp với bản đã lưu để người dùng thấy rõ mình sắp thêm, bỏ quyền gì.
+  const addedPermissions = selectedPermissions.filter((code) => !savedPermissions.includes(code));
+  const removedPermissions = savedPermissions.filter((code) => !selectedPermissions.includes(code));
+  const hasChanges = addedPermissions.length > 0 || removedPermissions.length > 0;
+
+  const updateDraft = (nextPermissions) => {
+    setPermissionDrafts((current) => ({ ...current, [selectedRoleCode]: nextPermissions }));
+    setPageSuccess('');
+  };
 
   const togglePermission = (permission) => {
+    updateDraft(
+      selectedPermissions.includes(permission)
+        ? selectedPermissions.filter((item) => item !== permission)
+        : [...selectedPermissions, permission],
+    );
+  };
+
+  const setGroup = (group, checked) => {
+    const groupCodes = group.permissions.map((item) => item.code);
+    const others = selectedPermissions.filter((code) => !groupCodes.includes(code));
+    updateDraft(checked ? [...others, ...groupCodes] : others);
+  };
+
+  const discardChanges = () => {
     setPermissionDrafts((current) => {
-      const currentPermissions =
-        current[selectedRoleCode] || selectedRole?.permissions || [];
-      const nextPermissions = currentPermissions.includes(permission)
-        ? currentPermissions.filter((item) => item !== permission)
-        : [...currentPermissions, permission];
-      return { ...current, [selectedRoleCode]: nextPermissions };
+      const next = { ...current };
+      delete next[selectedRoleCode];
+      return next;
     });
-    setPageSuccess('');
   };
 
   const handleSave = async () => {
@@ -98,15 +112,6 @@ export default function RoleManagementPage() {
     }
   };
 
-  const databasePermissions = useMemo(
-    () =>
-      DATABASE_PERMISSION_CODES.map((code) => ({
-        code,
-        label: databasePermissionLabel(code),
-      })),
-    [],
-  );
-
   if (isLoading) {
     return (
       <div className="text-center py-5">
@@ -121,7 +126,8 @@ export default function RoleManagementPage() {
       <div className="mb-4">
         <h2 className="mb-1">Quản lý vai trò & quyền</h2>
         <p className="text-muted mb-0">
-          UC-A6 · Ma trận quyền theo UC. Admin luôn có toàn quyền; thay đổi quyền của các vai trò khác có hiệu lực ngay với mọi tài khoản thuộc vai trò đó.
+          UC-A6 · Chọn vai trò rồi tích các chức năng vai trò đó được dùng. Thay đổi có hiệu lực ngay với mọi
+          tài khoản thuộc vai trò. Admin luôn có toàn quyền.
         </p>
       </div>
 
@@ -129,68 +135,122 @@ export default function RoleManagementPage() {
       {pageSuccess && <div className="alert alert-success" role="status">{pageSuccess}</div>}
 
       <div className="card shadow-sm mb-4">
-        <div className="card-body">
-          <label htmlFor="managedRole" className="form-label fw-semibold">
-            Vai trò
-          </label>
-          <select
-            id="managedRole"
-            className="form-select"
-            value={selectedRoleCode}
-            onChange={(event) => setSelectedRoleCode(event.target.value)}
-          >
-            {roles.map((item) => (
-              <option key={item.code} value={item.code}>
-                {item.name} ({item.code})
-              </option>
-            ))}
-          </select>
+        <div className="card-body d-flex flex-wrap align-items-end gap-3">
+          <div className="flex-grow-1">
+            <label htmlFor="managedRole" className="form-label fw-semibold">
+              Vai trò
+            </label>
+            <select
+              id="managedRole"
+              className="form-select"
+              value={selectedRoleCode}
+              onChange={(event) => setSelectedRoleCode(event.target.value)}
+            >
+              {roles.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name} ({item.code})
+                </option>
+              ))}
+            </select>
+          </div>
+          <span className="badge text-bg-secondary fs-6">
+            {selectedPermissions.length}/{Object.keys(PERMISSION_INFO).length} chức năng
+          </span>
         </div>
       </div>
 
       {selectedRole && (
         <>
-          <section className="card shadow-sm mb-4">
-            <div className="card-header fw-semibold">Quyền theo use case (UC-A1 đến UC-E6)</div>
-            <div className="card-body">
-              <div className="row g-3">
-                {databasePermissions.map(({ code, label }) => {
-                  const isLockedAdminAccess =
-                    selectedRoleCode === ROLES.ADMIN;
-                  const checked = selectedPermissions.includes(code);
-
-                  return (
-                    <div className="col-12 col-md-6 col-xl-4" key={code}>
-                      <label className="form-check border rounded p-3 h-100">
-                        <input
-                          className="form-check-input me-2"
-                          type="checkbox"
-                          checked={checked}
-                          disabled={isLockedAdminAccess}
-                          onChange={() => togglePermission(code)}
-                        />
-                        <span className="form-check-label">
-                          <span className="d-block fw-semibold">{label}</span>
-                          {isLockedAdminAccess && (
-                            <span className="small text-muted">ADMIN luôn giữ đủ quyền.</span>
-                          )}
-                        </span>
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
+          {isAdminRole && (
+            <div className="alert alert-info">
+              ADMIN luôn giữ đủ mọi quyền để hệ thống không mất người quản trị, nên không chỉnh được ở đây.
             </div>
-          </section>
+          )}
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Đang lưu...' : 'Lưu quyền'}
-          </button>
+          {PERMISSION_GROUPS.map((group) => {
+            const groupCodes = group.permissions.map((item) => item.code);
+            const checkedCount = groupCodes.filter((code) => selectedPermissions.includes(code)).length;
+            const allChecked = checkedCount === groupCodes.length;
+
+            return (
+              <section className="card shadow-sm mb-4" key={group.module}>
+                <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                  <span className="fw-semibold">
+                    Module {group.module} · {group.title}
+                    <span className="badge text-bg-light border ms-2">{checkedCount}/{groupCodes.length}</span>
+                  </span>
+                  {!isAdminRole && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => setGroup(group, !allChecked)}
+                    >
+                      {allChecked ? 'Bỏ cả nhóm' : 'Chọn cả nhóm'}
+                    </button>
+                  )}
+                </div>
+                <div className="card-body">
+                  <div className="row g-3">
+                    {group.permissions.map((permission) => {
+                      const checked = selectedPermissions.includes(permission.code);
+                      return (
+                        <div className="col-12 col-md-6 col-xl-4" key={permission.code}>
+                          <label className={`form-check border rounded p-3 h-100 ${checked ? 'border-primary' : ''}`}>
+                            <input
+                              className="form-check-input me-2"
+                              type="checkbox"
+                              checked={checked}
+                              disabled={isAdminRole}
+                              onChange={() => togglePermission(permission.code)}
+                            />
+                            <span className="form-check-label">
+                              <span className="d-block fw-semibold">
+                                {permission.name}
+                                <span className="badge text-bg-light border ms-2 fw-normal">{permission.code}</span>
+                              </span>
+                              <span className="d-block small">{permission.description}</span>
+                              <span className="d-block small text-muted">Màn hình: {permission.screen}</span>
+                            </span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+
+          {hasChanges && (
+            <div className="alert alert-warning">
+              <div className="fw-semibold mb-1">Thay đổi chưa lưu cho {ROLE_LABELS[selectedRoleCode]}:</div>
+              {addedPermissions.length > 0 && (
+                <div>Thêm: {addedPermissions.map(permissionName).join(', ')}</div>
+              )}
+              {removedPermissions.length > 0 && (
+                <div>Bỏ: {removedPermissions.map(permissionName).join(', ')}</div>
+              )}
+            </div>
+          )}
+
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges || isAdminRole}
+            >
+              {isSaving ? 'Đang lưu...' : 'Lưu quyền'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={discardChanges}
+              disabled={isSaving || !hasChanges}
+            >
+              Hủy thay đổi
+            </button>
+          </div>
         </>
       )}
     </div>
