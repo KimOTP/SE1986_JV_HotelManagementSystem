@@ -68,9 +68,9 @@ Xóa ảnh khỏi form không tự xóa file trên server. Cấu hình đường
 ## Room Map và tiện nghi
 
 Backend trả operationalStatus (AVAILABLE/OCCUPIED/MAINTENANCE), housekeepingStatus
-(DIRTY/CLEANING/CLEAN), displayStatus (READY/OCCUPIED/DIRTY/MAINTENANCE).
+(CLEANING/CLEAN), displayStatus (READY/OCCUPIED/MAINTENANCE).
 Adapter giữ rawOperationalStatus, housekeepingStatus rồi dùng displayStatus ở field operationalStatus
-cho component UI cũ. Ưu tiên MAINTENANCE, OCCUPIED, DIRTY/CLEANING, READY.
+cho component UI cũ. Ưu tiên MAINTENANCE, OCCUPIED, READY.
 Modal hiện cả trạng thái gốc; active riêng biệt. Không ghi giá trị hiển thị vào DB.
 Refresh lỗi hiển thị lỗi đồng thời giữ snapshot cũ; không giả vờ đã tải dữ liệu mới.
 
@@ -99,7 +99,7 @@ refresh để xác nhận persistence; thử trùng tên/số phòng, xóa bản
 MANAGER/RECEPTIONIST/HOUSEKEEPER mở trực tiếp `/admin/room-map`; ADMIN/CUSTOMER bị chặn theo seed mới.
 Thay đổi trạng thái qua quy trình
 D/E rồi refresh map. Kiểm tra PENDING hết hold mà status chưa đổi, ngày checkout trùng check-in,
-phòng OCCUPIED ở hiện tại khi tìm ngày tương lai và AVAILABLE/DIRTY.
+phòng OCCUPIED ở hiện tại khi tìm ngày tương lai và AVAILABLE.
 Không sửa booking thật/chạy lại seed để làm mới hold.
 
 ## Tách dữ liệu mock Module D khỏi Module B

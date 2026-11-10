@@ -8,6 +8,7 @@ import {
   DoorOpen,
   ExclamationTriangle,
   Grid3x3Gap,
+  Headset,
   Kanban,
   Layers,
   People,
@@ -32,6 +33,7 @@ export const sidebarMenu = [
         to: '/operations/my-reports',
         icon: Headset,
         requiredPermission: 'UC-E4',
+        requiredRoles: ['CUSTOMER'],
       },
       {
         label: 'Báo cáo sự cố',

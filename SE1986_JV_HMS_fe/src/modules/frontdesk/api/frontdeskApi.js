@@ -1,6 +1,4 @@
-// Optional adapter for the EXISTING React project.
-// Copy to FE: src/modules/frontdesk/api/frontdeskApi.js
-// IMPORTANT: existing pages must be refactored from synchronous mock to awaited API calls.
+// Module D API. All front desk pages load and write data through this client.
 import axiosClient from '../../../shared/api/axiosClient';
 
 const base = '/frontdesk';
@@ -29,8 +27,12 @@ export const frontdeskApi = {
         data(axiosClient.delete(`${base}/invoices/${encodeURIComponent(invoiceNumber)}`)),
     restoreInvoice: (invoiceNumber) =>
         data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/restore`)),
-    payInvoice: (invoiceNumber, method = 'CASH') =>
-        data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay`, { method })),
+    payInvoice: (invoiceNumber) =>
+        data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay`)),
+    startInvoicePayos: (invoiceNumber) =>
+        data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay/payos`)),
+    verifyInvoicePayos: (invoiceNumber) =>
+        data(axiosClient.get(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay/payos/verify`)),
 };
 
 export default frontdeskApi;

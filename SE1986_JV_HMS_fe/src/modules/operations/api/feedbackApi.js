@@ -14,6 +14,7 @@ const feedbackSchema = z.object({
   repliedBy: z.string().nullable(),
   repliedAt: z.string().nullable(),
   createdAt: z.string(),
+  rooms: z.array(z.string()).default([]),
 });
 export async function getCustomerFeedbackContext(signal) {
   const response = await axiosClient.get('/operations/feedback-customer-context', {
@@ -28,7 +29,13 @@ export async function getFeedbackBookings(signal) {
   const response = await axiosClient.get('/operations/feedback-bookings', { baseURL, signal });
   return z
     .array(
-      z.object({ id, bookingCode: z.string(), hotelName: z.string(), checkOutDate: z.string() }),
+      z.object({
+        id,
+        bookingCode: z.string(),
+        hotelName: z.string(),
+        checkOutDate: z.string(),
+        rooms: z.array(z.string()).default([]),
+      }),
     )
     .parse(response.data);
 }

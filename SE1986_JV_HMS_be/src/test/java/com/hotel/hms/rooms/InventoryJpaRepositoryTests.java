@@ -39,7 +39,7 @@ class InventoryJpaRepositoryTests {
         room.setId(4L);
         room.setRoomType(type);
         room.setOperationalStatus("OCCUPIED");
-        room.setHousekeepingStatus("DIRTY");
+        room.setHousekeepingStatus("CLEANING");
         when(rooms.findById(4L)).thenReturn(Optional.of(room));
         when(types.getReferenceById(2L)).thenReturn(type);
         when(rooms.saveAndFlush(room)).thenReturn(room);
@@ -48,7 +48,7 @@ class InventoryJpaRepositoryTests {
         assertEquals(-1, room.getFloor());
         assertEquals("Ghi chú", room.getNotes());
         assertEquals("OCCUPIED", room.getOperationalStatus());
-        assertEquals("DIRTY", room.getHousekeepingStatus());
+        assertEquals("CLEANING", room.getHousekeepingStatus());
         verify(entityManager, never()).refresh(any());
     }
 

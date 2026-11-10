@@ -225,14 +225,14 @@ theo môi trường chạy. Chưa có job tự xóa file hoặc cloud storage; k
 
 Service gọi nguyên procedure `inventory.search_available_rooms` với tham số bind.
 Procedure trả phòng vật lý; service group theo room_type_id và distinct room_id, không tải booking vào Java.
-Active hotel/type/room, capacity đủ, không MAINTENANCE. OCCUPIED hiện tại, DIRTY/CLEANING không tự chặn tương lai.
+Active hotel/type/room, capacity đủ, không MAINTENANCE. OCCUPIED hiện tại, CLEANING không tự chặn tương lai.
 Khoảng [in,out); overlap `existingIn < requestedOut AND existingOut > requestedIn`.
 CONFIRMED/CHECKED_IN chặn; PENDING chỉ chặn nếu `hold_expires_at > SYSUTCDATETIME()`.
 CANCELLED/EXPIRED/CHECKED_OUT và PENDING hold hết hạn không chặn. Không cần job đổi status.
 Không tự cấm ngày quá khứ trên backend; UI cũ có kiểm tra ngày quá khứ và được giữ nguyên.
 
-Room Map ưu tiên MAINTENANCE → OCCUPIED → DIRTY (DIRTY hoặc CLEANING) → READY (AVAILABLE/CLEAN).
-Đây là displayStatus riêng, không ghi READY/DIRTY vào operational_status.
+Room Map ưu tiên MAINTENANCE → OCCUPIED → READY (AVAILABLE).
+Đây là displayStatus riêng, không ghi READY vào operational_status.
 API giữ hai trạng thái gốc; adapter FE giữ rawOperationalStatus, housekeepingStatus và dùng displayStatus cho UI cũ.
 Modal hiển thị cả trạng thái DB, giúp phân biệt CLEANING; active độc lập với trạng thái.
 Thống kê/filter dựa dữ liệu DB vừa tải, refresh thủ công; không lấy task mock hoặc thêm WebSocket.
@@ -284,7 +284,7 @@ $env:INVENTORY_TEST_JDBC_URL = 'jdbc:sqlserver://localhost:1433;databaseName=Hot
 ```
 
 Suite bao phủ overlap, boundary checkout, từng blocking status/hold, inactive hotel/type/room,
-maintenance, occupied tương lai, dirty/cleaning, capacity, distinct count, generated keys với trigger,
+maintenance, occupied tương lai, cleaning, capacity, distinct count, generated keys với trigger,
 notes/images Unicode, bảo toàn trạng thái và FK delete. Không có URL test thì **skip**, không phải pass SQL.
 SQL trigger/concurrency/procedure và CRUD-refresh end-to-end cần chạy trên môi trường thật phù hợp.
 Không tạo/xóa fixture tùy tiện trên DB nhóm; ngày seed theo UTC lúc seed, không mặc định là hôm nay.

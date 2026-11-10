@@ -46,12 +46,12 @@ test('room map preserves raw statuses and computes UI separately', async () => {
         roomTypeId: 7,
         operationalStatus: 'AVAILABLE',
         housekeepingStatus: 'CLEANING',
-        displayStatus: 'DIRTY',
+        displayStatus: 'READY',
       },
     ],
   };
   const { rooms } = await api.getMap();
-  assert.equal(rooms[0].operationalStatus, 'DIRTY');
+  assert.equal(rooms[0].operationalStatus, 'READY');
   assert.equal(rooms[0].rawOperationalStatus, 'AVAILABLE');
   assert.equal(rooms[0].housekeepingStatus, 'CLEANING');
   assert.equal(rooms[0].roomTypeId, '7');

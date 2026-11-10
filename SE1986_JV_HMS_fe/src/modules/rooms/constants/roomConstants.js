@@ -1,8 +1,7 @@
-export const ROOM_STATUSES = ['READY', 'OCCUPIED', 'DIRTY', 'MAINTENANCE'];
+export const ROOM_STATUSES = ['READY', 'OCCUPIED', 'MAINTENANCE'];
 export const STATUS_LABELS = {
   READY: 'Sẵn sàng',
   OCCUPIED: 'Đang có khách',
-  DIRTY: 'Cần dọn',
   MAINTENANCE: 'Bảo trì',
 };
 export const FALLBACK_IMAGE =

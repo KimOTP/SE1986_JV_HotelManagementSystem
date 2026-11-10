@@ -168,6 +168,12 @@ export default function FeedbackFormModal({ feedback, bookingId, onClose, onSave
                         <small className="text-muted text-break">
                           Mã đặt phòng: {selectedStay.bookingCode}
                         </small>
+                        <div className="small">
+                          <strong>Phòng đã ở:</strong>{' '}
+                          {selectedStay.rooms?.length > 0
+                            ? selectedStay.rooms.join(', ')
+                            : 'Chưa có thông tin phòng'}
+                        </div>
                       </div>
                       {errors.bookingId && (
                         <div className="text-danger" role="alert">
@@ -183,6 +189,7 @@ export default function FeedbackFormModal({ feedback, bookingId, onClose, onSave
                         {bookings.items.map((booking) => (
                           <option key={booking.id} value={booking.id}>
                             Trả phòng {stayDate(booking.checkOutDate)} · {booking.bookingCode}
+                            {booking.rooms?.length > 0 && ` · ${booking.rooms.join(', ')}`}
                           </option>
                         ))}
                       </Form.Select>

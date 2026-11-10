@@ -34,7 +34,7 @@ phương thức tiền mặt tại quầy trong luồng đặt phòng.
 | `E_WALLET` | Ví điện tử | MoMo, ZaloPay, VNPay | Mở app xác nhận |
 
 `CASH` bị **loại khỏi cả UI và validation mock** (`bookingStore.payBookingDeposit`).
-Thu tiền mặt vẫn tồn tại ở Module D (invoice tại quầy) — ngoài phạm vi đặt cọc online.
+Hóa đơn tại quầy (Module D) không còn thu tiền mặt: khoản còn phải trả được thanh toán bằng chuyển khoản QR payOS (`/frontdesk/invoices/{số}`), cùng cơ chế với đặt cọc.
 
 ## 4. Quy tắc nghiệp vụ
 

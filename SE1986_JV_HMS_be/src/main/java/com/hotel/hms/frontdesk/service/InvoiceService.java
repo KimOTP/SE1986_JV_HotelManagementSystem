@@ -39,7 +39,7 @@ public class InvoiceService {
     }
 
     private InvoiceRecord get(String number, boolean lock) {
-        InvoiceRecord invoice = (lock ? invoiceRepository.findByNumberForUpdate(number)
+        InvoiceRecord invoice = (lock ? invoiceRepository.findLockedByNumber(number)
                 : invoiceRepository.findByNumber(number))
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy hóa đơn: " + number));
         if (Boolean.TRUE.equals(invoice.getDeleted())) throw ApiException.notFound("Hóa đơn đã xóa mềm.");
@@ -75,7 +75,7 @@ public class InvoiceService {
                     .description("Tiền phòng " + room.getRoom().getRoomNumber() + " (" + nights + " đêm)")
                     .quantity(BigDecimal.valueOf(nights)).unitPrice(room.getNightlyRate()).build());
         }
-        for (ServiceCharge service : serviceRepository.findDeliveredByBooking(booking.getId())) {
+        for (ServiceCharge service : serviceRepository.findByBookingRoom_Booking_IdAndStatusOrderByIdAsc(booking.getId(), "DELIVERED")) {
             lines.add(InvoiceItemInput.builder().type("SERVICE").serviceOrderId(service.getId())
                     .description(service.getService().getName())
                     .quantity(service.getQuantity()).unitPrice(service.getUnitPrice()).build());
@@ -173,11 +173,11 @@ public class InvoiceService {
     private void replaceLines(InvoiceRecord invoice, List<InvoiceItemInput> inputs) {
         itemRepository.deleteByInvoice_Id(invoice.getId());
         itemRepository.flush();
-        List<RoomStay> rooms = bookingRoomRepository.findRooms(invoice.getBooking().getId());
+        List<RoomStay> rooms = bookingRoomRepository.findByBooking_IdOrderByIdAsc(invoice.getBooking().getId());
         Map<Long, RoomStay> byRoom = new HashMap<>();
         for (RoomStay room : rooms) byRoom.put(room.getId(), room);
         Map<Long, ServiceCharge> byService = new HashMap<>();
-        for (ServiceCharge charge : serviceRepository.findDeliveredByBooking(invoice.getBooking().getId())) {
+        for (ServiceCharge charge : serviceRepository.findByBookingRoom_Booking_IdAndStatusOrderByIdAsc(invoice.getBooking().getId(), "DELIVERED")) {
             byService.put(charge.getId(), charge);
         }
         List<InvoiceLine> rows = new ArrayList<>();
@@ -202,7 +202,7 @@ public class InvoiceService {
         }
         BookingStay booking = frontDeskService.requireBooking(req.getBookingId().trim(), true, actor);
         if (!"CHECKED_IN".equals(booking.getStatus())) throw ApiException.conflict("Booking chưa CHECKED_IN.");
-        if (invoiceRepository.findByBookingIdForUpdate(booking.getId()).isPresent()) {
+        if (invoiceRepository.findLockedByBooking_Id(booking.getId()).isPresent()) {
             throw ApiException.conflict("Booking đã có hóa đơn, kể cả hóa đơn xóa mềm. Có UNIQUE(booking_id).");
         }
         List<InvoiceItemInput> inputs = validateLines(booking, req);
@@ -313,7 +313,7 @@ public class InvoiceService {
         InvoiceRecord old = invoiceRepository.findByNumber(number)
                 .orElseThrow(() -> ApiException.notFound("Không có hóa đơn."));
         BookingStay booking = frontDeskService.requireBooking(old.getBooking().getCode(), true, actor);
-        InvoiceRecord invoice = invoiceRepository.findByNumberForUpdate(number)
+        InvoiceRecord invoice = invoiceRepository.findLockedByNumber(number)
                 .orElseThrow(() -> ApiException.notFound("Không có hóa đơn."));
         if (!Boolean.TRUE.equals(invoice.getDeleted()) || !"VOID".equals(invoice.getStatus())
                 || !"CHECKED_IN".equals(booking.getStatus())
@@ -329,24 +329,70 @@ public class InvoiceService {
         return detailInternal(invoice, actor);
     }
 
-    @Transactional
-    public InvoiceResponse pay(String number, PayInvoiceRequest req, ActorService.Actor actor) {
-        InvoiceRecord old = get(number, false);
-        BookingStay booking = frontDeskService.requireBooking(old.getBooking().getCode(), true, actor);
-        InvoiceRecord invoice = get(number, true);
-        if (!"ISSUED".equals(invoice.getStatus()) || !"CHECKED_IN".equals(booking.getStatus())) {
-            throw ApiException.conflict("Hóa đơn chưa ISSUED hoặc booking chưa CHECKED_IN.");
-        }
+    private BigDecimal dueOf(InvoiceRecord invoice, BookingStay booking) {
         BigDecimal subtotal = itemRepository.findByInvoice_IdOrderByIdAsc(invoice.getId())
                 .stream().map(InvoiceLine::total).reduce(ZERO, BigDecimal::add);
         BigDecimal total = subtotal.subtract(invoice.getDiscount()).add(invoice.getTax());
         BigDecimal paid = paymentService.paidForInvoice(invoice.getId());
-        BigDecimal due = total.subtract(paymentService.depositPaid(booking.getId())).subtract(paid);
+        return total.subtract(paymentService.depositPaid(booking.getId())).subtract(paid);
+    }
+
+    /** Amount still to be collected through payOS for an ISSUED invoice of a checked-in booking. */
+    @Transactional(readOnly = true)
+    public BigDecimal payableDue(String number, ActorService.Actor actor) {
+        InvoiceRecord invoice = get(number, false);
+        BookingStay booking = bookingForActor(invoice, actor);
+        if (!"ISSUED".equals(invoice.getStatus()) || !"CHECKED_IN".equals(booking.getStatus())) {
+            throw ApiException.conflict("Hóa đơn chưa ISSUED hoặc booking chưa CHECKED_IN.");
+        }
+        BigDecimal due = dueOf(invoice, booking);
+        if (due.signum() < 0) throw ApiException.conflict("Số tiền đã thu lớn hơn tiền hóa đơn; cần đối soát hoàn tiền.");
+        return due;
+    }
+
+    @Transactional(readOnly = true)
+    public Long invoiceId(String number, ActorService.Actor actor) {
+        InvoiceRecord invoice = get(number, false);
+        bookingForActor(invoice, actor);
+        return invoice.getId();
+    }
+
+    /** Manual settlement is only possible when the deposit already covers the whole invoice. */
+    @Transactional
+    public InvoiceResponse pay(String number, ActorService.Actor actor) {
+        return settle(number, null, null, actor);
+    }
+
+    /** Called after payOS confirmed the exact due amount; idempotent per payment link. */
+    @Transactional
+    public InvoiceResponse confirmPayosPayment(String number, String providerReference, BigDecimal amountPaid,
+                                               ActorService.Actor actor) {
+        return settle(number, providerReference, amountPaid, actor);
+    }
+
+    private InvoiceResponse settle(String number, String providerReference, BigDecimal amountPaid,
+                                   ActorService.Actor actor) {
+        InvoiceRecord old = get(number, false);
+        BookingStay booking = frontDeskService.requireBooking(old.getBooking().getCode(), true, actor);
+        InvoiceRecord invoice = get(number, true);
+        if ("PAID".equals(invoice.getStatus()) && providerReference != null
+                && paymentService.hasProviderReference(invoice.getId(), providerReference)) {
+            entityManager.refresh(invoice);
+            return detailInternal(invoice, actor);
+        }
+        if (!"ISSUED".equals(invoice.getStatus()) || !"CHECKED_IN".equals(booking.getStatus())) {
+            throw ApiException.conflict("Hóa đơn chưa ISSUED hoặc booking chưa CHECKED_IN.");
+        }
+        BigDecimal due = dueOf(invoice, booking);
         if (due.signum() < 0) throw ApiException.conflict("Số tiền đã thu lớn hơn tiền hóa đơn; cần đối soát hoàn tiền.");
         if (due.signum() > 0) {
-            String method = req == null ? null : req.getMethod();
-            if ("TRANSFER".equals(method)) method = "BANK_TRANSFER";
-            paymentService.recordManualPayment(booking, invoice, method, due, actor.getId());
+            if (providerReference == null) {
+                throw ApiException.conflict("Hóa đơn phải thanh toán chuyển khoản qua payOS (không thu tiền mặt).");
+            }
+            if (amountPaid == null || amountPaid.compareTo(due) != 0) {
+                throw ApiException.conflict("Số tiền payOS đã thu không khớp số còn phải trả của hóa đơn.");
+            }
+            paymentService.recordPayosPayment(booking, invoice, due, actor.getId(), providerReference);
         }
         invoice.setStatus("PAID");
         invoiceRepository.saveAndFlush(invoice);

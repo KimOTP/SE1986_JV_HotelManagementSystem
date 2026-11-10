@@ -256,7 +256,7 @@ export default function CatalogManagementPage({ kind }) {
                   <Form.Label>Vận hành</Form.Label>
                   <Form.Select value={status} onChange={(e) => filter(setStatus, e.target.value)}>
                     <option value="ALL">Tất cả</option>
-                    {['READY', 'OCCUPIED', 'DIRTY', 'MAINTENANCE'].map((s) => (
+                    {['READY', 'OCCUPIED', 'MAINTENANCE'].map((s) => (
                       <option key={s} value={s}>
                         {s}
                       </option>

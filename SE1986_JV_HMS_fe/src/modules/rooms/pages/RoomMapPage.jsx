@@ -142,9 +142,6 @@ export default function RoomMapPage() {
           <i className="legend occupied" /> Có khách
         </span>
         <span>
-          <i className="legend dirty" /> Cần dọn
-        </span>
-        <span>
           <i className="legend maintenance" /> Bảo trì
         </span>
       </div>

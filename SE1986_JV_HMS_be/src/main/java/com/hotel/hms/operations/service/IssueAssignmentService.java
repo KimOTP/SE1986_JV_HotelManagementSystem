@@ -115,6 +115,17 @@ public class IssueAssignmentService {
                 """, request.staffId(), manager.id(), issueId);
         if (changed != 1) throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Issue changed concurrently; refresh before assigning again");
+        // Housekeeper's "Công việc của tôi" reads operations.tasks, so every assignment
+        // must produce a linked task (one per issue).
+        jdbc.update("""
+                INSERT INTO operations.tasks (room_id, issue_id, assigned_staff_id, assigned_by, task_type,
+                                              title, description, priority, status, scheduled_at)
+                SELECT i.room_id, i.issue_id, ?, ?, 'MAINTENANCE', i.title, i.description, i.priority,
+                       'PENDING', SYSUTCDATETIME()
+                FROM operations.issues i
+                WHERE i.issue_id = ?
+                  AND NOT EXISTS (SELECT 1 FROM operations.tasks t WHERE t.issue_id = i.issue_id)
+                """, request.staffId(), manager.id(), issueId);
         return new IssueAssignmentResponse(issueId, request.staffId(), manager.id(), "ASSIGNED");
     }
 }

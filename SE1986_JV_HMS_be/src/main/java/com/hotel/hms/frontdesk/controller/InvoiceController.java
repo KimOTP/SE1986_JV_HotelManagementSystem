@@ -12,8 +12,9 @@ import java.util.List;
 public class InvoiceController {
     private final InvoiceService service;
     private final ActorService actors;
-    public InvoiceController(InvoiceService service,ActorService actors) {
-        this.service=service;this.actors=actors;
+    private final InvoicePayosService payosService;
+    public InvoiceController(InvoiceService service,ActorService actors,InvoicePayosService payosService) {
+        this.service=service;this.actors=actors;this.payosService=payosService;
     }
     @GetMapping("/bookings/{bookingCode}/invoice-draft")
     public InvoiceDraftResponse draft(@PathVariable String bookingCode,Principal principal) {
@@ -46,9 +47,17 @@ public class InvoiceController {
     public InvoiceResponse restore(@PathVariable String invoiceNumber,Principal principal) {
         return service.restore(invoiceNumber,actors.require(principal,"UC-D6"));
     }
+    // Only settles invoices with nothing left to collect; any amount due must go through payOS.
     @PostMapping("/invoices/{invoiceNumber}/pay")
-    public InvoiceResponse pay(@PathVariable String invoiceNumber,@RequestBody(required=false) PayInvoiceRequest request,
-                               Principal principal) {
-        return service.pay(invoiceNumber,request,actors.require(principal,"UC-D2"));
+    public InvoiceResponse pay(@PathVariable String invoiceNumber,Principal principal) {
+        return service.pay(invoiceNumber,actors.require(principal,"UC-D2"));
+    }
+    @PostMapping("/invoices/{invoiceNumber}/pay/payos")
+    public InvoicePayosService.Checkout payos(@PathVariable String invoiceNumber,Principal principal) {
+        return payosService.createCheckout(invoiceNumber,actors.require(principal,"UC-D2"));
+    }
+    @GetMapping("/invoices/{invoiceNumber}/pay/payos/verify")
+    public InvoicePayosService.Verification verifyPayos(@PathVariable String invoiceNumber,Principal principal) {
+        return payosService.verify(invoiceNumber,actors.require(principal,"UC-D2"));
     }
 }

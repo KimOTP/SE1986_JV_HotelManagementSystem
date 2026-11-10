@@ -1,44 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert } from 'react-bootstrap';
 import { Link, useNavigate, useParams } from 'react-router';
 import InvoiceForm from '../components/InvoiceForm';
-import { getInvoice, updateInvoice } from '../mocks/frontdeskStore';
-import { useAuth } from '../../../app/provider/AuthsContext.jsx';
+import { frontdeskApi } from '../api/frontdeskApi';
+import { apiError } from '../utils/frontdeskUtils';
 
-// UC-D5: Update Invoice
 export default function InvoiceEditPage() {
-  const { hasPermission } = useAuth();
-  const canUpdateInvoice = hasPermission('UC-D5');
   const { id } = useParams();
   const navigate = useNavigate();
-  const [invoice] = useState(() => getInvoice(id));
-
-  if (!invoice) {
-    return (
-      <Alert variant="danger">
-        Không tìm thấy hóa đơn <strong>{id}</strong>. <Link to="/frontdesk/invoices">Về danh sách</Link>
-      </Alert>
-    );
-  }
-  if (!canUpdateInvoice) return <Alert variant="danger">Bạn không có UC-D5 để cập nhật hóa đơn.</Alert>;
-
-  const onSubmit = (data) => {
-    updateInvoice(id, data);
-    navigate(`/frontdesk/invoices/${id}`);
+  const [invoice, setInvoice] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    frontdeskApi.getInvoice(id).then((data) => { if (active) setInvoice(data); })
+      .catch((e) => { if (active) setError(apiError(e)); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [id]);
+  const save = async (payload) => {
+    try { await frontdeskApi.updateInvoice(id, payload); navigate(`/frontdesk/invoices/${encodeURIComponent(id)}`); }
+    catch (e) { setError(apiError(e)); }
   };
-
-  return (
-    <div>
-      <div className="mb-4">
-        <h2 className="fw-bold mb-1">Cập nhật hóa đơn {id}</h2>
-        <p className="text-muted mb-0">Chỉnh sửa thông tin, dòng chi phí và trạng thái thanh toán.</p>
-      </div>
-      <InvoiceForm
-        defaultValues={invoice}
-        onSubmit={onSubmit}
-        submitLabel="Lưu thay đổi"
-        onCancel={() => navigate(`/frontdesk/invoices/${id}`)}
-      />
-    </div>
-  );
+  return <div><h2>Cập nhật hóa đơn {id}</h2><p className="text-muted">Chỉ hóa đơn chưa thanh toán của khách đang lưu trú mới được sửa.</p>
+    {error && <Alert variant="danger">{error}</Alert>}{loading && <p>Đang tải…</p>}
+    {invoice?.status === 'ISSUED' ? <InvoiceForm defaultValues={invoice} onSubmit={save} onCancel={() => navigate(`/frontdesk/invoices/${encodeURIComponent(id)}`)} submitLabel="Lưu thay đổi" /> : !loading && invoice && <Alert variant="warning">Hóa đơn này không thể sửa. <Link to={`/frontdesk/invoices/${encodeURIComponent(id)}`}>Xem chi tiết</Link></Alert>}
+  </div>;
 }

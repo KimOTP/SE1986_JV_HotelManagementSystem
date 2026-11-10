@@ -75,6 +75,13 @@ public class MyTaskService {
                   AND started_at IS NULL AND completed_at IS NULL
                 """, id, worker.staffId());
         requireChanged(changed);
+        // Keep the linked issue in sync (ASSIGNED -> IN_PROGRESS); no-op if already moved.
+        jdbc.update("""
+                UPDATE i SET i.status = 'IN_PROGRESS', i.updated_at = SYSUTCDATETIME()
+                FROM operations.issues i
+                JOIN operations.tasks t ON t.issue_id = i.issue_id
+                WHERE t.task_id = ? AND i.status = 'ASSIGNED'
+                """, id);
         return new TaskProgressResponse(id, "IN_PROGRESS");
     }
     @Transactional
@@ -88,6 +95,20 @@ public class MyTaskService {
                   AND started_at IS NOT NULL AND completed_at IS NULL
                 """, id, worker.staffId());
         requireChanged(changed);
+        // Keep the linked issue in sync (-> RESOLVED); no-op if already resolved.
+        jdbc.update(connection -> {
+            var statement = connection.prepareStatement("""
+                    UPDATE i SET i.status = 'RESOLVED', i.resolved_at = SYSUTCDATETIME(),
+                                 i.resolution_note = COALESCE(i.resolution_note, ?),
+                                 i.updated_at = SYSUTCDATETIME()
+                    FROM operations.issues i
+                    JOIN operations.tasks t ON t.issue_id = i.issue_id
+                    WHERE t.task_id = ? AND i.status IN ('ASSIGNED', 'IN_PROGRESS')
+                    """);
+            statement.setNString(1, "Nhân viên đã hoàn thành công việc được giao.");
+            statement.setLong(2, id);
+            return statement;
+        });
         return new TaskProgressResponse(id, "COMPLETED");
     }
     private void requireChanged(int changed) {
