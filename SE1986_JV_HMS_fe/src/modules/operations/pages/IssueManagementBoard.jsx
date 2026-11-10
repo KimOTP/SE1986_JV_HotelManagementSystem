@@ -1,3 +1,4 @@
+import ManageWorkModal from '../components/ManageWorkModal';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
@@ -41,6 +42,7 @@ export default function IssueManagementBoard() {
   const [result, setResult] = useState({ items: [], loading: true, error: null });
   const [categories, setCategories] = useState({ items: [], error: null });
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [managingIssue, setManagingIssue] = useState(null);
   const [assigningIssue, setAssigningIssue] = useState(null);
   const [assignmentSuccess, setAssignmentSuccess] = useState(null);
   const [workingIssue, setWorkingIssue] = useState(null);
@@ -263,6 +265,20 @@ export default function IssueManagementBoard() {
                       Phân công
                     </Button>
                   )}
+                  {(hasRole(ROLES.MANAGER) || hasRole(ROLES.ADMIN)) &&
+                    hasPermission('UC-E5') &&
+                    ['ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].includes(issue.status) && (
+                      <Button
+                        size="sm"
+                        className="ms-2"
+                        variant="outline-secondary"
+                        onClick={() => setManagingIssue(issue)}
+                      >
+                        {['ASSIGNED', 'IN_PROGRESS'].includes(issue.status)
+                          ? 'Giao lại'
+                          : 'Lịch sử điều chỉnh'}
+                      </Button>
+                    )}
                   {hasRole(ROLES.HOUSEKEEPER) &&
                     hasPermission('UC-E5') &&
                     ['ASSIGNED', 'IN_PROGRESS'].includes(issue.status) && (
@@ -355,6 +371,17 @@ export default function IssueManagementBoard() {
           onUpdated={(response) => {
             setWorkingIssue(null);
             setProgressSuccess(response);
+            refresh();
+          }}
+        />
+      )}
+      {managingIssue && (
+        <ManageWorkModal
+          kind="issues"
+          item={managingIssue}
+          onClose={() => setManagingIssue(null)}
+          onSaved={() => {
+            setManagingIssue(null);
             refresh();
           }}
         />

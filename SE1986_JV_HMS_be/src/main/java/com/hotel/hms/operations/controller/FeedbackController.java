@@ -21,8 +21,9 @@ public class FeedbackController {
     @GetMapping("/feedback-bookings") @PreAuthorize("hasAuthority('UC-E6')")
     public List<FeedbackBookingResponse> bookings() { return service.eligibleBookings(); }
     @GetMapping("/my-feedback") @PreAuthorize("hasAuthority('UC-E6')")
-    public List<FeedbackResponse> mine(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="5") int size) {
-        page(page,size);return service.myFeedback(page,size);
+    public List<FeedbackResponse> mine(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="5") int size,
+            @RequestParam(defaultValue="") String bookingCode) {
+        page(page,size);return service.myFeedback(page,size,bookingCode.trim());
     }
     @GetMapping("/feedback") @PreAuthorize("hasAuthority('UC-E6')")
     public List<FeedbackResponse> list(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="5") int size,

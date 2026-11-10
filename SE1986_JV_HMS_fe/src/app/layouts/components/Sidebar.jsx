@@ -3,8 +3,7 @@ import { sidebarMenu } from '../sidebarMenu';
 import { useAuth } from '../../provider/AuthsContext.jsx';
 import promoImage from '../../../assets/images/hotel-promo.svg';
 
-const matchesPath = (pathname, to) =>
-  pathname === to || pathname.startsWith(`${to}/`);
+const matchesPath = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
 
 export default function Sidebar({ onNavigate }) {
   const auth = useAuth();
@@ -27,9 +26,7 @@ export default function Sidebar({ onNavigate }) {
       return auth.canManageBookings;
     }
 
-    return item.permission === 'manage'
-      ? auth.canManageInvoices
-      : auth.canViewInvoices;
+    return item.permission === 'manage' ? auth.canManageInvoices : auth.canViewInvoices;
   };
 
   const visibleGroups = sidebarMenu
@@ -61,12 +58,7 @@ export default function Sidebar({ onNavigate }) {
             >
               {group.heading && (
                 <h2 className="hms-sidebar__heading">
-                  {HeadingIcon && (
-                    <HeadingIcon
-                      className="hms-sidebar__icon"
-                      aria-hidden="true"
-                    />
-                  )}
+                  {HeadingIcon && <HeadingIcon className="hms-sidebar__icon" aria-hidden="true" />}
                   <span>{group.heading.label}</span>
                 </h2>
               )}
@@ -83,10 +75,12 @@ export default function Sidebar({ onNavigate }) {
                     aria-current={active ? 'page' : undefined}
                     className={`hms-sidebar__link${active ? ' is-active' : ''}`}
                   >
-                    {Icon && (
-                      <Icon className="hms-sidebar__icon" aria-hidden="true" />
-                    )}
-                    <span>{item.label}</span>
+                    {Icon && <Icon className="hms-sidebar__icon" aria-hidden="true" />}
+                    <span>
+                      {auth.hasRole('CUSTOMER') && item.customerLabel
+                        ? item.customerLabel
+                        : item.label}
+                    </span>
                   </NavLink>
                 );
               })}
