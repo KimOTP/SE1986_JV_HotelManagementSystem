@@ -16,7 +16,8 @@ public record CreateInternalUserRequest(
         String email,
 
         @NotBlank(message = "Vui lòng chọn vai trò.")
-        @Pattern(regexp = "MANAGER|STAFF", message = "UC-A5 chỉ cho phép vai trò MANAGER hoặc STAFF.")
+        @Pattern(regexp = "MANAGER|RECEPTIONIST|HOUSEKEEPER",
+                message = "UC-A5 chỉ cho phép vai trò MANAGER, RECEPTIONIST hoặc HOUSEKEEPER.")
         String role,
 
         @Size(max = 100, message = "Chức danh không được vượt quá 100 ký tự.")

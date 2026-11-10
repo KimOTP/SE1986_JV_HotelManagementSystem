@@ -7,8 +7,8 @@ export const AUTH_STORAGE_KEYS = {
 export const ROLES = {
   ADMIN: 'ADMIN',
   MANAGER: 'MANAGER',
-  STAFF: 'STAFF',
-  RECEPTIONIST: 'STAFF',
+  RECEPTIONIST: 'RECEPTIONIST',
+  HOUSEKEEPER: 'HOUSEKEEPER',
   CUSTOMER: 'CUSTOMER',
 };
 
@@ -37,7 +37,8 @@ export const DATABASE_PERMISSION_CODES = [...'ABCDE'].flatMap((module) =>
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: 'Quản trị viên',
   [ROLES.MANAGER]: 'Quản lý',
-  [ROLES.STAFF]: 'Nhân viên',
+  [ROLES.RECEPTIONIST]: 'Lễ tân',
+  [ROLES.HOUSEKEEPER]: 'Buồng phòng',
   [ROLES.CUSTOMER]: 'Khách hàng',
 };
 
@@ -54,11 +55,16 @@ export const ROLE_PERMISSION_DEFAULTS = {
     'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4', 'UC-D5',
     'UC-E1', 'UC-E3', 'UC-E4', 'UC-E5', 'UC-E6',
   ],
-  [ROLES.STAFF]: [
+  [ROLES.RECEPTIONIST]: [
     'UC-A2', 'UC-A3', 'UC-A4',
     'UC-B4', 'UC-B5', 'UC-B6',
     'UC-C6',
     'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4',
+    'UC-E4',
+  ],
+  [ROLES.HOUSEKEEPER]: [
+    'UC-A2', 'UC-A3', 'UC-A4',
+    'UC-B6',
     'UC-E2', 'UC-E4', 'UC-E5',
   ],
   [ROLES.CUSTOMER]: [
@@ -69,4 +75,4 @@ export const ROLE_PERMISSION_DEFAULTS = {
   ],
 };
 
-export const INTERNAL_ROLES = [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF];
+export const INTERNAL_ROLES = [ROLES.ADMIN, ROLES.MANAGER, ROLES.RECEPTIONIST, ROLES.HOUSEKEEPER];

@@ -64,12 +64,13 @@ class UserAdminManagementTests {
     @BeforeEach
     void setUp() {
         when(roles.findByCodeAndActiveTrue("MANAGER")).thenReturn(Optional.of(role("MANAGER")));
-        when(roles.findByCodeAndActiveTrue("STAFF")).thenReturn(Optional.of(role("STAFF")));
+        when(roles.findByCodeAndActiveTrue("RECEPTIONIST")).thenReturn(Optional.of(role("RECEPTIONIST")));
+        when(roles.findByCodeAndActiveTrue("HOUSEKEEPER")).thenReturn(Optional.of(role("HOUSEKEEPER")));
         when(staff.findActiveHotelIds()).thenReturn(List.of(1L));
     }
 
     private CreateInternalUserRequest createRequest() {
-        return new CreateInternalUserRequest("Nguyễn An", "An@Example.TEST", "STAFF", " Lễ tân ", "secret1");
+        return new CreateInternalUserRequest("Nguyễn An", "An@Example.TEST", "RECEPTIONIST", " Lễ tân ", "secret1");
     }
 
     @Test
@@ -90,12 +91,37 @@ class UserAdminManagementTests {
         ArgumentCaptor<Staff> savedStaff = ArgumentCaptor.forClass(Staff.class);
         verify(staff).save(savedStaff.capture());
         assertEquals(1L, savedStaff.getValue().getHotelId());
-        assertEquals("S012", savedStaff.getValue().getEmployeeCode());
+        assertEquals("R012", savedStaff.getValue().getEmployeeCode());
         assertEquals("Lễ tân", savedStaff.getValue().getJobTitle());
         assertTrue(savedStaff.getValue().getActive());
 
-        assertEquals("STAFF", response.role());
+        assertEquals("RECEPTIONIST", response.role());
         assertTrue(response.enabled());
+    }
+
+    @Test
+    void housekeeperGetsHCodeAndDefaultTitleWhenTitleIsBlank() {
+        when(users.saveAndFlush(any())).thenAnswer(call -> {
+            call.<User>getArgument(0).setId(7L);
+            return call.getArgument(0);
+        });
+
+        AdminUserResponse response = service.createInternalUser(admin(),
+                new CreateInternalUserRequest("Trần Bình", "binh@example.test", "HOUSEKEEPER", null, "secret1"));
+
+        ArgumentCaptor<Staff> savedStaff = ArgumentCaptor.forClass(Staff.class);
+        verify(staff).save(savedStaff.capture());
+        assertEquals("H007", savedStaff.getValue().getEmployeeCode());
+        assertEquals("Buồng phòng", savedStaff.getValue().getJobTitle());
+        assertEquals("HOUSEKEEPER", response.role());
+    }
+
+    @Test
+    void oldStaffRoleIsNoLongerAccepted() {
+        var validator = jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator();
+
+        assertFalse(validator.validate(new CreateInternalUserRequest("Nguyễn An", "an@example.test", "STAFF", null, "secret1")).isEmpty());
+        assertTrue(validator.validate(new CreateInternalUserRequest("Nguyễn An", "an@example.test", "HOUSEKEEPER", null, "secret1")).isEmpty());
     }
 
     @Test
@@ -137,7 +163,7 @@ class UserAdminManagementTests {
 
     @Test
     void updateChangesRoleAndKeepsSingleInternalRole() {
-        User target = user(3, "STAFF");
+        User target = user(3, "RECEPTIONIST");
         when(users.findById(3L)).thenReturn(Optional.of(target));
         when(staff.findByUser_Id(3L)).thenReturn(Optional.of(new Staff()));
 
@@ -157,7 +183,7 @@ class UserAdminManagementTests {
         when(staff.findByUser_Id(2L)).thenReturn(Optional.of(new Staff()));
 
         assertThrows(BadRequestException.class, () -> service.updateInternalUser(actor, 2L,
-                new UpdateInternalUserRequest("Tên", self.getEmail(), "STAFF", null)));
+                new UpdateInternalUserRequest("Tên", self.getEmail(), "RECEPTIONIST", null)));
 
         service.updateInternalUser(actor, 2L, new UpdateInternalUserRequest("Tên Mới", self.getEmail(), "MANAGER", null));
         assertEquals("Tên Mới", self.getFullName());
@@ -165,19 +191,19 @@ class UserAdminManagementTests {
 
     @Test
     void updateRejectsEmailOfAnotherUser() {
-        User target = user(3, "STAFF");
+        User target = user(3, "RECEPTIONIST");
         when(users.findById(3L)).thenReturn(Optional.of(target));
         when(users.existsByEmailAndIdNot("taken@example.test", 3L)).thenReturn(true);
 
         assertThrows(ConflictException.class, () -> service.updateInternalUser(admin(), 3L,
-                new UpdateInternalUserRequest("Tên", "taken@example.test", "STAFF", null)));
+                new UpdateInternalUserRequest("Tên", "taken@example.test", "RECEPTIONIST", null)));
     }
 
     @Test
     void adminAndCustomerAreNotManagedHere() {
         when(users.findById(5L)).thenReturn(Optional.of(user(5, "CUSTOMER")));
         when(users.findById(9L)).thenReturn(Optional.of(user(9, "ADMIN")));
-        UpdateInternalUserRequest request = new UpdateInternalUserRequest("Tên", "a@example.test", "STAFF", null);
+        UpdateInternalUserRequest request = new UpdateInternalUserRequest("Tên", "a@example.test", "RECEPTIONIST", null);
 
         assertThrows(BadRequestException.class, () -> service.updateInternalUser(admin(), 5L, request));
         assertThrows(BadRequestException.class, () -> service.updateInternalUser(admin(), 9L, request));
@@ -187,7 +213,7 @@ class UserAdminManagementTests {
 
     @Test
     void lockDisablesStaffAndRevokesSessions() {
-        User target = user(3, "STAFF");
+        User target = user(3, "RECEPTIONIST");
         Staff targetStaff = new Staff();
         targetStaff.setActive(true);
         targetStaff.setJobTitle("Lễ tân");
@@ -205,7 +231,7 @@ class UserAdminManagementTests {
 
     @Test
     void unlockEnablesStaffWithoutTouchingTokens() {
-        User target = user(3, "STAFF");
+        User target = user(3, "RECEPTIONIST");
         target.setActive(false);
         Staff targetStaff = new Staff();
         targetStaff.setActive(false);

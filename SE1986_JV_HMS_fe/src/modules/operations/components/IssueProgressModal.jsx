@@ -16,7 +16,7 @@ const errorMessage = (error) => {
     case 409:
       return 'Sự cố đã đổi trạng thái hoặc phân công. Đóng hộp thoại và tải lại bảng trước khi tiếp tục.';
     case 503:
-      return 'Tài khoản hiện tại chưa hợp lệ hoặc nhân viên đang đăng nhập không có vai trò STAFF đang hoạt động.';
+      return 'Tài khoản hiện tại chưa hợp lệ hoặc nhân viên đang đăng nhập không có vai trò buồng phòng (HOUSEKEEPER) đang hoạt động.';
     default:
       return 'Chưa xác nhận được kết quả. Kiểm tra lại bảng trước khi gửi lại.';
   }

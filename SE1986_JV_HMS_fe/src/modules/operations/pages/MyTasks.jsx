@@ -48,7 +48,7 @@ const errorMessage = (error) => {
 
 export default function MyTasks() {
   const { hasRole, hasPermission } = useAuth();
-  const canUpdate = hasRole(ROLES.STAFF) && hasPermission('UC-E2');
+  const canUpdate = hasRole(ROLES.HOUSEKEEPER) && hasPermission('UC-E2');
   const [draft, setDraft] = useState(defaults);
   const [filters, setFilters] = useState(defaults);
   const [page, setPage] = useState(0);

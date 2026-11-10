@@ -20,7 +20,7 @@ Nếu chưa đặt mật khẩu cho seed: xem và chạy SE1986_JV_HMS_be/script
 | Manager | manager@sba.example | 123456 |
 | Staff | housekeeper@sba.example | 123456 |
 | Customer | customer@sba.example | 123456 |
-| Lễ tân (STAFF) | reception@sba.example | 123456 |
+| Lễ tân (RECEPTIONIST) | reception@sba.example | 123456 |
 
 Dùng một tab: đăng xuất trước khi đổi tài khoản. Hai tab thường cùng origin dùng chung localStorage; nếu cần song song hãy dùng cửa sổ riêng tư hoặc profile trình duyệt khác.
 
