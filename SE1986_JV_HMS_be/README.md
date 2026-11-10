@@ -366,7 +366,7 @@ Người đang đăng nhập từ trước cần đăng xuất rồi đăng nh�
 2. Tài khoản seed: `admin@sba.example`, `manager@sba.example`, `reception@sba.example`,
    `housekeeper@sba.example`, `customer@sba.example`. Chạy `scripts/dev-reset-passwords.sql`
    trên DB local để đặt mật khẩu chung `123456` cho các tài khoản này.
-3. Frontend: trong `SE1986_JV_HMS_fe/.env` đặt `VITE_AUTH_DATA_SOURCE=api` và
+3. Frontend: trong `SE1986_JV_HMS_fe/.env` chỉ cần (đăng nhập luôn qua backend, không còn mock)
    `VITE_API_BASE_URL=http://localhost:8080/api`, rồi đăng nhập bằng tài khoản seed.
 
 ### API

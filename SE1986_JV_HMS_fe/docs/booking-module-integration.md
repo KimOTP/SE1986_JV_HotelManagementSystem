@@ -10,11 +10,10 @@ trường, không sửa code trang.
 
 ```dotenv
 VITE_BOOKING_DATA_SOURCE=api
-VITE_AUTH_DATA_SOURCE=api
 ```
 
 - `VITE_BOOKING_DATA_SOURCE`: `mock` (mặc định) hoặc `api`.
-- `VITE_AUTH_DATA_SOURCE=api` cần thiết vì backend xác thực JWT thật; tài khoản seed
+- Đăng nhập luôn dùng backend (JWT thật); tài khoản seed
   `customer@sba.example` … mật khẩu `123456` (chạy `scripts/dev-reset-passwords.sql`).
 - API base mặc định `/api` (Vite proxy sang `localhost:8080`), đổi bằng `VITE_API_BASE_URL`.
 
