@@ -59,10 +59,11 @@ class OperationsFollowUpSqlServerTests extends FeedbackSqlServerTests {
    mvc.perform(get("/api/operations/my-issue-reports").header("Authorization","Bearer "+otherCustomerToken)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
    mvc.perform(get("/api/operations/issues/"+issue+"/management").header("Authorization","Bearer "+customerToken)).andExpect(status().isForbidden());
  }
- @Test void issueCanBeHandedOverWithoutChangingProgress() throws Exception {
+ @Test void inProgressIssueCannotBeHandedOver() throws Exception {
    jdbc.update("UPDATE operations.issues SET status='IN_PROGRESS' WHERE issue_id=?",issue);
-   mvc.perform(patch("/api/operations/issues/"+issue+"/management").header("Authorization","Bearer "+managerToken).contentType("application/json").content("{\"version\":\""+version(true,issue)+"\",\"action\":\"REASSIGN\",\"staffId\":"+workerTwo+",\"reason\":\"Bàn giao ca trực\"}")).andDo(result -> { if(result.getResponse().getStatus()!=204) System.out.println("Follow-up response: "+String.valueOf(result.getResolvedException())); }).andExpect(status().isNoContent());
+   mvc.perform(patch("/api/operations/issues/"+issue+"/management").header("Authorization","Bearer "+managerToken).contentType("application/json").content("{\"version\":\""+version(true,issue)+"\",\"action\":\"REASSIGN\",\"staffId\":"+workerTwo+",\"reason\":\"Bàn giao ca trực\"}")).andExpect(status().isConflict());
    assertEquals("IN_PROGRESS",jdbc.queryForObject("SELECT status FROM operations.issues WHERE issue_id=?",String.class,issue));
-   assertEquals(workerTwo,jdbc.queryForObject("SELECT assigned_staff_id FROM operations.issues WHERE issue_id=?",Long.class,issue));
+   assertEquals(workerOne,jdbc.queryForObject("SELECT assigned_staff_id FROM operations.issues WHERE issue_id=?",Long.class,issue));
  }
+
 }

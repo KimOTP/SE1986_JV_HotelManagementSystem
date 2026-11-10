@@ -1,3 +1,4 @@
+import WorkHistory from '../components/WorkHistory';
 import ManageWorkModal from '../components/ManageWorkModal';
 import { useEffect, useState } from 'react';
 import { Alert, Badge, Button, Card, Col, Form, Modal, Pagination, Row } from 'react-bootstrap';
@@ -234,18 +235,16 @@ export default function HousekeepingTaskBoard() {
                             >
                               Chi tiết
                             </Button>
-                            {
+                            {task.status === 'PENDING' && (
                               <Button
                                 size="sm"
                                 variant="outline-secondary"
                                 className="mt-2"
                                 onClick={() => setManaging(task)}
                               >
-                                {['PENDING', 'IN_PROGRESS'].includes(task.status)
-                                  ? 'Giao lại / Hủy'
-                                  : 'Lịch sử điều chỉnh'}
+                                Giao lại / Hủy
                               </Button>
-                            }
+                            )}
                           </Card.Body>
                         </Card>
                       ))}
@@ -323,6 +322,7 @@ export default function HousekeepingTaskBoard() {
                 <br />
                 Trạng thái: {getTaskStatus(detail.status).label}
               </p>
+              <WorkHistory kind="tasks" id={detail.id} />
             </>
           )}
         </Modal.Body>

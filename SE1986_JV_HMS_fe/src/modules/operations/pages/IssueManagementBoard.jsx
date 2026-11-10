@@ -1,3 +1,6 @@
+import { canProcessIssue } from '../utils/issueActions';
+import { getIssueWorkContext } from '../api/issueProgressApi';
+import WorkHistory from '../components/WorkHistory';
 import ManageWorkModal from '../components/ManageWorkModal';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -34,7 +37,8 @@ const formatDate = (value) =>
 
 export default function IssueManagementBoard() {
   const navigate = useNavigate();
-  const { hasPermission, hasRole } = useAuth();
+  const { hasPermission, hasRole, user } = useAuth();
+  const isWorker = hasRole(ROLES.HOUSEKEEPER) && hasPermission('UC-E5');
   const [formData, setFormData] = useState(emptyFilters);
   const [filters, setFilters] = useState(emptyFilters);
   const [page, setPage] = useState(0);
@@ -50,9 +54,13 @@ export default function IssueManagementBoard() {
 
   useEffect(() => {
     const controller = new AbortController();
-    getDatabaseIssues({ ...filters, page, size: pageSize }, controller.signal)
-      .then((items) => {
-        if (!controller.signal.aborted) setResult({ items, loading: false, error: null });
+    Promise.all([
+      getDatabaseIssues({ ...filters, page, size: pageSize }, controller.signal),
+      isWorker ? getIssueWorkContext(controller.signal).catch(() => null) : Promise.resolve(null),
+    ])
+      .then(([items, workerContext]) => {
+        if (!controller.signal.aborted)
+          setResult({ items, workerContext, loading: false, error: null });
       })
       .catch(() => {
         if (!controller.signal.aborted)
@@ -63,7 +71,7 @@ export default function IssueManagementBoard() {
           });
       });
     return () => controller.abort();
-  }, [filters, page, attempt]);
+  }, [filters, page, attempt, isWorker, user?.id]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -267,33 +275,29 @@ export default function IssueManagementBoard() {
                   )}
                   {(hasRole(ROLES.MANAGER) || hasRole(ROLES.ADMIN)) &&
                     hasPermission('UC-E5') &&
-                    ['ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].includes(issue.status) && (
+                    issue.status === 'ASSIGNED' && (
                       <Button
                         size="sm"
                         className="ms-2"
                         variant="outline-secondary"
                         onClick={() => setManagingIssue(issue)}
                       >
-                        {['ASSIGNED', 'IN_PROGRESS'].includes(issue.status)
-                          ? 'Giao lại'
-                          : 'Lịch sử điều chỉnh'}
+                        Giao lại
                       </Button>
                     )}
-                  {hasRole(ROLES.HOUSEKEEPER) &&
-                    hasPermission('UC-E5') &&
-                    ['ASSIGNED', 'IN_PROGRESS'].includes(issue.status) && (
-                      <Button
-                        size="sm"
-                        variant="outline-success"
-                        className="ms-2"
-                        onClick={() => {
-                          setProgressSuccess(null);
-                          setWorkingIssue(issue);
-                        }}
-                      >
-                        {issue.status === 'ASSIGNED' ? 'Nhận xử lý' : 'Hoàn tất'}
-                      </Button>
-                    )}
+                  {isWorker && canProcessIssue(issue, result.workerContext) && (
+                    <Button
+                      size="sm"
+                      variant="outline-success"
+                      className="ms-2"
+                      onClick={() => {
+                        setProgressSuccess(null);
+                        setWorkingIssue(issue);
+                      }}
+                    >
+                      {issue.status === 'ASSIGNED' ? 'Nhận xử lý' : 'Hoàn tất'}
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))
@@ -319,42 +323,47 @@ export default function IssueManagementBoard() {
         </Modal.Header>
         <Modal.Body>
           {selectedIssue && (
-            <ListGroup variant="flush">
-              <ListGroup.Item>
-                <strong>Tiêu đề:</strong> {selectedIssue.title}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <strong>Danh mục:</strong> {selectedIssue.category}
-              </ListGroup.Item>
-              <ListGroup.Item className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
-                <strong>Mô tả:</strong> {selectedIssue.description}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <strong>Độ ưu tiên:</strong> {getPriority(selectedIssue.priority).label}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <strong>Người báo cáo:</strong> {selectedIssue.reportedBy}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <strong>Ngày báo cáo:</strong> {formatDate(selectedIssue.createdAt)}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <strong>Người xử lý:</strong> {selectedIssue.assignedTo || 'Chưa phân công'}
-              </ListGroup.Item>
-              <ListGroup.Item>
-                <strong>Trạng thái:</strong> <StatusBadge status={selectedIssue.status} />
-              </ListGroup.Item>
-              {selectedIssue.resolutionNote && (
-                <ListGroup.Item className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
-                  <strong>Ghi chú xử lý:</strong> {selectedIssue.resolutionNote}
-                </ListGroup.Item>
-              )}
-              {selectedIssue.resolvedAt && (
+            <>
+              <ListGroup variant="flush">
                 <ListGroup.Item>
-                  <strong>Thời gian xử lý xong:</strong> {formatDate(selectedIssue.resolvedAt)}
+                  <strong>Tiêu đề:</strong> {selectedIssue.title}
                 </ListGroup.Item>
+                <ListGroup.Item>
+                  <strong>Danh mục:</strong> {selectedIssue.category}
+                </ListGroup.Item>
+                <ListGroup.Item className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                  <strong>Mô tả:</strong> {selectedIssue.description}
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <strong>Độ ưu tiên:</strong> {getPriority(selectedIssue.priority).label}
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <strong>Người báo cáo:</strong> {selectedIssue.reportedBy}
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <strong>Ngày báo cáo:</strong> {formatDate(selectedIssue.createdAt)}
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <strong>Người xử lý:</strong> {selectedIssue.assignedTo || 'Chưa phân công'}
+                </ListGroup.Item>
+                <ListGroup.Item>
+                  <strong>Trạng thái:</strong> <StatusBadge status={selectedIssue.status} />
+                </ListGroup.Item>
+                {selectedIssue.resolutionNote && (
+                  <ListGroup.Item className="text-break" style={{ whiteSpace: 'pre-wrap' }}>
+                    <strong>Ghi chú xử lý:</strong> {selectedIssue.resolutionNote}
+                  </ListGroup.Item>
+                )}
+                {selectedIssue.resolvedAt && (
+                  <ListGroup.Item>
+                    <strong>Thời gian xử lý xong:</strong> {formatDate(selectedIssue.resolvedAt)}
+                  </ListGroup.Item>
+                )}
+              </ListGroup>
+              {(hasRole(ROLES.MANAGER) || hasRole(ROLES.ADMIN)) && hasPermission('UC-E5') && (
+                <WorkHistory kind="issues" id={selectedIssue.id} />
               )}
-            </ListGroup>
+            </>
           )}
         </Modal.Body>
         <Modal.Footer>

@@ -67,6 +67,8 @@ public class MyTaskService {
     @Transactional
     public TaskProgressResponse start(Long id) {
         var worker = staffContext.requireWorker();
+        var pair = LinkedWorkGuard.forTask(jdbc, id);
+        if (pair != null) pair.requireWorker(worker.staffId());
         assertTask(id, worker, "PENDING");
         int changed = jdbc.update("""
                 UPDATE operations.tasks
@@ -76,17 +78,20 @@ public class MyTaskService {
                 """, id, worker.staffId());
         requireChanged(changed);
         // Keep the linked issue in sync (ASSIGNED -> IN_PROGRESS); no-op if already moved.
-        jdbc.update("""
+        int linkedChanged = jdbc.update("""
                 UPDATE i SET i.status = 'IN_PROGRESS', i.updated_at = SYSUTCDATETIME()
                 FROM operations.issues i
                 JOIN operations.tasks t ON t.issue_id = i.issue_id
-                WHERE t.task_id = ? AND i.status = 'ASSIGNED'
+                WHERE t.task_id = ? AND i.assigned_staff_id = t.assigned_staff_id AND i.status = 'ASSIGNED'
                 """, id);
+        if (pair != null) requireChanged(linkedChanged);
         return new TaskProgressResponse(id, "IN_PROGRESS");
     }
     @Transactional
     public TaskProgressResponse complete(Long id) {
         var worker = staffContext.requireWorker();
+        var pair = LinkedWorkGuard.forTask(jdbc, id);
+        if (pair != null) pair.requireWorker(worker.staffId());
         assertTask(id, worker, "IN_PROGRESS");
         int changed = jdbc.update("""
                 UPDATE operations.tasks
@@ -96,19 +101,20 @@ public class MyTaskService {
                 """, id, worker.staffId());
         requireChanged(changed);
         // Keep the linked issue in sync (-> RESOLVED); no-op if already resolved.
-        jdbc.update(connection -> {
+        int linkedChanged = jdbc.update(connection -> {
             var statement = connection.prepareStatement("""
                     UPDATE i SET i.status = 'RESOLVED', i.resolved_at = SYSUTCDATETIME(),
                                  i.resolution_note = COALESCE(i.resolution_note, ?),
                                  i.updated_at = SYSUTCDATETIME()
                     FROM operations.issues i
                     JOIN operations.tasks t ON t.issue_id = i.issue_id
-                    WHERE t.task_id = ? AND i.status IN ('ASSIGNED', 'IN_PROGRESS')
+                    WHERE t.task_id = ? AND i.assigned_staff_id = t.assigned_staff_id AND i.status = 'IN_PROGRESS'
                     """);
             statement.setNString(1, "Nhân viên đã hoàn thành công việc được giao.");
             statement.setLong(2, id);
             return statement;
         });
+        if (pair != null) requireChanged(linkedChanged);
         return new TaskProgressResponse(id, "COMPLETED");
     }
     private void requireChanged(int changed) {

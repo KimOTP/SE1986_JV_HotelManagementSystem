@@ -1,3 +1,4 @@
+import { canProcessIssue } from '../utils/issueActions';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Form, Modal } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
@@ -48,7 +49,7 @@ export default function IssueProgressModal({ issue, onClose, onUpdated }) {
       });
     return () => controller.abort();
   }, [attempt]);
-  const isAssignee = context.value?.enabled && context.value.staffId === issue.assignedStaffId;
+  const isAssignee = canProcessIssue(issue, context.value);
   const submit = async ({ resolutionNote }) => {
     if (saving.current || !isAssignee || context.loading) return;
     saving.current = true;
@@ -100,15 +101,14 @@ export default function IssueProgressModal({ issue, onClose, onUpdated }) {
               {!context.value.enabled && context.value.message}
               {context.value.enabled && (
                 <div>
-                  Nhân viên thực hiện: <strong>{context.value.staffName}</strong>. Phiên đăng nhập hiện tại.
+                  Nhân viên thực hiện: <strong>{context.value.staffName}</strong>. Phiên đăng nhập
+                  hiện tại.
                 </div>
               )}
             </Alert>
           )}
           {context.value?.enabled && !isAssignee && (
-            <Alert variant="warning">
-              Sự cố này không được giao cho nhân viên đang đăng nhập.
-            </Alert>
+            <Alert variant="warning">Sự cố này không được giao cho nhân viên đang đăng nhập.</Alert>
           )}
           {saveError && <Alert variant="danger">{saveError}</Alert>}
           {completing ? (

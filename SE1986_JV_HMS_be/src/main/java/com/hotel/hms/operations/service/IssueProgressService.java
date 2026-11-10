@@ -71,6 +71,8 @@ public class IssueProgressService {
     @Transactional
     public IssueProgressResponse start(Long issueId) {
         var worker = requireWorker();
+        var pair = LinkedWorkGuard.forIssue(jdbc, issueId);
+        if (pair != null) pair.requireWorker(worker.staffId());
         assertAssignedIssue(issueId, worker, "ASSIGNED");
         int changed = jdbc.update("""
                 UPDATE operations.issues
@@ -78,16 +80,19 @@ public class IssueProgressService {
                 WHERE issue_id = ? AND assigned_staff_id = ? AND status = 'ASSIGNED'
                 """, issueId, worker.staffId());
         requireChanged(changed);
-        jdbc.update("""
+        int linkedChanged = jdbc.update("""
                 UPDATE operations.tasks
                 SET status = 'IN_PROGRESS', started_at = SYSUTCDATETIME(), updated_at = SYSUTCDATETIME()
                 WHERE issue_id = ? AND assigned_staff_id = ? AND status = 'PENDING'
                 """, issueId, worker.staffId());
+        if (pair != null) requireChanged(linkedChanged);
         return new IssueProgressResponse(issueId, "IN_PROGRESS");
     }
     @Transactional
     public IssueProgressResponse resolve(Long issueId, ResolveIssueRequest request) {
         var worker = requireWorker();
+        var pair = LinkedWorkGuard.forIssue(jdbc, issueId);
+        if (pair != null) pair.requireWorker(worker.staffId());
         assertAssignedIssue(issueId, worker, "IN_PROGRESS");
         // Unicode note is bound explicitly, not concatenated into SQL.
         int changed = jdbc.update(connection -> {
@@ -102,12 +107,13 @@ public class IssueProgressService {
             return statement;
         });
         requireChanged(changed);
-        jdbc.update("""
+        int linkedChanged = jdbc.update("""
                 UPDATE operations.tasks
                 SET status = 'COMPLETED', started_at = COALESCE(started_at, SYSUTCDATETIME()),
                     completed_at = SYSUTCDATETIME(), updated_at = SYSUTCDATETIME()
-                WHERE issue_id = ? AND assigned_staff_id = ? AND status IN ('PENDING', 'IN_PROGRESS')
+                WHERE issue_id = ? AND assigned_staff_id = ? AND status = 'IN_PROGRESS'
                 """, issueId, worker.staffId());
+        if (pair != null) requireChanged(linkedChanged);
         return new IssueProgressResponse(issueId, "RESOLVED");
     }
     private void requireChanged(int changed) {

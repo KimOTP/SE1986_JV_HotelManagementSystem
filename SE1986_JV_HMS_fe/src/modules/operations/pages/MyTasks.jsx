@@ -132,8 +132,8 @@ export default function MyTasks() {
         </Button>
       </OperationsPageHeader>
       <Alert variant="info">
-        Nhận và hoàn thành các công việc được giao. Công việc bảo trì và sự cố liên quan được theo
-        dõi riêng.
+        Nhận và hoàn thành các công việc được giao. Trạng thái công việc sẽ tự động cập nhật cho
+        sự cố liên quan.
       </Alert>
       {result.context && (
         <Alert variant={result.context.enabled ? 'info' : 'warning'}>

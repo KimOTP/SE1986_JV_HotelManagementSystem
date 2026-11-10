@@ -24,14 +24,16 @@ export default function ManageWorkModal({ kind, item, onClose, onSaved }) {
       });
     return () => controller.abort();
   }, [kind, item.id]);
+  const replacements =
+    state.data?.staff.filter((staff) => staff.id !== state.data.work.staffId) || [];
   const submit = async (event) => {
     event.preventDefault();
-    if (saving.current || !state.data) return;
+    if (saving.current || !state.data?.canChange) return;
     if (reason.trim().length < 5) {
       setState((old) => ({ ...old, error: 'Vui lòng nhập lý do từ 5 đến 1.000 ký tự.' }));
       return;
     }
-    if (action === 'REASSIGN' && !staffId) {
+    if (action === 'REASSIGN' && !replacements.some((staff) => staff.id === Number(staffId))) {
       setState((old) => ({ ...old, error: 'Hãy chọn nhân viên mới.' }));
       return;
     }
@@ -50,9 +52,9 @@ export default function ManageWorkModal({ kind, item, onClose, onSaved }) {
       setState((old) => ({
         ...old,
         error:
-          error.response?.status === 409
-            ? 'Dữ liệu đã thay đổi. Hãy đóng và mở lại trước khi tiếp tục.'
-            : 'Không lưu được thay đổi. Kiểm tra quyền và nhân viên rồi thử lại.',
+          [400, 403, 409].includes(error.response?.status) && error.response?.data?.message
+            ? error.response.data.message
+            : 'Chưa xác nhận được kết quả lưu. Đóng và kiểm tra lại danh sách trước khi thử lại.',
       }));
     } finally {
       saving.current = false;
@@ -72,7 +74,7 @@ export default function ManageWorkModal({ kind, item, onClose, onSaved }) {
       <Modal.Header closeButton={!busy}>
         <Modal.Title>
           {state.data && !state.data.canChange
-            ? 'Lịch sử điều chỉnh'
+            ? 'Không thể điều chỉnh'
             : kind === 'tasks'
               ? 'Điều chỉnh công việc'
               : 'Giao lại sự cố'}
@@ -85,72 +87,72 @@ export default function ManageWorkModal({ kind, item, onClose, onSaved }) {
           {state.loading && <p role="status">Đang tải…</p>}
           {state.data && (
             <>
-              <fieldset disabled={busy || !state.data.canChange}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Thao tác</Form.Label>
-                  <Form.Select value={action} onChange={(e) => setAction(e.target.value)}>
-                    <option value="REASSIGN">Giao cho nhân viên khác</option>
-                    {kind === 'tasks' && <option value="CANCEL">Hủy công việc</option>}
-                  </Form.Select>
-                </Form.Group>
-                {action === 'REASSIGN' && (
+              {!state.data.canChange && (
+                <Alert variant="info">
+                  Công việc đã bắt đầu hoặc đã kết thúc. Không thể giao lại hay hủy; bạn có thể xem
+                  lịch sử trong Chi tiết.
+                </Alert>
+              )}
+              {state.data.canChange && (
+                <fieldset disabled={busy}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Nhân viên mới</Form.Label>
-                    <Form.Select
-                      required
-                      value={staffId}
-                      onChange={(e) => setStaffId(e.target.value)}
-                    >
-                      <option value="">Chọn nhân viên</option>
-                      {state.data.staff
-                        .filter((staff) => staff.id !== state.data.work.staffId)
-                        .map((staff) => (
+                    <Form.Label>Thao tác</Form.Label>
+                    <Form.Select value={action} onChange={(e) => setAction(e.target.value)}>
+                      <option value="REASSIGN">Giao cho nhân viên khác</option>
+                      {kind === 'tasks' && state.data.canCancel && (
+                        <option value="CANCEL">Hủy công việc</option>
+                      )}
+                    </Form.Select>
+                  </Form.Group>
+                  {action === 'REASSIGN' && (
+                    <Form.Group className="mb-3">
+                      <Form.Label>Nhân viên mới</Form.Label>
+                      <Form.Select
+                        required
+                        disabled={!replacements.length}
+                        value={staffId}
+                        onChange={(e) => setStaffId(e.target.value)}
+                      >
+                        <option value="">Chọn nhân viên</option>
+                        {replacements.map((staff) => (
                           <option key={staff.id} value={staff.id}>
                             {staff.fullName}
                           </option>
                         ))}
-                    </Form.Select>
-                    <Form.Text>Chỉ hiển thị nhân viên buồng phòng đang hoạt động.</Form.Text>
+                      </Form.Select>
+                      {!replacements.length && (
+                        <Form.Text>
+                          Hiện không có nhân viên khác để giao lại. Bạn có thể đóng và thử lại khi
+                          có người phù hợp.
+                        </Form.Text>
+                      )}
+                    </Form.Group>
+                  )}
+
+                  {kind === 'tasks' && state.data.canChange && !state.data.canCancel && (
+                    <Form.Text className="d-block mb-3">
+                      Công việc này gắn với sự cố. Giao lại sẽ chuyển cả công việc và sự cố cho nhân
+                      viên mới.
+                    </Form.Text>
+                  )}
+                  {action === 'CANCEL' && (
+                    <Alert variant="warning">
+                      Công việc sẽ chuyển sang Đã hủy. Thao tác này không thay đổi trạng thái phòng.
+                    </Alert>
+                  )}
+                  <Form.Group>
+                    <Form.Label>Lý do {action === 'CANCEL' ? 'hủy' : 'giao lại'}</Form.Label>
+                    <Form.Control
+                      required
+                      as="textarea"
+                      rows={3}
+                      minLength={5}
+                      maxLength={1000}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
                   </Form.Group>
-                )}
-                {state.data.work.status === 'IN_PROGRESS' && action === 'REASSIGN' && (
-                  <Alert variant="info">
-                    Giữ trạng thái đang thực hiện và thời điểm bắt đầu. Nhân viên mới tiếp tục công
-                    việc đã được bàn giao.
-                  </Alert>
-                )}
-                {action === 'CANCEL' && (
-                  <Alert variant="warning">
-                    Công việc sẽ chuyển sang Đã hủy. Thao tác này không thay đổi trạng thái phòng.
-                  </Alert>
-                )}
-                <Form.Group>
-                  <Form.Label>Lý do {action === 'CANCEL' ? 'hủy' : 'bàn giao'}</Form.Label>
-                  <Form.Control
-                    required
-                    as="textarea"
-                    rows={3}
-                    minLength={5}
-                    maxLength={1000}
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                  />
-                </Form.Group>
-              </fieldset>
-              {!!state.data.history.length && (
-                <section className="mt-3">
-                  <h3 className="h6">Lịch sử điều chỉnh</h3>
-                  {state.data.history.map((entry, index) => (
-                    <div key={index} className="border-top py-2 small">
-                      <strong>{entry.action === 'CANCEL' ? 'Hủy công việc' : 'Giao lại'}</strong> ·{' '}
-                      {entry.actor} · {new Date(entry.createdAt).toLocaleString('vi-VN')}
-                      <div>
-                        {entry.previousStaff || 'Chưa phân công'} → {entry.newStaff || 'Không có'}
-                      </div>
-                      <div className="text-break">{entry.reason}</div>
-                    </div>
-                  ))}
-                </section>
+                </fieldset>
               )}
             </>
           )}
@@ -159,7 +161,12 @@ export default function ManageWorkModal({ kind, item, onClose, onSaved }) {
           <Button variant="secondary" disabled={busy} onClick={onClose}>
             Đóng
           </Button>
-          <Button type="submit" disabled={busy || !state.data?.canChange}>
+          <Button
+            type="submit"
+            disabled={
+              busy || !state.data?.canChange || (action === 'REASSIGN' && !replacements.length)
+            }
+          >
             {busy ? 'Đang lưu…' : 'Xác nhận'}
           </Button>
         </Modal.Footer>
