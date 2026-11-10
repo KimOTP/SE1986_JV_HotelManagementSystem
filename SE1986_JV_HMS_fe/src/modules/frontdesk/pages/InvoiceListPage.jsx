@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form, Pagination, Table } from 'react-bootstrap';
 import { Link } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
@@ -14,11 +14,6 @@ export default function InvoiceListPage() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => {
-    try { setRows(await frontdeskApi.getInvoices()); setError(''); }
-    catch (e) { setError(apiError(e)); }
-    finally { setLoading(false); }
-  }, []);
   useEffect(() => {
     let active = true;
     frontdeskApi.getInvoices()

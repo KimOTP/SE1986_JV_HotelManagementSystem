@@ -95,8 +95,6 @@ export default function DepositPaymentPage() {
 
   useEffect(() => {
     if (!payosBooking) return undefined;
-    setVerificationStatus('PENDING');
-    setCancelError('');
     let active = true;
     let retry;
     const checkUntil = Date.now() + 120_000;
