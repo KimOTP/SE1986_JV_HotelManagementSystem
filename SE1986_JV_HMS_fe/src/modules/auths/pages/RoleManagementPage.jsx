@@ -61,7 +61,11 @@ export default function RoleManagementPage() {
     setPageSuccess('');
   };
 
+  // ADMIN bắt buộc giữ UC-A5 và UC-A6 (khớp backend); các quyền còn lại chỉnh tự do.
+  const isLocked = (code) => isAdminRole && ['UC-A5', 'UC-A6'].includes(code);
+
   const togglePermission = (permission) => {
+    if (isLocked(permission)) return;
     updateDraft(
       selectedPermissions.includes(permission)
         ? selectedPermissions.filter((item) => item !== permission)
@@ -71,8 +75,8 @@ export default function RoleManagementPage() {
 
   const setGroup = (group, checked) => {
     const groupCodes = group.permissions.map((item) => item.code);
-    const others = selectedPermissions.filter((code) => !groupCodes.includes(code));
-    updateDraft(checked ? [...others, ...groupCodes] : others);
+    const others = selectedPermissions.filter((code) => !groupCodes.includes(code) || isLocked(code));
+    updateDraft(checked ? [...new Set([...others, ...groupCodes])] : others);
   };
 
   const discardChanges = () => {
@@ -126,7 +130,7 @@ export default function RoleManagementPage() {
         <h2 className="mb-1">Quản lý vai trò & quyền</h2>
         <p className="text-muted mb-0">
           UC-A6 · Chọn vai trò rồi tích các chức năng vai trò đó được dùng. Thay đổi có hiệu lực ngay với mọi
-          tài khoản thuộc vai trò. Admin luôn có toàn quyền.
+          tài khoản thuộc vai trò.
         </p>
       </div>
 
@@ -162,7 +166,7 @@ export default function RoleManagementPage() {
         <>
           {isAdminRole && (
             <div className="alert alert-info">
-              ADMIN luôn giữ đủ mọi quyền để hệ thống không mất người quản trị, nên không chỉnh được ở đây.
+              ADMIN chỉ cần quyền quản trị. UC-A5 và UC-A6 luôn được giữ để hệ thống không mất người quản trị.
             </div>
           )}
 
@@ -178,15 +182,13 @@ export default function RoleManagementPage() {
                     Module {group.module} · {group.title}
                     <span className="badge text-bg-light border ms-2">{checkedCount}/{groupCodes.length}</span>
                   </span>
-                  {!isAdminRole && (
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() => setGroup(group, !allChecked)}
-                    >
-                      {allChecked ? 'Bỏ cả nhóm' : 'Chọn cả nhóm'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => setGroup(group, !allChecked)}
+                  >
+                    {allChecked ? 'Bỏ cả nhóm' : 'Chọn cả nhóm'}
+                  </button>
                 </div>
                 <div className="card-body">
                   <div className="row g-3">
@@ -199,7 +201,7 @@ export default function RoleManagementPage() {
                               className="form-check-input me-2"
                               type="checkbox"
                               checked={checked}
-                              disabled={isAdminRole}
+                              disabled={isLocked(permission.code)}
                               onChange={() => togglePermission(permission.code)}
                             />
                             <span className="form-check-label">
@@ -237,7 +239,7 @@ export default function RoleManagementPage() {
               type="button"
               className="btn btn-primary"
               onClick={handleSave}
-              disabled={isSaving || !hasChanges || isAdminRole}
+              disabled={isSaving || !hasChanges}
             >
               {isSaving ? 'Đang lưu...' : 'Lưu quyền'}
             </button>

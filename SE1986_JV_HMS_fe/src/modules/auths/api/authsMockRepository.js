@@ -263,8 +263,8 @@ export const authsMockRepository = {
     if (uniquePermissions.some((permission) => !validPermissions.has(permission))) {
       throw new Error('Danh sách chứa quyền không được hỗ trợ.');
     }
-    if (role === ROLES.ADMIN && DATABASE_PERMISSION_CODES.some((permission) => !uniquePermissions.includes(permission))) {
-      throw new Error('Không thể thay đổi toàn bộ quyền UC của ADMIN.');
+    if (role === ROLES.ADMIN && !['UC-A5', 'UC-A6'].every((permission) => uniquePermissions.includes(permission))) {
+      throw new Error('ADMIN phải giữ quyền quản lý tài khoản (UC-A5) và vai trò (UC-A6).');
     }
 
     const rolePermissions = getStoredRolePermissions();

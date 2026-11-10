@@ -357,6 +357,8 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 chuyển người dùng STAFF sang vai trò mới theo chức danh (có "dọn phòng", "buồng" → Buồng phòng, còn lại → Lễ tân) rồi xóa vai trò STAFF.
 Người đang đăng nhập từ trước cần đăng xuất rồi đăng nhập lại để nhận vai trò mới. DB tạo mới từ `docs/sql/02_seed_demo.sql` đã có sẵn hai vai trò này.
 
+**Quyền ADMIN gọn hơn:** chạy thêm `scripts/migrate-admin-minimal-permissions.sql` (ADMIN chỉ giữ A2–A6 và B1–B3, việc vận hành trả về Quản lý/nhân viên; thêm UC-C5 cho Lễ tân để xem đặt phòng).
+
 0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
    `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
 1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
@@ -385,7 +387,7 @@ Người đang đăng nhập từ trước cần đăng xuất rồi đăng nh�
 | PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/RECEPTIONIST/HOUSEKEEPER; không tự đổi vai trò của mình (UC-A5) |
 | PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/RECEPTIONIST/HOUSEKEEPER; khóa thì thu hồi mọi phiên (UC-A5) |
 | GET | `/api/admin/roles` | — | Danh sách role kèm mã UC (UC-A6) |
-| PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN luôn giữ đủ 30 quyền (UC-A6) |
+| PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN bắt buộc giữ UC-A5 và UC-A6, các quyền khác chỉnh tự do |
 | POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
 `user` gồm `id, fullName, email, phone, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified, enabled`.
