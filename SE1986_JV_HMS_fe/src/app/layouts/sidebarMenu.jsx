@@ -8,6 +8,7 @@ import {
   DoorOpen,
   ExclamationTriangle,
   Grid3x3Gap,
+  Headset,
   Kanban,
   Layers,
   People,
