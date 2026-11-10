@@ -16,6 +16,8 @@ public interface AuthTokenRepository extends JpaRepository<AuthToken, Long> {
     @EntityGraph(attributePaths = {"user"})
     Optional<AuthToken> findByTokenHashAndPurpose(String tokenHash, TokenPurpose purpose);
 
+    Optional<AuthToken> findFirstByUser_IdAndPurposeOrderByCreatedAtDesc(Long userId, TokenPurpose purpose);
+
     @Modifying
     @Query("""
             update AuthToken t set t.revokedAt = :now

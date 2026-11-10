@@ -39,7 +39,7 @@ function refreshAccessToken() {
   return refreshPromise;
 }
 
-const isAuthRequest = (config) => /\/auth\/(register|login|refresh|logout)$/.test(config?.url || '');
+const isAuthRequest = (config) => /\/auth\/(register|login|refresh|logout|forgot-password|reset-password)$/.test(config?.url || '');
 
 axiosClient.interceptors.response.use(
   (response) => response,
