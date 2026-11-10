@@ -12,7 +12,7 @@ public interface UserAdminService {
 
     List<AdminUserResponse> listUsers();
 
-    /** Tạo tài khoản MANAGER/STAFF: ghi users, user_roles và staff trong một transaction. */
+    /** Tạo tài khoản MANAGER/RECEPTIONIST/HOUSEKEEPER: ghi users, user_roles và staff trong một transaction. */
     AdminUserResponse createInternalUser(AuthUserDetails actor, CreateInternalUserRequest request);
 
     AdminUserResponse updateInternalUser(AuthUserDetails actor, Long userId, UpdateInternalUserRequest request);

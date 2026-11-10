@@ -1,12 +1,13 @@
 const ROLE_LABELS = {
   ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý',
-  STAFF: 'Nhân viên',
+  RECEPTIONIST: 'Lễ tân',
+  HOUSEKEEPER: 'Buồng phòng',
   CUSTOMER: 'Khách hàng',
 };
 
 // UC-A5 chỉ tạo/sửa/khóa tài khoản nội bộ; đặt lại mật khẩu áp dụng cho mọi tài khoản.
-const EDITABLE_ROLES = ['MANAGER', 'STAFF'];
+const EDITABLE_ROLES = ['MANAGER', 'RECEPTIONIST', 'HOUSEKEEPER'];
 
 export default function UserList({
   users,
@@ -47,7 +48,8 @@ export default function UserList({
             <option value="ALL">Tất cả vai trò</option>
             <option value="ADMIN">Quản trị viên</option>
             <option value="MANAGER">Quản lý</option>
-            <option value="STAFF">Nhân viên</option>
+            <option value="RECEPTIONIST">Lễ tân</option>
+            <option value="HOUSEKEEPER">Buồng phòng</option>
             <option value="CUSTOMER">Khách hàng</option>
           </select>
         </div>

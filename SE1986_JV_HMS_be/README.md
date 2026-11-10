@@ -122,7 +122,7 @@ MANAGER phải có bản ghi staff active cùng khách sạn sự cố; ADMIN đ
 | Method | Endpoint | Kết quả |
 | --- | --- | --- |
 | GET | `/api/operations/issue-assignment-context` | Trạng thái bật phân công và tên manager local |
-| GET | `/api/operations/issues/{id}/assignees` | Staff active/user active/role STAFF active cùng khách sạn |
+| GET | `/api/operations/issues/{id}/assignees` | Staff active/user active/role HOUSEKEEPER active cùng khách sạn |
 | PATCH | `/api/operations/issues/{id}/assignment` | Body `{ "staffId": 3 }`; OPEN chưa gán → ASSIGNED |
 
 PATCH lưu assigned_staff_id, assigned_by (user ID manager do backend xác định), updated_at (UTC).
@@ -154,7 +154,7 @@ Kiểm thử unit: `./mvnw.cmd -Dtest=IssueAssignmentServiceTests,IssueReportSer
 Giữ profile `local-demo` và thêm biến môi trường IntelliJ:
 `OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example` (user seed Housekeeper Demo, staff ID 3).
 Khởi động lại backend. Cấu hình reporter/manager vẫn riêng, không thay thế bằng staff email.
-Danh tính nhân viên local phải là user/staff/hotel active và role STAFF active.
+Danh tính nhân viên local phải là user/staff/hotel active và role HOUSEKEEPER active.
 Không thay đổi đăng nhập, JWT hay module của thành viên khác.
 
 | Method | Endpoint | Nghiệp vụ |
@@ -184,7 +184,7 @@ GET danh sách bổ sung assignedStaffId, resolutionNote và resolvedAt để fr
 7. Thử sự cố giao cho người khác: modal khóa thao tác/backend 403. Thử hai cửa sổ cùng thao tác: cửa sổ cập nhật sau nhận 409.
 8. Nếu đang lọc trạng thái cũ, bản ghi cập nhật có thể biến mất theo bộ lọc; Đặt lại để xem.
 
-Frontend chỉ hiển thị thao tác cho role STAFF + UC-E5; backend dùng danh tính cấu hình local và kiểm tra assignee.
+Frontend chỉ hiển thị thao tác cho role HOUSEKEEPER + UC-E5; backend dùng danh tính cấu hình local và kiểm tra assignee.
 Đây chưa phải xác thực JWT. Mọi hành động trong local-demo chạy dưới staff cấu hình, không phải phiên React.
 Không triển khai chia sẻ chế độ này. Phần JWT để Module A tích hợp sau.
 
@@ -229,7 +229,7 @@ Các thao tác sự cố và task hiện tách riêng; Bảng công việc của
 6. Hoàn thành task đó: COMPLETED, Chi tiết có thời gian hoàn thành; reload vẫn giữ.
 7. Nếu lọc trạng thái cũ, task có thể biến mất theo bộ lọc sau khi cập nhật.
 8. Hai cửa sổ thao tác cùng task: thao tác cập nhật sau phải nhận 409.
-9. Thử tài khoản DB khác có role STAFF hoặc bỏ profile để kiểm tra dữ liệu theo danh tính/khóa thao tác.
+9. Thử tài khoản DB khác có role HOUSEKEEPER hoặc bỏ profile để kiểm tra dữ liệu theo danh tính/khóa thao tác.
 
 Unit tests không ghi database thật:
 `./mvnw.cmd -Dtest=MyTaskServiceTests,IssueProgressServiceTests,IssueAssignmentServiceTests,IssueReportServiceTests test`.
@@ -246,7 +246,7 @@ Không sửa đăng nhập/JWT hoặc module của người khác.
 | --- | --- | --- |
 | GET | `/api/operations/tasks?page=0&size=12&room=&status=&type=` | Bảng task theo phạm vi manager local |
 | GET | `/api/operations/task-rooms` | Phòng active trong khách sạn manager quản lý |
-| GET | `/api/operations/task-assignees?roomId=3` | STAFF active cùng khách sạn với phòng |
+| GET | `/api/operations/task-assignees?roomId=3` | HOUSEKEEPER active cùng khách sạn với phòng |
 | POST | `/api/operations/tasks` | Tạo task và giao nhân viên, trạng thái PENDING |
 
 Payload POST: roomId, staffId, taskType (CLEANING/MAINTENANCE), title (1–200 sau trim),
@@ -257,7 +257,7 @@ Có thể ghi nhận lịch đã qua; không tự động chạy task theo lịc
 
 Backend lấy assigned_by từ manager local, không nhận ID người giao việc từ payload.
 MANAGER chỉ chọn phòng thuộc khách sạn có staff membership active; ADMIN quản lý khách sạn active.
-Phòng/room type/hotel active; staff/user/role STAFF active cùng khách sạn phòng. SQL insert dùng prepared statement,
+Phòng/room type/hotel active; staff/user/role HOUSEKEEPER active cùng khách sạn phòng. SQL insert dùng prepared statement,
 setNString cho tiếng Việt và transaction; DB cấp ID/timestamps/row_version.
 POST trả 201 với id và status PENDING; 400 dữ liệu/phòng/nhân viên sai, 403 khác phạm vi, 503 manager chưa cấu hình hợp lệ.
 Chưa tạo liên kết issue_id trong form mới (để null), chưa sửa/hủy/tái phân công task có sẵn.
@@ -352,6 +352,11 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 ### Cài đặt local
 
+**Cập nhật vai trò (tách STAFF thành Lễ tân và Buồng phòng):** DB đã có dữ liệu cần chạy
+`scripts/migrate-split-staff-role.sql` một lần (chạy lại vẫn an toàn). Script tạo vai trò `RECEPTIONIST` và `HOUSEKEEPER`,
+chuyển người dùng STAFF sang vai trò mới theo chức danh (có "dọn phòng", "buồng" → Buồng phòng, còn lại → Lễ tân) rồi xóa vai trò STAFF.
+Người đang đăng nhập từ trước cần đăng xuất rồi đăng nhập lại để nhận vai trò mới. DB tạo mới từ `docs/sql/02_seed_demo.sql` đã có sẵn hai vai trò này.
+
 0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
    `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
 1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
@@ -376,9 +381,9 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | PUT | `/api/users/me/profile` | `{ fullName, phone }` | `user` sau khi cập nhật; không đổi được email và role (UC-A4) |
 | PUT | `/api/users/me/password` | `{ currentPassword, newPassword }` | Cặp token mới; mọi phiên cũ bị thu hồi (UC-A4) |
 | GET | `/api/admin/users` | — | Danh sách tài khoản (UC-A5) |
-| POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/STAFF kèm dòng `staff` (UC-A5) |
-| PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/STAFF; không tự đổi vai trò của mình (UC-A5) |
-| PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/STAFF; khóa thì thu hồi mọi phiên (UC-A5) |
+| POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/RECEPTIONIST/HOUSEKEEPER kèm dòng `staff` (UC-A5) |
+| PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/RECEPTIONIST/HOUSEKEEPER; không tự đổi vai trò của mình (UC-A5) |
+| PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/RECEPTIONIST/HOUSEKEEPER; khóa thì thu hồi mọi phiên (UC-A5) |
 | GET | `/api/admin/roles` | — | Danh sách role kèm mã UC (UC-A6) |
 | PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN luôn giữ đủ 30 quyền (UC-A6) |
 | POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |

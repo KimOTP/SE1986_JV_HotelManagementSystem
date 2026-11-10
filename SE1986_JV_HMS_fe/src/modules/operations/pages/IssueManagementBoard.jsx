@@ -263,7 +263,7 @@ export default function IssueManagementBoard() {
                       Phân công
                     </Button>
                   )}
-                  {hasRole(ROLES.STAFF) &&
+                  {hasRole(ROLES.HOUSEKEEPER) &&
                     hasPermission('UC-E5') &&
                     ['ASSIGNED', 'IN_PROGRESS'].includes(issue.status) && (
                       <Button

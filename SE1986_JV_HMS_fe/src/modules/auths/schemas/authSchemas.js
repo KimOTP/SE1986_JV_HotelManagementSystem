@@ -114,7 +114,7 @@ export const changePasswordSchema = z
     .max(254, 'Email quá dài.'),
 
   role: z.enum(
-    ['MANAGER', 'STAFF'],
+    ['MANAGER', 'RECEPTIONIST', 'HOUSEKEEPER'],
     {
       errorMap: () => ({
         message: 'Vui lòng chọn vai trò hợp lệ.',
