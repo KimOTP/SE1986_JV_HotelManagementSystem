@@ -46,7 +46,7 @@ export const ROLE_LABELS = {
 // hiển thị giống khi đăng nhập bằng backend (VITE_AUTH_DATA_SOURCE=api).
 export const ROLE_PERMISSION_DEFAULTS = {
   [ROLES.ADMIN]: DATABASE_PERMISSION_CODES.filter(
-    (code) => !['UC-C1', 'UC-C2', 'UC-C3', 'UC-C4'].includes(code),
+    (code) => !['UC-C1', 'UC-C2', 'UC-C3', 'UC-C4', 'UC-E2'].includes(code),
   ),
   [ROLES.MANAGER]: [
     'UC-A2', 'UC-A3', 'UC-A4',
@@ -58,7 +58,7 @@ export const ROLE_PERMISSION_DEFAULTS = {
   [ROLES.RECEPTIONIST]: [
     'UC-A2', 'UC-A3', 'UC-A4',
     'UC-B4', 'UC-B5', 'UC-B6',
-    'UC-C6',
+    'UC-C5', 'UC-C6',
     'UC-D1', 'UC-D2', 'UC-D3', 'UC-D4',
     'UC-E4',
   ],
