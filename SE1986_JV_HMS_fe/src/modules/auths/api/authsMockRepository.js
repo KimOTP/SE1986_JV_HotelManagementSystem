@@ -303,6 +303,25 @@ export const authsMockRepository = {
     };
   },
 
+  // Chế độ mock không gửi mail: mã xác nhận luôn là 123456.
+  async requestPasswordReset({ email }) {
+    const exists = getStoredUsers().some((item) => normalizeEmail(item.email) === normalizeEmail(email));
+    return {
+      message: exists
+        ? 'Chế độ demo: nhập mã 123456 để tiếp tục.'
+        : 'Nếu email đã đăng ký, mã xác nhận đã được gửi.',
+    };
+  },
+
+  async resetPasswordWithOtp({ email, otp, newPassword }) {
+    const users = getStoredUsers();
+    const target = users.find((item) => normalizeEmail(item.email) === normalizeEmail(email));
+    if (!target || otp !== '123456') {
+      throw new Error('Mã xác nhận không đúng hoặc đã hết hạn.');
+    }
+    saveUsers(users.map((item) => (item === target ? { ...item, password: newPassword } : item)));
+  },
+
   async register({ fullName, name, email, password }) {
     const normalizedFullName = (fullName || name || "").trim();
 

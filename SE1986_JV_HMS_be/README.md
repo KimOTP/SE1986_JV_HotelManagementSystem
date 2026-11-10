@@ -367,6 +367,8 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | Method | URL | Body | Kết quả |
 | --- | --- | --- | --- |
 | POST | `/api/auth/register` | `{ fullName, email, password }` | 201 kèm `user`; tạo CUSTOMER, đăng nhập được ngay (không xác thực qua email). Trùng email trả 409 |
+| POST | `/api/auth/forgot-password` | `{ email }` | Luôn trả 200 cùng một câu; nếu email có tài khoản thì gửi mã OTP 6 số (UC-A3) |
+| POST | `/api/auth/reset-password` | `{ email, otp, newPassword }` | 204; sai hoặc hết hạn trả 400 `INVALID_OTP`; thu hồi mọi phiên cũ (UC-A3) |
 | POST | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken, tokenType, expiresIn, user }` |
 | POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
 | POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
@@ -385,11 +387,24 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 Access token sống 15 phút, refresh token 7 ngày. FE (`axiosClient`) tự gắn
 `Authorization: Bearer ...` và tự refresh khi gặp 401.
 
-### Quên mật khẩu
+### Quên mật khẩu (OTP qua email)
 
-Hệ thống không gửi mail. Người dùng liên hệ quản trị viên; quản trị viên bấm "Đặt lại mật khẩu" trong
-màn Quản lý tài khoản để nhận mật khẩu tạm, người dùng đăng nhập rồi đổi trong trang Hồ sơ.
+1. Người dùng nhập email ở trang Quên mật khẩu; backend gửi mã 6 số, hiệu lực 10 phút (`OTP_TTL_MINUTES`).
+2. Người dùng nhập mã cùng mật khẩu mới. Mã chỉ dùng được một lần; nhập sai 5 lần (`OTP_MAX_ATTEMPTS`) thì mã bị hủy.
+3. Xin mã mới phải chờ 60 giây (`OTP_RESEND_COOLDOWN_SECONDS`). Mã cũ bị hủy khi có mã mới.
+4. Đổi xong, mọi phiên đăng nhập cũ bị đăng xuất. DB chỉ lưu bản băm của mã (bảng `auth_tokens`, `purpose = PASSWORD_RESET`).
+
+Đăng ký không cần OTP. Quản trị viên vẫn có nút "Đặt lại mật khẩu" ở màn Quản lý tài khoản (mật khẩu tạm) cho trường hợp người dùng không nhận được mail.
 Access token đã phát trước đó vẫn dùng được tới khi hết hạn (tối đa 15 phút).
+
+### Cấu hình gửi mail
+
+Đặt trong `.env` (xem `.env.example`): `MAIL_HOST`, `MAIL_PORT` (mặc định 587), `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`.
+Với Gmail: bật xác thực 2 bước rồi tạo **mật khẩu ứng dụng** (App password), `MAIL_HOST=smtp.gmail.com`; không dùng mật khẩu đăng nhập Gmail.
+
+- Để trống `MAIL_HOST`: backend **không gửi mail**, chỉ ghi mã OTP vào log để phát triển. Không dùng cách này khi triển khai thật.
+- Gửi mail lỗi (SMTP tắt, sai mật khẩu): API vẫn trả 200 để không lộ email nào đã đăng ký; lỗi được ghi vào log, người dùng xin lại mã sau.
+- Không commit `.env`.
 
 ### Dùng trong module khác
 
