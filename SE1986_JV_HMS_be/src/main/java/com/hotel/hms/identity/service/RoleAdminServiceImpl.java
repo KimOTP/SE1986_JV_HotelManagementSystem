@@ -26,6 +26,7 @@ public class RoleAdminServiceImpl implements RoleAdminService {
 
     private static final String ADMIN_ROLE = "ADMIN";
     private static final String ROLE_MANAGE_PERMISSION = "UC-A6";
+    private static final Set<String> ADMIN_REQUIRED = Set.of("UC-A5", ROLE_MANAGE_PERMISSION);
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -50,9 +51,10 @@ public class RoleAdminServiceImpl implements RoleAdminService {
             throw new BadRequestException("UNKNOWN_PERMISSION", "Danh sách chứa quyền không tồn tại.");
         }
 
-        // ADMIN luôn giữ đủ quyền để hệ thống không mất người quản trị.
-        if (ADMIN_ROLE.equals(role.getCode()) && requested.size() != permissionRepository.count()) {
-            throw new BadRequestException("ADMIN_PERMISSIONS_LOCKED", "Không thể bớt quyền của ADMIN.");
+        // ADMIN chỉ cần giữ hai quyền quản trị để hệ thống không mất người quản trị.
+        if (ADMIN_ROLE.equals(role.getCode()) && !requested.containsAll(ADMIN_REQUIRED)) {
+            throw new BadRequestException("ADMIN_PERMISSIONS_LOCKED",
+                    "ADMIN phải giữ quyền quản lý tài khoản (UC-A5) và vai trò (UC-A6).");
         }
         // Người không phải ADMIN được cấp UC-A6 không được tự gỡ quyền này khỏi role của mình.
         boolean actorHoldsRole = actor.getRoles().contains(role.getCode());
