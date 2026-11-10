@@ -352,15 +352,24 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 ### Cài đặt local
 
-**Cập nhật vai trò (tách STAFF thành Lễ tân và Buồng phòng):** DB đã có dữ liệu cần chạy
-`scripts/migrate-split-staff-role.sql` một lần (chạy lại vẫn an toàn). Script tạo vai trò `RECEPTIONIST` và `HOUSEKEEPER`,
-chuyển người dùng STAFF sang vai trò mới theo chức danh (có "dọn phòng", "buồng" → Buồng phòng, còn lại → Lễ tân) rồi xóa vai trò STAFF.
-Người đang đăng nhập từ trước cần đăng xuất rồi đăng nhập lại để nhận vai trò mới. DB tạo mới từ `docs/sql/02_seed_demo.sql` đã có sẵn hai vai trò này.
+**Cơ sở dữ liệu do Flyway quản lý.** Các file `src/main/resources/db/migration/V*.sql` tự chạy theo thứ tự khi backend khởi động,
+và Flyway ghi lại file nào đã chạy trong bảng `dbo.flyway_schema_history`.
 
-**Quyền ADMIN gọn hơn:** chạy thêm `scripts/migrate-admin-minimal-permissions.sql` (ADMIN chỉ giữ A2–A6 và B1–B3, việc vận hành trả về Quản lý/nhân viên; thêm UC-C5 cho Lễ tân để xem đặt phòng).
+- **Máy chưa có database:** tạo database rỗng một lần, rồi chạy backend. Flyway tự tạo schema, bảng và dữ liệu demo.
+  ```sql
+  CREATE DATABASE HotelManagement_SBA;
+  ```
+- **Máy đã có database cũ:** không cần làm gì. Lần chạy đầu Flyway đặt mốc ở V2 (schema + seed) và tự chạy V3 trở đi
+  (thêm bảng và cột còn thiếu, tách STAFF thành Lễ tân/Buồng phòng, thu gọn quyền ADMIN, bỏ cột `amenities.icon`).
+  Nên sao lưu database trước lần chạy đầu vì V7 xóa cột `icon`.
+- **Đổi database:** sửa `DB_NAME` trong `.env` (mặc định `HotelManagement_SBA`).
+- **Muốn đổi schema hay dữ liệu:** không sửa file `V` đã chạy. Thêm file mới `V8__ten_thay_doi.sql`, `V9__...` (tên dạng `V<số>__<mô_tả>.sql`).
+  Sửa file cũ làm Flyway báo lỗi checksum.
+- `docs/sql/*.sql` và `scripts/migrate-*.sql` (của Module B, E) là bản cũ để tham khảo, không còn là nơi dựng database.
 
-0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
-   `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
+Người đang đăng nhập từ trước khi đổi vai trò cần đăng xuất rồi đăng nhập lại để nhận quyền mới.
+
+0. Chép `.env.example` thành `.env` và điền mật khẩu DB.
 1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
    Thiếu biến này app vẫn chạy nhưng tự sinh khóa tạm, nên phải đăng nhập lại sau mỗi lần restart.
 2. Tài khoản seed: `admin@sba.example`, `manager@sba.example`, `reception@sba.example`,
