@@ -13,7 +13,7 @@ test('accepts JPEG/PNG within the remaining six image slots', () => {
     ),
   );
 });
-test('counts existing URLs and newly chosen files together', () => {
+test('counts existing images and newly chosen files together', () => {
   assert.throws(() => validateRoomImageSelection([{ type: 'image/png', size: 10 }], 6), /6 ảnh/);
 });
 test('rejects empty, oversize, and unsupported files before making requests', () => {

@@ -6,7 +6,7 @@ export default function RoomGallery({ images = [], editable = false, onChange })
   const [selected, setSelected] = useState(0);
   const current = list[Math.min(selected, list.length - 1)] || FALLBACK_IMAGE;
   const fail = (e) => {
-    e.currentTarget.src = FALLBACK_IMAGE;
+    if (e.currentTarget.src !== FALLBACK_IMAGE) e.currentTarget.src = FALLBACK_IMAGE;
   };
   const remove = (i) => {
     const next = images.filter((_, idx) => idx !== i);

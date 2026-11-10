@@ -1,35 +1,39 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { roomsApi } from '../api/roomsApi';
 export function useRoomsData() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const requestSeq = useRef(0);
   const reload = useCallback(async () => {
+    const requestId = ++requestSeq.current;
     setLoading(true);
     setError('');
     try {
-      setData(await roomsApi.getMap());
+      const value = await roomsApi.getMap();
+      if (requestId === requestSeq.current) setData(value);
     } catch (e) {
-      setError(e?.response?.data?.message || e.message || 'Không thể tải dữ liệu.');
+      if (requestId === requestSeq.current)
+        setError(e?.response?.data?.message || e.message || 'Không thể tải dữ liệu.');
     } finally {
-      setLoading(false);
+      if (requestId === requestSeq.current) setLoading(false);
     }
   }, []);
   useEffect(() => {
-    let active = true;
+    const requestId = ++requestSeq.current;
     (async () => {
       setLoading(true);
       try {
         const v = await roomsApi.getMap();
-        if (active) setData(v);
+        if (requestId === requestSeq.current) setData(v);
       } catch (e) {
-        if (active) setError(e?.response?.data?.message || e.message);
+        if (requestId === requestSeq.current) setError(e?.response?.data?.message || e.message);
       } finally {
-        if (active) setLoading(false);
+        if (requestId === requestSeq.current) setLoading(false);
       }
     })();
     return () => {
-      active = false;
+      requestSeq.current += 1;
     };
   }, []);
   return { data, loading, error, reload };

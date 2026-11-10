@@ -26,7 +26,6 @@ export const roomTypeSchema = z.object({
   ),
   area: optionalNumber,
   bedType: required('Loại giường'),
-  imageText: z.string().optional(),
   amenityIds: z.array(z.string()),
   isActive: z.boolean(),
 });
@@ -42,7 +41,6 @@ export const roomSchema = z.object({
 });
 export const amenitySchema = z.object({
   name: required('Tên'),
-  iconKey: z.string().max(100),
   description: z.string().trim(),
   isActive: z.boolean(),
 });

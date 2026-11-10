@@ -34,7 +34,7 @@ const fields = {
     'isActive',
   ],
   rooms: ['roomNumber', 'floor', 'roomTypeId', 'notes', 'isActive'],
-  amenities: ['name', 'iconKey', 'description', 'isActive'],
+  amenities: ['name', 'description', 'isActive'],
 };
 const criteriaParams = ({ checkIn, checkOut, guests }) => ({ checkIn, checkOut, guests });
 export const roomsApi = {

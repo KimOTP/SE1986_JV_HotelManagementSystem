@@ -12,13 +12,16 @@ export const currency = (value) =>
   }).format(value || 0);
 export const imageOrFallback = (images) => images?.[0] || FALLBACK_IMAGE;
 export const localDateString = (date = new Date()) => {
-  const y = date.getFullYear();
+  const y = String(date.getFullYear()).padStart(4, '0');
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
-export const parseLocalDate = (value) =>
-  /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? new Date(`${value}T00:00:00`) : null;
+export const parseLocalDate = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '') || value.startsWith('0000-')) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isFinite(date.getTime()) && localDateString(date) === value ? date : null;
+};
 export const nightsBetween = (a, b) => {
   const start = parseLocalDate(a);
   const end = parseLocalDate(b);

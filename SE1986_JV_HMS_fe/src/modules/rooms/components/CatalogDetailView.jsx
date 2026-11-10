@@ -1,7 +1,6 @@
 import { Badge, Col, ListGroup, Row } from 'react-bootstrap';
 import { Building, People, Rulers } from 'react-bootstrap-icons';
 import { ActiveBadge, StatusBadge } from './Common';
-import AmenityIcon from './AmenityIcon';
 import RoomGallery from './RoomGallery';
 import { currency } from '../utils/roomUtils';
 
@@ -17,9 +16,6 @@ function DetailRow({ label, children }) {
 function AmenityDetail({ item }) {
   return (
     <div className="text-center">
-      <div className="catalog-detail-icon mx-auto mb-3">
-        <AmenityIcon iconKey={item.iconKey} size={36} />
-      </div>
       <h4 className="mb-1">{item.name}</h4>
       <div className="mb-4">
         <ActiveBadge active={item.isActive} />
@@ -92,7 +88,7 @@ function RoomTypeDetail({ item, amenities }) {
           {assignedAmenities.length ? (
             assignedAmenities.map((amenity) => (
               <Badge bg="light" text="dark" className="border py-2" key={amenity.id}>
-                <AmenityIcon iconKey={amenity.iconKey} /> {amenity.name}
+                {amenity.name}
               </Badge>
             ))
           ) : (
