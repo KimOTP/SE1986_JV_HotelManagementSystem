@@ -1,6 +1,5 @@
-import { BLOCKING_RESERVATION_STATUSES, FALLBACK_IMAGE } from '../constants/roomConstants.js';
+import { FALLBACK_IMAGE } from '../constants/roomConstants.js';
 
-export const clone = (value) => JSON.parse(JSON.stringify(value));
 export const normalize = (value) =>
   String(value ?? '')
     .trim()
@@ -25,10 +24,6 @@ export const nightsBetween = (a, b) => {
   const end = parseLocalDate(b);
   return start && end ? Math.round((end - start) / 86400000) : 0;
 };
-export const overlaps = (aIn, aOut, bIn, bOut) => aIn < bOut && aOut > bIn;
-export const reservationBlocks = (reservation, checkIn, checkOut) =>
-  BLOCKING_RESERVATION_STATUSES.includes(reservation.status) &&
-  overlaps(reservation.checkIn, reservation.checkOut, checkIn, checkOut);
 export const validateSearch = ({ checkIn, checkOut, guests }, today = localDateString()) => {
   const errors = {};
   const count = Number(guests);
