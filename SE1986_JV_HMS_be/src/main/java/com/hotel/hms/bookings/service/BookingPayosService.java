@@ -66,8 +66,10 @@ public class BookingPayosService {
                 .requestFactory(factory).build();
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public Checkout createCheckout(long userId, String bookingCode) {
         requireConfigured();
+        paymentRepository.lockBooking(bookingCode);
         BookingResponse booking = bookings.getByCode(userId, bookingCode, false);
         if (!"PENDING".equals(booking.status()) || booking.holdExpiresAt() == null) {
             throw new ApiException(CONFLICT, "BOOKING_NOT_PAYABLE", "Đơn không còn chờ đặt cọc.");
@@ -88,7 +90,7 @@ public class BookingPayosService {
                 throw new ApiException(CONFLICT, "BOOKING_PAYOS_LINK_NOT_PENDING",
                         "Link không còn chờ thanh toán. Vui lòng kiểm tra trạng thái giao dịch.");
             }
-            return new Checkout("https://pay.payos.vn/web/" + id);
+            return new Checkout("https://pay.payos.vn/web/" + id, null);
         }
         return createOrResume(booking, order, amount, expiry, true);
     }
@@ -98,7 +100,8 @@ public class BookingPayosService {
         String returnUrl = frontendUrl.replaceAll("/+$", "")
                 + "/bookings/deposit?payosBooking=" + booking.bookingCode();
         String description = "COC " + order;
-        String signature = sign("amount=" + amount + "&cancelUrl=" + returnUrl
+        String cancelUrl = returnUrl + "&cancel=true";
+        String signature = sign("amount=" + amount + "&cancelUrl=" + cancelUrl
                 + "&description=" + description + "&orderCode=" + order + "&returnUrl=" + returnUrl);
 
         JsonNode response;
@@ -106,7 +109,7 @@ public class BookingPayosService {
             response = client.post().uri(REQUESTS)
                     .header("x-client-id", clientId).header("x-api-key", apiKey)
                     .body(Map.of("orderCode", order, "amount", amount, "description", description,
-                            "cancelUrl", returnUrl, "returnUrl", returnUrl, "expiredAt", expiry,
+                            "cancelUrl", cancelUrl, "returnUrl", returnUrl, "expiredAt", expiry,
                             "signature", signature))
                     .retrieve().body(JsonNode.class);
         } catch (RestClientException exception) {
@@ -124,7 +127,7 @@ public class BookingPayosService {
                 && !paymentRepository.hasVerifiedPayosLink(booking.bookingId(), linkId)) {
             String status = link.path("status").asString();
             if ("PENDING".equals(status)) {
-                cancelUnverifiedLink(order, amount);
+                cancelLink(order, amount, "Thay link QR chua xac minh");
             }
             if ("PENDING".equals(status) || "CANCELLED".equals(status)) {
                 return createOrResume(booking, replacementOrder(order), amount, expiry, false);
@@ -135,7 +138,7 @@ public class BookingPayosService {
                     "Link không còn chờ thanh toán. Vui lòng kiểm tra trạng thái giao dịch.");
         }
         if (!created && paymentRepository.hasVerifiedPayosLink(booking.bookingId(), linkId)) {
-            return new Checkout("https://pay.payos.vn/web/" + linkId);
+            return new Checkout("https://pay.payos.vn/web/" + linkId, null);
         }
         String account = link.path("accountNumber").asString();
         if (!receiverBin.equals(link.path("bin").asString()) || account.isBlank()
@@ -146,12 +149,50 @@ public class BookingPayosService {
                     "Chưa xác minh được tài khoản nhận tiền của mã QR. Vui lòng liên hệ khách sạn.");
         }
         paymentRepository.rememberVerifiedPayosLink(booking.bookingId(), linkId, BigDecimal.valueOf(amount));
-        return new Checkout("https://pay.payos.vn/web/" + linkId);
+        return new Checkout("https://pay.payos.vn/web/" + linkId, link.path("qrCode").asString(null));
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void cancelCheckout(long userId, String bookingCode) {
+        requireConfigured();
+        var target = paymentRepository.lockBooking(bookingCode).orElse(null);
+        BookingResponse booking = bookings.getByCode(userId, bookingCode, false);
+        if ("CANCELLED".equals(booking.status())) {
+            return;
+        }
+        if (target == null || !"PENDING".equals(target.status())) {
+            throw new ApiException(CONFLICT, "BOOKING_NOT_CANCELLABLE",
+                    "Chỉ có thể hủy đặt phòng đang chờ thanh toán.");
+        }
+        long order = orderCode(booking);
+        String verifiedId = paymentRepository.findVerifiedPayosLink(booking.bookingId()).orElse(null);
+        JsonNode link = fetchLink(verifiedId == null ? Long.toString(order) : verifiedId);
+        String linkId = link.path("id").asString();
+        long amount = amount(booking);
+        long actualOrder = link.path("orderCode").asLong(-1);
+        validateLink(link, verifiedId != null && actualOrder == replacementOrder(order)
+                ? actualOrder : order, amount);
+        String status = link.path("status").asString();
+        boolean pendingVerifiedLink = "PENDING".equals(status) && linkId.equals(verifiedId);
+        if (!linkId.matches("[0-9a-fA-F]{32}") || (verifiedId != null && !linkId.equals(verifiedId))
+                || link.path("amountPaid").asLong(-1) != 0
+                || !(pendingVerifiedLink || "CANCELLED".equals(status))) {
+            throw new ApiException(CONFLICT, "BOOKING_DEPOSIT_REVIEW_REQUIRED",
+                    "Không thể hủy lúc này. Vui lòng kiểm tra lại trạng thái giao dịch.");
+        }
+        if (pendingVerifiedLink) {
+            cancelLink(actualOrder, amount, "Khach huy dat phong");
+        }
+        bookings.cancel(userId, bookingCode, "Khách hủy thanh toán PayOS");
+        paymentRepository.closeVerifiedPayosLink(booking.bookingId(), linkId);
     }
 
     public Verification verify(long userId, String bookingCode) {
-        requireConfigured();
         BookingResponse booking = bookings.getByCode(userId, bookingCode, false);
+        if ("CANCELLED".equals(booking.status())) {
+            return new Verification("BOOKING_CANCELLED", null);
+        }
+        requireConfigured();
         long order = orderCode(booking);
         long amount = amount(booking);
         String verifiedId = paymentRepository.findVerifiedPayosLink(booking.bookingId()).orElse(null);
@@ -163,6 +204,13 @@ public class BookingPayosService {
         }
         validateLink(link, order, amount);
         String status = link.path("status").asString();
+        if ("CANCELLED".equals(status) && "PENDING".equals(booking.status())) {
+            if (link.path("amountPaid").asLong(-1) != 0) {
+                throw new ApiException(CONFLICT, "BOOKING_DEPOSIT_REVIEW_REQUIRED",
+                        "Giao dịch cần được khách sạn đối soát trước khi hủy đặt phòng.");
+            }
+            return new Verification("BOOKING_CANCELLABLE", null);
+        }
         if (!"PAID".equals(status)) {
             return new Verification(status, null);
         }
@@ -200,11 +248,11 @@ public class BookingPayosService {
         throw providerError();
     }
 
-    private void cancelUnverifiedLink(long order, long amount) {
+    private void cancelLink(long order, long amount, String reason) {
         try {
             JsonNode response = client.post().uri(REQUESTS + "/{order}/cancel", order)
                     .header("x-client-id", clientId).header("x-api-key", apiKey)
-                    .body(Map.of("cancellationReason", "Thay link QR chua xac minh"))
+                    .body(Map.of("cancellationReason", reason))
                     .retrieve().body(JsonNode.class);
             if (response != null && "00".equals(response.path("code").asString())) {
                 JsonNode link = response.path("data");
@@ -269,6 +317,6 @@ public class BookingPayosService {
                 "Chưa lấy được thông tin giao dịch từ payOS. Vui lòng thử lại.");
     }
 
-    public record Checkout(String checkoutUrl) {}
+    public record Checkout(String checkoutUrl, String qrCode) {}
     public record Verification(String status, BookingResponse booking) {}
 }

@@ -20,7 +20,6 @@ const columns = [
   {
     title: 'Dịch vụ',
     items: [
-      { label: 'Dịch vụ khách sạn', to: '/services' },
       { label: 'Báo cáo sự cố', to: '/operations/report-issue', permission: 'UC-E4' },
       {
         label: 'Đánh giá của khách',

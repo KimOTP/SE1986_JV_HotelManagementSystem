@@ -8,7 +8,6 @@ import {
   DoorOpen,
   ExclamationTriangle,
   Grid3x3Gap,
-  Headset,
   Kanban,
   Layers,
   People,
@@ -28,7 +27,6 @@ export const sidebarMenu = [
   {
     groupLabel: 'Dịch vụ & phản hồi',
     items: [
-      { label: 'Dịch vụ & phản hồi', to: '/services', icon: Headset },
       {
         label: 'Yêu cầu hỗ trợ của tôi',
         to: '/operations/my-reports',

@@ -5,6 +5,7 @@ import com.hotel.hms.bookings.repository.BookingPaymentRepository;
 import com.hotel.hms.bookings.repository.BookingPaymentRepository.PaymentTarget;
 import com.hotel.hms.common.exception.ApiException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,14 +44,16 @@ public class BookingDepositService {
 
     private final BookingPaymentRepository repository;
     private final BookingQueryService queryService;
+    private final ApplicationEventPublisher events;
 
     @Value("${BOOKING_PAYOS_ENABLED:false}")
     private boolean payosEnabled;
 
     public BookingDepositService(BookingPaymentRepository repository,
-                                 BookingQueryService queryService) {
+                                 BookingQueryService queryService, ApplicationEventPublisher events) {
         this.repository = repository;
         this.queryService = queryService;
+        this.events = events;
     }
 
     /**
@@ -135,8 +138,14 @@ public class BookingDepositService {
         repository.insertStatusHistory(target.bookingId(), "PENDING", "CONFIRMED", customerId,
                 "Đã thanh toán tiền cọc " + amount.toPlainString() + " qua " + normalizedMethod);
 
-        return queryService.getByCode(customerId, target.bookingCode(), false);
+        BookingResponse booking = queryService.getByCode(customerId, target.bookingCode(), false);
+        if (reference != null) {
+            events.publishEvent(new BookingDepositConfirmed(booking, amount));
+        }
+        return booking;
     }
+
+    public record BookingDepositConfirmed(BookingResponse booking, BigDecimal amount) {}
 
     private static String normalizeMethod(String method) {
         if (method == null || method.isBlank()) {
