@@ -14,8 +14,11 @@ export default function ProtectedRoute({
   }
 
   const hasRequiredRole = !roles || roles.some(hasRole);
+  const hasRequiredPermission = Array.isArray(requiredPermission)
+    ? requiredPermission.some(hasPermission)
+    : !requiredPermission || hasPermission(requiredPermission);
   if (
-    (requiredPermission && !hasPermission(requiredPermission)) ||
+    !hasRequiredPermission ||
     !hasRequiredRole
   ) {
     return (

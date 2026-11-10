@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class UserAdminServiceImpl implements UserAdminService {
 
     private static final String ADMIN_ROLE = "ADMIN";
-    private static final Set<String> INTERNAL_ROLES = Set.of("MANAGER", "STAFF");
+    private static final Set<String> INTERNAL_ROLES = Set.of("MANAGER", "RECEPTIONIST", "HOUSEKEEPER");
 
     private final UserRepository userRepository;
     private final StaffRepository staffRepository;
@@ -108,7 +108,7 @@ public class UserAdminServiceImpl implements UserAdminService {
 
         Staff staff = staffRepository.findByUser_Id(userId)
                 .orElseGet(() -> newStaff(target, resolveHotelId(actor), request.role(), null));
-        staff.setJobTitle(request.jobTitle());
+        staff.setJobTitle(titleFor(request.role(), request.jobTitle()));
         staffRepository.save(staff);
         return toResponse(target, staff.getJobTitle());
     }
@@ -196,9 +196,20 @@ public class UserAdminServiceImpl implements UserAdminService {
         staff.setHotelId(hotelId);
         // Mã theo user_id nên không trùng; seed có M001, R001, H001.
         staff.setEmployeeCode(String.format("%s%03d", role.charAt(0), user.getId()));
-        staff.setJobTitle(jobTitle);
+        staff.setJobTitle(titleFor(role, jobTitle));
         staff.setActive(true);
         return staff;
+    }
+
+    private static String titleFor(String role, String jobTitle) {
+        if (jobTitle != null) {
+            return jobTitle;
+        }
+        return switch (role) {
+            case "RECEPTIONIST" -> "Lễ tân";
+            case "HOUSEKEEPER" -> "Buồng phòng";
+            default -> "Quản lý";
+        };
     }
 
     private void saveAndCheckEmail(User user) {
@@ -219,7 +230,7 @@ public class UserAdminServiceImpl implements UserAdminService {
     }
 
     private BadRequestException notInternal() {
-        return new BadRequestException("NOT_INTERNAL_USER", "UC-A5 chỉ quản lý tài khoản MANAGER hoặc STAFF.");
+        return new BadRequestException("NOT_INTERNAL_USER", "UC-A5 chỉ quản lý tài khoản MANAGER, RECEPTIONIST hoặc HOUSEKEEPER.");
     }
 
     private AdminUserResponse toResponse(User user, String jobTitle) {

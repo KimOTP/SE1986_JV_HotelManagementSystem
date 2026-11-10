@@ -93,7 +93,7 @@ public class IssueAssignmentService {
                 WHERE s.hotel_id = ? AND s.is_active = 1 AND u.is_active = 1 AND EXISTS (
                     SELECT 1 FROM identity_access.user_roles ur
                     JOIN identity_access.roles r ON r.role_id = ur.role_id
-                    WHERE ur.user_id = u.user_id AND r.code = 'STAFF' AND r.is_active = 1
+                    WHERE ur.user_id = u.user_id AND r.code = 'HOUSEKEEPER' AND r.is_active = 1
                 )
                 ORDER BY u.full_name, s.staff_id
                 """, (rs, row) -> new IssueAssigneeResponse(rs.getLong("staff_id"),

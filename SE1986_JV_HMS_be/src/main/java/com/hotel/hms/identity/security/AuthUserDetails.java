@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 public class AuthUserDetails implements UserDetails {
 
     // Thứ tự ưu tiên khi chọn vai trò chính để FE hiển thị.
-    private static final List<String> ROLE_PRIORITY = List.of("ADMIN", "MANAGER", "STAFF", "CUSTOMER");
+    public static final List<String> ROLE_PRIORITY = List.of("ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPER", "CUSTOMER");
 
     private final Long id;
     private final String email;

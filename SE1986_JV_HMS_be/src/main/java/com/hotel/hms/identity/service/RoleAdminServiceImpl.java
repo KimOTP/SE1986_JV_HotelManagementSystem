@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,7 +33,10 @@ public class RoleAdminServiceImpl implements RoleAdminService {
     @Override
     @Transactional(readOnly = true)
     public List<RoleResponse> listRoles() {
-        return roleRepository.findAllByOrderByIdAsc().stream().map(this::toResponse).toList();
+        // Theo thứ tự quyền hạn chứ không theo id, để vai trò thêm sau không nằm lẫn giữa các vai trò cũ.
+        return roleRepository.findAllByOrderByIdAsc().stream()
+                .sorted(Comparator.comparingInt(role -> AuthUserDetails.ROLE_PRIORITY.indexOf(role.getCode())))
+                .map(this::toResponse).toList();
     }
 
     @Override

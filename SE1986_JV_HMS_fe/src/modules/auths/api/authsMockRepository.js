@@ -36,7 +36,7 @@ const DEFAULT_USERS = [
     fullName: 'Nguyễn Văn A',
     email: "receptionist@hotel.com",
     password: "123456",
-    role: ROLES.STAFF,
+    role: ROLES.RECEPTIONIST,
     jobTitle: 'Lễ tân',
     enabled: true,
   },
@@ -46,8 +46,8 @@ const DEFAULT_USERS = [
     fullName: 'Trần Thị B',
     email: "housekeeper@hotel.com",
     password: "123456",
-    role: ROLES.STAFF,
-    jobTitle: 'Nhân viên buồng phòng',
+    role: ROLES.HOUSEKEEPER,
+    jobTitle: 'Buồng phòng',
     enabled: true,
   },
   {
@@ -78,9 +78,10 @@ const getStoredUsers = () => {
       const parsedUsers = JSON.parse(storedUsers);
 
       if (Array.isArray(parsedUsers)) {
+        // Dữ liệu demo cũ còn vai trò STAFF: tách theo chức danh như script migrate của backend.
         return parsedUsers.map((user) =>
-          user.role === 'RECEPTIONIST'
-            ? { ...user, role: ROLES.STAFF }
+          user.role === 'STAFF'
+            ? { ...user, role: /buồng|dọn/i.test(user.jobTitle || '') ? ROLES.HOUSEKEEPER : ROLES.RECEPTIONIST }
             : user,
         );
       }
@@ -113,7 +114,7 @@ const toPublicUser = (user) => {
 
   return {
     ...publicUser,
-    role: user.role === 'RECEPTIONIST' ? ROLES.STAFF : user.role,
+    role: user.role,
     fullName: user.fullName || user.name || '',
   };
 };
@@ -198,6 +199,8 @@ const getEffectivePermissions = (roles = []) => {
     ),
   ];
 };
+
+const EDITABLE_ROLES = [ROLES.MANAGER, ROLES.RECEPTIONIST, ROLES.HOUSEKEEPER];
 
 // Người đang thao tác lấy từ phiên đăng nhập, giống backend lấy từ JWT.
 const currentActor = () => {
@@ -301,6 +304,25 @@ export const authsMockRepository = {
       },
       token: `mock-token-${user.id}-${Date.now()}`,
     };
+  },
+
+  // Chế độ mock không gửi mail: mã xác nhận luôn là 123456.
+  async requestPasswordReset({ email }) {
+    const exists = getStoredUsers().some((item) => normalizeEmail(item.email) === normalizeEmail(email));
+    return {
+      message: exists
+        ? 'Chế độ demo: nhập mã 123456 để tiếp tục.'
+        : 'Nếu email đã đăng ký, mã xác nhận đã được gửi.',
+    };
+  },
+
+  async resetPasswordWithOtp({ email, otp, newPassword }) {
+    const users = getStoredUsers();
+    const target = users.find((item) => normalizeEmail(item.email) === normalizeEmail(email));
+    if (!target || otp !== '123456') {
+      throw new Error('Mã xác nhận không đúng hoặc đã hết hạn.');
+    }
+    saveUsers(users.map((item) => (item === target ? { ...item, password: newPassword } : item)));
   },
 
   async register({ fullName, name, email, password }) {
@@ -420,8 +442,8 @@ export const authsMockRepository = {
   if (!currentActor().permissions.includes(PERMISSIONS.USER_MANAGE)) {
     throw new Error('Bạn không có UC-A5 để tạo tài khoản nội bộ.');
   }
-  if (![ROLES.MANAGER, ROLES.STAFF].includes(role)) {
-    throw new Error('UC-A5 chỉ cho phép tạo tài khoản MANAGER hoặc STAFF.');
+  if (!EDITABLE_ROLES.includes(role)) {
+    throw new Error('UC-A5 chỉ cho phép tạo tài khoản MANAGER, RECEPTIONIST hoặc HOUSEKEEPER.');
   }
 
   const users = getStoredUsers();
@@ -473,11 +495,11 @@ export const authsMockRepository = {
 
   const target = users[userIndex];
 
-  if (![ROLES.MANAGER, ROLES.STAFF].includes(target.role)) {
-    throw new Error('UC-A5 chỉ quản lý tài khoản MANAGER hoặc STAFF.');
+  if (!EDITABLE_ROLES.includes(target.role)) {
+    throw new Error('UC-A5 chỉ quản lý tài khoản MANAGER, RECEPTIONIST hoặc HOUSEKEEPER.');
   }
-  if (![ROLES.MANAGER, ROLES.STAFF].includes(role)) {
-    throw new Error('UC-A5 chỉ cho phép gán vai trò MANAGER hoặc STAFF.');
+  if (!EDITABLE_ROLES.includes(role)) {
+    throw new Error('UC-A5 chỉ cho phép gán vai trò MANAGER, RECEPTIONIST hoặc HOUSEKEEPER.');
   }
 
   if (
@@ -535,8 +557,8 @@ export const authsMockRepository = {
 
   const target = users[userIndex];
 
-  if (![ROLES.MANAGER, ROLES.STAFF].includes(target.role)) {
-    throw new Error('UC-A5 chỉ quản lý tài khoản MANAGER hoặc STAFF.');
+  if (!EDITABLE_ROLES.includes(target.role)) {
+    throw new Error('UC-A5 chỉ quản lý tài khoản MANAGER, RECEPTIONIST hoặc HOUSEKEEPER.');
   }
 
   users[userIndex] = {

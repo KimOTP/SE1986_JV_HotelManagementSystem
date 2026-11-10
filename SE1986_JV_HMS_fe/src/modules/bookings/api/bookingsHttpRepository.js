@@ -24,6 +24,13 @@ export const bookingsHttpRepository = {
     return data;
   },
 
+  async listPendingDeposits({ page, size }) {
+    const { data } = await axiosClient.get('/bookings/deposit/pending', {
+      params: { page, size },
+    });
+    return data;
+  },
+
   async listAll({ status = '', keyword = '', page = 0, size = 20 } = {}) {
     const response = await axiosClient.get('/bookings/manage', {
       params: { status, keyword, page, size },
@@ -58,6 +65,20 @@ export const bookingsHttpRepository = {
     const { data } = await axiosClient.post(
       `/bookings/${encodeURIComponent(bookingCode)}/deposit`,
       { method },
+    );
+    return data;
+  },
+
+  async startPayosCheckout(bookingCode) {
+    const { data } = await axiosClient.post(
+      `/bookings/${encodeURIComponent(bookingCode)}/deposit/payos`, {},
+    );
+    return data;
+  },
+
+  async verifyPayosDeposit(bookingCode) {
+    const { data } = await axiosClient.post(
+      `/bookings/${encodeURIComponent(bookingCode)}/deposit/payos/verify`, {},
     );
     return data;
   },

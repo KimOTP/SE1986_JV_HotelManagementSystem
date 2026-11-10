@@ -6,7 +6,8 @@ import { internalUserSchema } from '../../schemas/authSchemas';
 
 const INTERNAL_ROLES = [
   { value: 'MANAGER', label: 'Quản lý' },
-  { value: 'STAFF', label: 'Nhân viên' },
+  { value: 'RECEPTIONIST', label: 'Lễ tân' },
+  { value: 'HOUSEKEEPER', label: 'Buồng phòng' },
 ];
 
 export default function UserForm({
@@ -29,7 +30,7 @@ export default function UserForm({
   defaultValues: {
     fullName: '',
     email: '',
-    role: 'STAFF',
+    role: 'RECEPTIONIST',
     jobTitle: '',
     password: '',
   },
@@ -39,7 +40,7 @@ export default function UserForm({
     reset({
       fullName: selectedUser?.fullName || '',
       email: selectedUser?.email || '',
-      role: selectedUser?.role || 'STAFF',
+      role: selectedUser?.role || 'RECEPTIONIST',
       jobTitle: selectedUser?.jobTitle || '',
       password: '',
     });
@@ -147,7 +148,7 @@ export default function UserForm({
 
         <input
           id="internalJobTitle"
-          placeholder="Ví dụ: Lễ tân, Dọn phòng"
+          placeholder="Để trống sẽ dùng theo vai trò"
           className={`form-control ${
             errors.jobTitle ? 'is-invalid' : ''
           }`}

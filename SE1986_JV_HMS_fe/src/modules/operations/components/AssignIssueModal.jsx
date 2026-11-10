@@ -118,7 +118,7 @@ export default function AssignIssueModal({ issue, onClose, onAssigned }) {
           {data.error && <Alert variant="danger">{data.error}</Alert>}
           {saveError && <Alert variant="danger">{saveError}</Alert>}
           {!data.loading && data.context?.enabled && !data.items.length && (
-            <Alert variant="warning">Chưa có nhân viên STAFF hoạt động thuộc khách sạn này.</Alert>
+            <Alert variant="warning">Chưa có nhân viên buồng phòng hoạt động thuộc khách sạn này.</Alert>
           )}
           <Form.Group controlId="issue-assignee">
             <Form.Label>Nhân viên xử lý</Form.Label>
