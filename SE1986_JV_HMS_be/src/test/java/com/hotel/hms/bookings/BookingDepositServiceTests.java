@@ -73,6 +73,33 @@ class BookingDepositServiceTests {
     }
 
     @Test
+    void rejectsVerifiedPaymentWithWrongAmount() {
+        when(repository.lockBooking("BK-TEST"))
+                .thenReturn(Optional.of(target("PENDING", futureHold(), new BigDecimal("480000.00"))));
+
+        ApiException error = assertThrows(ApiException.class, () ->
+                service.confirmPayosDeposit(5L, "BK-TEST", new BigDecimal("1000"), "PAYOS-test"));
+
+        assertEquals("BOOKING_DEPOSIT_AMOUNT_MISMATCH", error.getCode());
+        verify(repository, never()).confirmAfterDeposit(anyLong(), any());
+        verify(repository, never()).insertDepositTransaction(anyLong(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void recheckingSamePayosPaymentDoesNotInsertSecondDeposit() {
+        when(repository.lockBooking("BK-TEST"))
+                .thenReturn(Optional.of(target("CONFIRMED", futureHold(), new BigDecimal("480000.00"))));
+        when(repository.hasDepositReference(99L, "PAYOS-test")).thenReturn(true);
+        when(queryService.getByCode(5L, "BK-TEST", false)).thenReturn(confirmedResponse());
+
+        BookingResponse response = service.confirmPayosDeposit(5L, "BK-TEST",
+                new BigDecimal("480000"), "PAYOS-test");
+
+        assertEquals("CONFIRMED", response.status());
+        verify(repository, never()).insertDepositTransaction(anyLong(), any(), any(), any(), any(), any());
+    }
+
+    @Test
     void cardAndWalletAreRecordedAsGatewayInDatabase() {
         when(repository.lockBooking("BK-TEST"))
                 .thenReturn(Optional.of(target("PENDING", futureHold(), new BigDecimal("480000.00"))));

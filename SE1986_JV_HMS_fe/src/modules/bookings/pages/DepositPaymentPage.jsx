@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Form } from 'react-bootstrap';
 import {
   Bank,
@@ -15,7 +15,7 @@ import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingError from '../components/BookingError';
 import BookingStatus from '../components/BookingStatus';
-import { bookingsApi } from '../api/bookingsApi';
+import { bookingsApi, bookingsDataSource, collectBookingPages } from '../api/bookingsApi';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { displayDate, isHoldExpired, money, nightsBetween } from '../utils/bookingUtils';
 import '../styles/deposit-payment.css';
@@ -48,20 +48,55 @@ const METHOD_LABELS = Object.fromEntries(
   PAYMENT_METHODS.map((method) => [method.id, method.label]),
 );
 
+const payosEnabled = bookingsDataSource === 'api' &&
+  import.meta.env.VITE_BOOKING_PAYOS_ENABLED === 'true';
+
 export default function DepositPaymentPage() {
   const { hasPermission } = useAuth();
   const canPayDeposit = hasPermission('UC-C2');
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const payosBooking = payosEnabled ? params.get('payosBooking') : null;
   const { data, loading, error: loadError, refetch } = useAsyncData(
-    () => bookingsApi.listMine({ status: 'PENDING', size: 100 }),
+    () => collectBookingPages(bookingsApi.listPendingDeposits),
     [],
   );
   const bookings = useMemo(() => data || [], [data]);
-  const [selectedId, setSelectedId] = useState(params.get('bookingId') || '');
+  const selectedId = params.get('bookingId') || '';
   const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState('PENDING');
+
+  useEffect(() => {
+    if (!payosBooking) return undefined;
+    let active = true;
+    let retry;
+    const checkUntil = Date.now() + 120_000;
+    const check = async () => {
+      try {
+        const { status, booking } = await bookingsApi.verifyPayosDeposit(payosBooking);
+        if (!active) return;
+        setVerificationStatus(status);
+        if (status === 'PAID' && booking) {
+          setPaid({ id: booking.bookingCode, amount: booking.depositPaid, method: 'BANK_TRANSFER' });
+        } else if (status === 'PENDING' || status === 'PROCESSING') {
+          if (Date.now() < checkUntil) retry = setTimeout(check, 5000);
+          else setVerificationStatus('WAIT_TIMEOUT');
+        }
+      } catch (caught) {
+        if (active) {
+          setVerificationStatus('ERROR');
+          setError(caught.message);
+        }
+      }
+    };
+    check();
+    return () => {
+      active = false;
+      clearTimeout(retry);
+    };
+  }, [payosBooking]);
 
   const payableBookings = bookings.filter(
     (booking) => booking.status === 'PENDING' && !isHoldExpired(booking),
@@ -94,6 +129,11 @@ export default function DepositPaymentPage() {
     setError('');
     setPaying(true);
     try {
+      if (payosEnabled) {
+        const { checkoutUrl } = await bookingsApi.startPayosCheckout(selected.id);
+        window.location.assign(checkoutUrl);
+        return;
+      }
       const result = await bookingsApi.payDeposit(selected.id, paymentMethod);
       setPaid({
         id: result.bookingCode || selected.id,
@@ -131,9 +171,25 @@ export default function DepositPaymentPage() {
 
       <BookingError error={error} />
 
-      {loading ? (
+      {payosBooking && !paid ? (
+        <Alert variant="info">
+          {['PENDING', 'PROCESSING'].includes(verificationStatus)
+            ? 'Đang chờ payOS xác nhận giao dịch. Bạn có thể giữ trang này mở.'
+            : 'Phiên thanh toán đã kết thúc hoặc cần kiểm tra lại.'}
+          <div className="mt-2">
+            <Button variant="outline-primary" onClick={() => window.location.reload()}>
+              Kiểm tra lại
+            </Button>{' '}
+            <Button as={Link}
+              to={`/bookings/deposit?bookingId=${encodeURIComponent(payosBooking)}`}
+              variant="outline-secondary">
+              Quay lại chọn đơn
+            </Button>
+          </div>
+        </Alert>
+      ) : !paid && loading ? (
         <Alert variant="secondary">Đang tải đặt phòng chờ thanh toán…</Alert>
-      ) : loadError ? (
+      ) : !paid && loadError ? (
         <Alert
           variant="danger"
           className="d-flex flex-wrap justify-content-between align-items-center gap-3"
@@ -184,14 +240,19 @@ export default function DepositPaymentPage() {
           <section className="deposit-card">
             <h2 className="deposit-card__title">Thông tin đặt phòng</h2>
 
-            {payableBookings.length > 1 && (
+            {payableBookings.length > 0 && (
               <Form.Group className="mb-3" controlId="deposit-booking">
                 <Form.Label className="deposit-label">
                   Chọn đặt phòng cần thanh toán
                 </Form.Label>
                 <Form.Select
                   value={selectedId}
-                  onChange={(event) => setSelectedId(event.target.value)}
+                  onChange={(event) => {
+                    const next = new URLSearchParams(params);
+                    if (event.target.value) next.set('bookingId', event.target.value);
+                    else next.delete('bookingId');
+                    setParams(next, { replace: true });
+                  }}
                 >
                   <option value="">-- Chọn đặt phòng --</option>
                   {payableBookings.map((booking) => (
@@ -275,7 +336,7 @@ export default function DepositPaymentPage() {
               role="radiogroup"
               aria-label="Phương thức thanh toán trực tuyến"
             >
-              {PAYMENT_METHODS.map((method) => {
+              {(payosEnabled ? PAYMENT_METHODS.slice(0, 1) : PAYMENT_METHODS).map((method) => {
                 const Icon = method.icon;
                 const active = paymentMethod === method.id;
 
@@ -331,10 +392,10 @@ export default function DepositPaymentPage() {
               </span>
             </div>
 
-            <p className="deposit-demo">
+            {!payosEnabled && <p className="deposit-demo">
               Môi trường demo: chưa kết nối cổng thanh toán, không phát sinh giao
               dịch thật.
-            </p>
+            </p>}
 
             <Button
               className="w-100 deposit-cta"

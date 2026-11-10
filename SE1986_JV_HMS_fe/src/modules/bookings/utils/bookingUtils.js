@@ -53,10 +53,14 @@ export const isDepositSettled = (booking) =>
 // Thời gian giữ phòng của booking PENDING (khớp backend `booking.hold-minutes`).
 export const HOLD_MINUTES = 15;
 
+// Các phiên bản API cũ trả UTC mà không kèm hậu tố múi giờ.
+const parseHoldExpiry = (value) =>
+  Date.parse(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : value + 'Z');
+
 /** Số giây còn lại để thanh toán cọc; null nếu booking không có hạn giữ chỗ. */
 export const holdRemainingSeconds = (booking) => {
   if (!booking?.holdExpiresAt) return null;
-  const expiresAt = Date.parse(booking.holdExpiresAt);
+  const expiresAt = parseHoldExpiry(booking.holdExpiresAt);
   if (Number.isNaN(expiresAt)) return null;
   return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
 };
@@ -71,7 +75,7 @@ export const formatHoldTime = (totalSeconds) => {
 
 export const isHoldExpired = (booking) => {
   if (!booking?.holdExpiresAt) return false;
-  const expiresAt = Date.parse(booking.holdExpiresAt);
+  const expiresAt = parseHoldExpiry(booking.holdExpiresAt);
   return !Number.isNaN(expiresAt) && expiresAt <= Date.now();
 };
 

@@ -46,14 +46,66 @@ public class BookingPaymentRepository {
 
     public void insertDepositTransaction(long bookingId, String transactionCode, String dbMethod,
                                          BigDecimal amount, LocalDateTime paidAt) {
+        insertDepositTransaction(bookingId, transactionCode, dbMethod, amount, paidAt, null);
+    }
+
+    public void insertDepositTransaction(long bookingId, String transactionCode, String dbMethod,
+                                         BigDecimal amount, LocalDateTime paidAt, String reference) {
         String sql = """
                 INSERT INTO billing.payment_transactions (
                     booking_id, invoice_id, transaction_code, transaction_type, method,
                     amount, status, provider_reference, refund_of_transaction_id,
                     processed_by, paid_at, created_at
-                ) VALUES (?, NULL, ?, 'DEPOSIT', ?, ?, 'SUCCESS', NULL, NULL, NULL, ?, ?)
+                ) VALUES (?, NULL, ?, 'DEPOSIT', ?, ?, 'SUCCESS', ?, NULL, NULL, ?, ?)
                 """;
-        jdbc.update(sql, bookingId, transactionCode, dbMethod, amount, paidAt, paidAt);
+        jdbc.update(sql, bookingId, transactionCode, dbMethod, amount, reference, paidAt, paidAt);
+    }
+
+    public boolean hasDepositReference(long bookingId, String reference) {
+        Integer count = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM billing.payment_transactions
+                WHERE booking_id = ? AND provider_reference = ?
+                  AND transaction_type = 'DEPOSIT' AND status = 'SUCCESS'
+                """, Integer.class, bookingId, reference);
+        return count != null && count > 0;
+    }
+
+    public boolean hasVerifiedPayosLink(long bookingId, String linkId) {
+        Integer count = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM billing.payment_transactions
+                WHERE booking_id = ? AND provider_reference = ?
+                  AND transaction_type = 'DEPOSIT' AND status = 'PENDING'
+                """, Integer.class, bookingId, "PAYOS-LINK-" + linkId);
+        return count != null && count > 0;
+    }
+
+    public Optional<String> findVerifiedPayosLink(long bookingId) {
+        return jdbc.query("""
+                SELECT TOP 1 provider_reference FROM billing.payment_transactions
+                WHERE booking_id = ? AND provider_reference LIKE 'PAYOS-LINK-%'
+                ORDER BY transaction_id DESC
+                """, (rs, row) -> rs.getString(1).substring("PAYOS-LINK-".length()), bookingId)
+                .stream().findFirst();
+    }
+
+    public void rememberVerifiedPayosLink(long bookingId, String linkId, BigDecimal amount) {
+        String reference = "PAYOS-LINK-" + linkId;
+        jdbc.update("""
+                INSERT INTO billing.payment_transactions
+                    (booking_id, transaction_code, transaction_type, method, amount, status, provider_reference)
+                SELECT ?, ?, 'DEPOSIT', 'BANK_TRANSFER', ?, 'PENDING', ?
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM billing.payment_transactions WITH (UPDLOCK, HOLDLOCK)
+                    WHERE provider_reference = ?
+                )
+                """, bookingId, reference, amount, reference, reference);
+    }
+
+    public void closeVerifiedPayosLink(long bookingId, String linkId) {
+        jdbc.update("""
+                UPDATE billing.payment_transactions SET status = 'CANCELLED'
+                WHERE booking_id = ? AND provider_reference = ? AND status = 'PENDING'
+                """, bookingId, "PAYOS-LINK-" + linkId);
     }
 
     /**

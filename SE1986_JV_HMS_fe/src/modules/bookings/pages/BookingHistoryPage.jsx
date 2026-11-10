@@ -16,7 +16,7 @@ import {
 import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
-import { bookingsApi } from '../api/bookingsApi';
+import { bookingsApi, bookingsDataSource, collectBookingPages } from '../api/bookingsApi';
 import { useAsyncData } from '../hooks/useAsyncData';
 import {
   BOOKING_GROUPS,
@@ -54,7 +54,7 @@ const compareBookings = (first, second) => {
     : second.checkIn.localeCompare(first.checkIn);
 };
 
-function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
+function BookingRow({ booking, canPayDeposit, canCancel }) {
   const nights = nightsBetween(booking.checkIn, booking.checkOut);
   const holdRemaining =
     booking.status === 'PENDING' ? holdRemainingSeconds(booking) : null;
@@ -70,7 +70,6 @@ function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
           <div className="bh-item__code">{booking.id}</div>
           <div className="bh-item__type">
             {booking.roomTypeName || 'Đang cập nhật'} · {booking.rooms || 1} phòng
-            {showCustomer && booking.customerName ? ` · ${booking.customerName}` : ''}
           </div>
           <div className="bh-item__status">
             <BookingStatus status={booking.status} />
@@ -139,20 +138,15 @@ function BookingRow({ booking, canPayDeposit, canCancel, showCustomer }) {
 }
 
 export default function BookingHistoryPage() {
-  const { role, hasPermission } = useAuth();
-  const canManageBookings = hasPermission('UC-C5');
+  const { hasPermission } = useAuth();
   const canCreateBooking = hasPermission('UC-C1');
   const canSearchRooms = hasPermission('UC-B4');
   const canPayDeposit = hasPermission('UC-C2');
   const canCancel = hasPermission('UC-C4');
 
-  // Khách chỉ thấy đơn của mình (backend đã scope theo JWT); quản lý thấy toàn bộ.
   const { data, loading, error, refetch } = useAsyncData(
-    () =>
-      canManageBookings
-        ? bookingsApi.listAll({ size: 200 })
-        : bookingsApi.listMine({ size: 200 }),
-    [canManageBookings],
+    () => collectBookingPages(bookingsApi.listMine),
+    [],
   );
 
   const [params, setParams] = useSearchParams();
@@ -160,10 +154,7 @@ export default function BookingHistoryPage() {
   const [query, setQuery] = useState('');
   const [, setTick] = useState(0);
 
-  const bookings = useMemo(
-    () => (canManageBookings ? data?.items || [] : data || []),
-    [canManageBookings, data],
-  );
+  const bookings = useMemo(() => data || [], [data]);
 
   // Đếm ngược hiển thị; khi có đơn quá 15 phút thì tải lại để nhận trạng thái EXPIRED.
   useEffect(() => {
@@ -185,7 +176,6 @@ export default function BookingHistoryPage() {
   const groupFilter = BOOKING_GROUPS.some((group) => group.key === rawGroup)
     ? rawGroup
     : 'ALL';
-  const isCustomerView = role === 'CUSTOMER' || !canManageBookings;
 
   const counts = useMemo(() => {
     const result = { ALL: bookings.length };
@@ -259,7 +249,7 @@ export default function BookingHistoryPage() {
         </div>
       </header>
 
-      {isCustomerView && (
+      {bookingsDataSource !== 'api' && (
         <div className="bh-demo-note">
           <span className="bh-demo-note__icon">
             <CalendarCheck aria-hidden="true" />
@@ -330,7 +320,7 @@ export default function BookingHistoryPage() {
           type="button"
           className="bh-reload"
           onClick={reload}
-          title="Tải lại dữ liệu demo"
+          title="Tải lại dữ liệu đặt phòng"
         >
           <ArrowRepeat aria-hidden="true" />
           <span className="d-none d-sm-inline">Tải lại</span>
@@ -396,7 +386,6 @@ export default function BookingHistoryPage() {
                 booking={booking}
                 canPayDeposit={canPayDeposit}
                 canCancel={canCancel}
-                showCustomer={!isCustomerView}
               />
             ))}
           </ul>

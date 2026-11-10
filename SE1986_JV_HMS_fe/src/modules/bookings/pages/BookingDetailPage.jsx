@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router';
 import { useAuth } from '../../../app/provider/AuthsContext';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
-import { bookingsApi } from '../api/bookingsApi';
+import { bookingsApi, bookingsDataSource } from '../api/bookingsApi';
 import { useAsyncData } from '../hooks/useAsyncData';
 import {
   BOOKING_STATUS,
@@ -18,10 +18,8 @@ import {
 
 export default function BookingDetailPage() {
   const { id } = useParams();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const canManageBookings = hasPermission('UC-C5');
-  const canCancelBooking = hasPermission('UC-C4');
-  const canPayDeposit = hasPermission('UC-C2');
   const { data: booking, loading, error } = useAsyncData(
     () => bookingsApi.getByCode(id),
     [id],
@@ -63,6 +61,9 @@ export default function BookingDetailPage() {
   const holdExpired =
     booking.status === 'PENDING' && remaining !== null && remaining <= 0;
   const displayStatus = holdExpired ? 'EXPIRED' : booking.status;
+  const ownsBooking = bookingsDataSource !== 'api' || booking.customerId === user?.id;
+  const canCancelBooking = ownsBooking && hasPermission('UC-C4');
+  const canPayDeposit = ownsBooking && hasPermission('UC-C2');
   const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status) && !holdExpired;
   const canPay = booking.status === 'PENDING' && !holdExpired;
   const timeline =

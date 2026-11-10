@@ -27,10 +27,14 @@ export const useAsyncData = (loader, deps = []) => {
       })
       .catch((caught) => {
         if (live) {
+          const message =
+            caught?.response?.status === 502
+              ? 'Không kết nối được với máy chủ đặt phòng. Hãy thử lại khi máy chủ hoạt động.'
+              : caught?.message || 'Không tải được dữ liệu đặt phòng.';
           setState({
             data: null,
             loading: false,
-            error: caught?.message || 'Không tải được dữ liệu đặt phòng.',
+            error: message,
           });
         }
       });
