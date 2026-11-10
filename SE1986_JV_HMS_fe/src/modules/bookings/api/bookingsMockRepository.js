@@ -53,6 +53,10 @@ export const bookingsMockRepository = {
     return pageOf(items, page, size).map(toView);
   },
 
+  async listPendingDeposits({ page, size }) {
+    return this.listMine({ status: 'PENDING', page, size });
+  },
+
   async listAll({ status = '', keyword = '', page = 0, size = 20 } = {}) {
     const items = getBookings()
       .filter((booking) => matchesStatus(booking, status))

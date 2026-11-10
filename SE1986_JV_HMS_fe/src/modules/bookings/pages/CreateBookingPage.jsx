@@ -72,7 +72,7 @@ export default function CreateBookingPage() {
   useEffect(() => {
     let live = true;
     roomsApi
-      .getAll()
+      .getCatalog()
       .then((data) => {
         if (!live) return;
         const activeTypes = data.roomTypes.filter((room) => room.isActive);
@@ -187,7 +187,7 @@ export default function CreateBookingPage() {
       .availability(roomType.id, {
         checkIn: form.checkIn,
         checkOut: form.checkOut,
-        guests: form.guests,
+        guests: Math.ceil(guestCount / roomCount),
       })
       .then(async (availabilityResult) => {
         const availableRooms = Number(availabilityResult?.availableRooms || 0);

@@ -4,6 +4,7 @@ import com.hotel.hms.bookings.dto.BookingResponse;
 import com.hotel.hms.bookings.repository.BookingPaymentRepository;
 import com.hotel.hms.bookings.repository.BookingPaymentRepository.PaymentTarget;
 import com.hotel.hms.common.exception.ApiException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +44,9 @@ public class BookingDepositService {
     private final BookingPaymentRepository repository;
     private final BookingQueryService queryService;
 
+    @Value("${BOOKING_PAYOS_ENABLED:false}")
+    private boolean payosEnabled;
+
     public BookingDepositService(BookingPaymentRepository repository,
                                  BookingQueryService queryService) {
         this.repository = repository;
@@ -55,6 +59,23 @@ public class BookingDepositService {
      */
     @Transactional
     public BookingResponse payDeposit(long customerId, String bookingCode, String method) {
+        if (payosEnabled) {
+            throw new ApiException(CONFLICT, "BOOKING_USE_PAYOS",
+                    "Vui lòng thanh toán tiền cọc qua trang chuyển khoản payOS.");
+        }
+        return settleDeposit(customerId, bookingCode, method, null, null);
+    }
+
+    @Transactional
+    public BookingResponse confirmPayosDeposit(long customerId, String bookingCode,
+                                                BigDecimal verifiedAmount, String reference) {
+        BookingResponse booking = settleDeposit(customerId, bookingCode, "BANK_TRANSFER", verifiedAmount, reference);
+        repository.closeVerifiedPayosLink(booking.bookingId(), reference.substring("PAYOS-".length()));
+        return booking;
+    }
+
+    private BookingResponse settleDeposit(long customerId, String bookingCode, String method,
+                                          BigDecimal verifiedAmount, String reference) {
         if (bookingCode == null || bookingCode.isBlank()) {
             throw new ApiException(BAD_REQUEST, "BOOKING_CODE_REQUIRED", "Thiếu mã đặt phòng.");
         }
@@ -70,6 +91,9 @@ public class BookingDepositService {
         if (target.customerId() != customerId) {
             throw new ApiException(NOT_FOUND, "BOOKING_NOT_FOUND",
                     "Không tìm thấy đặt phòng này.");
+        }
+        if (reference != null && repository.hasDepositReference(target.bookingId(), reference)) {
+            return queryService.getByCode(customerId, target.bookingCode(), false);
         }
         if (!"PENDING".equals(target.status())) {
             throw new ApiException(CONFLICT, "BOOKING_NOT_PAYABLE",
@@ -90,8 +114,17 @@ public class BookingDepositService {
                     "Đặt phòng này không yêu cầu tiền cọc.");
         }
 
-        repository.insertDepositTransaction(target.bookingId(), newTransactionCode(),
-                dbMethod, amount, now);
+        if (reference == null) {
+            repository.insertDepositTransaction(target.bookingId(), newTransactionCode(),
+                    dbMethod, amount, now);
+        } else {
+            if (amount.compareTo(verifiedAmount) != 0) {
+                throw new ApiException(CONFLICT, "BOOKING_DEPOSIT_AMOUNT_MISMATCH",
+                        "Số tiền đã nhận không khớp tiền cọc của đặt phòng.");
+            }
+            repository.insertDepositTransaction(target.bookingId(), newTransactionCode(),
+                    dbMethod, amount, now, reference);
+        }
 
         if (repository.confirmAfterDeposit(target.bookingId(), now) == 0) {
             // Hủy/hết hạn vừa thắng race: rollback toàn bộ giao dịch đã ghi.

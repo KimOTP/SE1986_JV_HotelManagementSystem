@@ -224,7 +224,7 @@ export default function App() {
           <Route
             path="bookings/:id"
             element={
-              <PermissionRoute permission="UC-C6">
+              <PermissionRoute permission={['UC-C6', 'UC-C5']}>
                 <BookingDetailPage />
               </PermissionRoute>
             }

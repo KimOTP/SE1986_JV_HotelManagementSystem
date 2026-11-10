@@ -233,6 +233,22 @@ class BookingApiSecurityTests {
     }
 
     @Test
+    void pendingDepositListUsesUcC2AndScopesToCurrentUser() throws Exception {
+        when(queryService.listMine(5L, "PENDING", 1, 100)).thenReturn(List.of(response()));
+
+        mvc.perform(get("/api/bookings/deposit/pending")
+                        .with(auth(5L, "UC-C3")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/bookings/deposit/pending")
+                        .with(auth(5L, "UC-C2"))
+                        .param("page", "1").param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("BK-TEST"));
+
+        verify(queryService).listMine(5L, "PENDING", 1, 100);
+    }
+
+    @Test
     void customerWithUcC3ListsOnlyOwnBookings() throws Exception {
         when(queryService.listMine(eq(5L), eq(""), eq(0), eq(20)))
                 .thenReturn(List.of(response()));
