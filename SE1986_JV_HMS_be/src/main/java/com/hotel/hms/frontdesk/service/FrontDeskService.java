@@ -225,7 +225,7 @@ public class FrontDeskService {
             bookingRoomRepository.save(stay);
             HotelRoom room = lockedRooms.get(stay.getRoom().getId());
             room.setOperationalStatus("AVAILABLE");
-            room.setHousekeepingStatus("DIRTY");
+            room.setHousekeepingStatus("CLEAN");
             roomRepository.save(room);
         }
         booking.setStatus("CHECKED_OUT");

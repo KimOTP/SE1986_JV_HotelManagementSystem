@@ -86,9 +86,6 @@ body {
 .room-map-card.status-occupied {
   border-left-color: #dc3545;
 }
-.room-map-card.status-dirty {
-  border-left-color: #ffc107;
-}
 .room-map-card.status-maintenance {
   border-left-color: #6c757d;
 }
@@ -107,9 +104,6 @@ body {
 }
 .legend.occupied {
   background: #dc3545;
-}
-.legend.dirty {
-  background: #ffc107;
 }
 .legend.maintenance {
   background: #6c757d;

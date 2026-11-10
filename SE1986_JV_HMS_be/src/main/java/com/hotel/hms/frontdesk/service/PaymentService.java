@@ -46,20 +46,22 @@ public class PaymentService {
                 .map(PaymentTransaction::getMethod).orElse(null);
     }
 
-    // Only for cash/bank transfer already verified by an authorized staff member.
+    public boolean hasProviderReference(Long invoiceId, String providerReference) {
+        return paymentRepository.existsByInvoice_IdAndProviderReference(invoiceId, providerReference);
+    }
+
+    // Invoice payments are bank transfers confirmed by payOS only (no cash).
     // Caller owns @Transactional and locks the booking -> invoice in that order.
-    public PaymentTransaction recordManualPayment(BookingStay booking, InvoiceRecord invoice,
-                                                  String method, BigDecimal amount, Long actorId) {
-        if (!"CASH".equals(method) && !"BANK_TRANSFER".equals(method)) {
-            throw ApiException.bad("Không hỗ trợ xác nhận tự động thẻ/gateway. Chỉ CASH/BANK_TRANSFER.");
-        }
+    public PaymentTransaction recordPayosPayment(BookingStay booking, InvoiceRecord invoice,
+                                                 BigDecimal amount, Long actorId, String providerReference) {
         if (amount == null || amount.signum() <= 0) throw ApiException.bad("Số tiền phải > 0.");
         PaymentTransaction transaction = new PaymentTransaction();
         transaction.setBooking(booking);
         transaction.setInvoice(invoice);
         transaction.setCode("TX-" + UUID.randomUUID().toString().replace("-", "").toUpperCase());
         transaction.setTransactionType("PAYMENT");
-        transaction.setMethod(method);
+        transaction.setMethod("BANK_TRANSFER");
+        transaction.setProviderReference(providerReference);
         transaction.setAmount(amount);
         transaction.setStatus("SUCCESS");
         transaction.setProcessedBy(actorId);

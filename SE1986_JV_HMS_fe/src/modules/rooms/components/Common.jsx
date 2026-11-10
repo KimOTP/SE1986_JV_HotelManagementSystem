@@ -30,10 +30,10 @@ export function ActiveBadge({ active }) {
 }
 export function StatusBadge({ status }) {
   const bg =
-    { READY: 'success', OCCUPIED: 'danger', DIRTY: 'warning', MAINTENANCE: 'secondary' }[status] ||
+    { READY: 'success', OCCUPIED: 'danger', MAINTENANCE: 'secondary' }[status] ||
     'dark';
   return (
-    <Badge bg={bg} text={status === 'DIRTY' ? 'dark' : undefined}>
+    <Badge bg={bg}>
       {STATUS_LABELS[status] || status}
     </Badge>
   );

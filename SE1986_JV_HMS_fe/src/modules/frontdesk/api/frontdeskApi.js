@@ -27,8 +27,12 @@ export const frontdeskApi = {
         data(axiosClient.delete(`${base}/invoices/${encodeURIComponent(invoiceNumber)}`)),
     restoreInvoice: (invoiceNumber) =>
         data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/restore`)),
-    payInvoice: (invoiceNumber, method = 'CASH') =>
-        data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay`, { method })),
+    payInvoice: (invoiceNumber) =>
+        data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay`)),
+    startInvoicePayos: (invoiceNumber) =>
+        data(axiosClient.post(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay/payos`)),
+    verifyInvoicePayos: (invoiceNumber) =>
+        data(axiosClient.get(`${base}/invoices/${encodeURIComponent(invoiceNumber)}/pay/payos/verify`)),
 };
 
 export default frontdeskApi;

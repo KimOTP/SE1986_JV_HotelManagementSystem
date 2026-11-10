@@ -15,6 +15,8 @@ public interface PaymentRepository extends JpaRepository<PaymentTransaction, Lon
     List<PaymentTransaction> findByInvoice_IdAndStatusAndTransactionTypeIn(
             Long invoiceId, String status, Collection<String> types);
 
+    boolean existsByInvoice_IdAndProviderReference(Long invoiceId, String providerReference);
+
     Optional<PaymentTransaction> findFirstByInvoice_IdAndTransactionTypeAndStatusOrderByPaidAtDescIdDesc(
             Long invoiceId, String transactionType, String status);
 

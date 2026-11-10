@@ -192,8 +192,8 @@ class InventorySqlServerTests {
     }
 
     @Test
-    void dirtyAndCleaningDoNotBlockDateSearch() {
-        for (String status : List.of("DIRTY", "CLEANING")) {
+    void cleaningAndCleanDoNotBlockDateSearch() {
+        for (String status : List.of("CLEANING", "CLEAN")) {
             jdbc.update("UPDATE inventory.rooms SET housekeeping_status=? WHERE room_id=?", status, room);
             assertEquals(1, count());
         }
@@ -223,13 +223,13 @@ class InventorySqlServerTests {
         assertEquals("AVAILABLE", created.operationalStatus());
         assertEquals("CLEAN", created.housekeepingStatus());
         jdbc.update(
-                "UPDATE inventory.rooms SET operational_status='OCCUPIED',housekeeping_status='DIRTY' WHERE room_id=?",
+                "UPDATE inventory.rooms SET operational_status='OCCUPIED',housekeeping_status='CLEANING' WHERE room_id=?",
                 Long.valueOf(created.id()));
         entityManager.clear();
         var updated = service.saveRoom(hotel, Long.valueOf(created.id()),
                 new RoomWrite("N2", 0, Long.valueOf(saved.id()), "Mới", true));
         assertEquals("OCCUPIED", updated.operationalStatus());
-        assertEquals("DIRTY", updated.housekeepingStatus());
+        assertEquals("CLEANING", updated.housekeepingStatus());
     }
 
     @Test

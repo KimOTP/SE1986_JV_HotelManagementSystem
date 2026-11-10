@@ -126,7 +126,7 @@ CREATE TABLE inventory.rooms (
     floor_number INT NOT NULL,
     notes NVARCHAR(2000) NULL,
     operational_status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' CHECK(operational_status IN ('AVAILABLE','OCCUPIED','MAINTENANCE')),
-    housekeeping_status VARCHAR(20) NOT NULL DEFAULT 'CLEAN' CHECK(housekeeping_status IN ('DIRTY','CLEANING','CLEAN')),
+    housekeeping_status VARCHAR(20) NOT NULL DEFAULT 'CLEAN' CHECK(housekeeping_status IN ('CLEANING','CLEAN')),
     is_active BIT NOT NULL DEFAULT 1,
     created_at DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),

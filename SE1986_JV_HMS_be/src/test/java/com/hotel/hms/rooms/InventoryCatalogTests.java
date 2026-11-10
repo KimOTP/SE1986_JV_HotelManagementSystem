@@ -15,7 +15,7 @@ class InventoryCatalogTests {
     InventoryService service = spy(new InventoryService(repository));
     RoomTypeView type = new RoomTypeView("2", "Deluxe", "", BigDecimal.TEN, 2, null, "Double", List.of(),
             List.of("3"), true, null);
-    RoomView room = new RoomView("4", "201", 2, "2", "", true, "OCCUPIED", "DIRTY", "OCCUPIED");
+    RoomView room = new RoomView("4", "201", 2, "2", "", true, "OCCUPIED", "CLEAN", "OCCUPIED");
 
     @BeforeEach
     void setup() {

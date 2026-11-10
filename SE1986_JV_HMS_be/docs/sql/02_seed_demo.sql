@@ -60,8 +60,8 @@ INSERT inventory.amenities(name,icon) VALUES (N'Wi-Fi','wifi'),(N'Điều hòa',
 INSERT inventory.room_type_amenities VALUES(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3),(3,4);
 INSERT inventory.rooms(room_type_id,room_number,floor_number,operational_status,housekeeping_status) VALUES
  (1,'101',1,'AVAILABLE','CLEAN'),(1,'102',1,'AVAILABLE','CLEAN'),
- (1,'103',1,'MAINTENANCE','DIRTY'),(2,'201',2,'AVAILABLE','CLEAN'),
- (2,'202',2,'AVAILABLE','DIRTY'),(3,'301',3,'AVAILABLE','CLEAN');
+ (1,'103',1,'MAINTENANCE','CLEAN'),(2,'201',2,'AVAILABLE','CLEAN'),
+ (2,'202',2,'AVAILABLE','CLEAN'),(3,'301',3,'AVAILABLE','CLEAN');
 INSERT billing.services(hotel_id,name,unit,unit_price) VALUES
  (1,N'Nước suối',N'Chai',15000),(1,N'Giặt là',N'Kg',50000),(1,N'Ăn sáng',N'Suất',100000);
 INSERT operations.issue_types(name) VALUES(N'Điện'),(N'Nước'),(N'Thiết bị'),(N'Vệ sinh');

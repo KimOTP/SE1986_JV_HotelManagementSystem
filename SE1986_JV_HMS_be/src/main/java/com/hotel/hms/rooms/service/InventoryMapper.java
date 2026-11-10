@@ -49,6 +49,6 @@ public final class InventoryMapper {
     public static String displayStatus(String operational, String housekeeping) {
         if ("MAINTENANCE".equals(operational) || "OCCUPIED".equals(operational))
             return operational;
-        return "CLEAN".equals(housekeeping) ? "READY" : "DIRTY";
+        return "READY";
     }
 }
