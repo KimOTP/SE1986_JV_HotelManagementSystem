@@ -20,7 +20,6 @@ Không coi test adapter hoặc test security mock là kiểm chứng DB/end-to-e
 ## Cấu hình API
 
 ```dotenv
-VITE_AUTH_DATA_SOURCE=api
 VITE_API_BASE_URL=http://localhost:8080/api
 ```
 

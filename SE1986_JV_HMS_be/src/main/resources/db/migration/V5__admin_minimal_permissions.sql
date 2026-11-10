@@ -2,8 +2,6 @@
 -- ADMIN chi giu: dang nhap/ho so (A2-A4), quan ly tai khoan va vai tro (A5, A6),
 -- quan ly loai phong, phong, tien nghi (B1-B3). Viec van hanh tra ve cho quan ly va nhan vien.
 -- Chay lai nhieu lan van an toan. Co the cap lai quyen o man UC-A6.
-USE HotelManagement_SBA;
-GO
 SET QUOTED_IDENTIFIER ON;
 SET XACT_ABORT ON;
 GO
