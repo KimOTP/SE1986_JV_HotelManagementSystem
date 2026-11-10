@@ -106,6 +106,11 @@ public class InvoicePayosService {
                     "Link thanh toán không còn chờ. Vui lòng kiểm tra trạng thái giao dịch.");
         }
         String account = link.path("accountNumber").asString();
+        // Resuming an existing link: payOS's payment-info response omits the receiving account,
+        // and this link was already verified when our own signed create request produced it.
+        if (!created && link.path("bin").isMissingNode() && link.path("accountNumber").isMissingNode()) {
+            return new Checkout("https://pay.payos.vn/web/" + linkId);
+        }
         if (!receiverBin.equals(link.path("bin").asString()) || account.isBlank()
                 || (!receiverAccount.isBlank() && !receiverAccount.equals(account))
                 || (!receiverName.isBlank()

@@ -78,6 +78,11 @@ public class IssueProgressService {
                 WHERE issue_id = ? AND assigned_staff_id = ? AND status = 'ASSIGNED'
                 """, issueId, worker.staffId());
         requireChanged(changed);
+        jdbc.update("""
+                UPDATE operations.tasks
+                SET status = 'IN_PROGRESS', started_at = SYSUTCDATETIME(), updated_at = SYSUTCDATETIME()
+                WHERE issue_id = ? AND assigned_staff_id = ? AND status = 'PENDING'
+                """, issueId, worker.staffId());
         return new IssueProgressResponse(issueId, "IN_PROGRESS");
     }
     @Transactional
@@ -97,6 +102,12 @@ public class IssueProgressService {
             return statement;
         });
         requireChanged(changed);
+        jdbc.update("""
+                UPDATE operations.tasks
+                SET status = 'COMPLETED', started_at = COALESCE(started_at, SYSUTCDATETIME()),
+                    completed_at = SYSUTCDATETIME(), updated_at = SYSUTCDATETIME()
+                WHERE issue_id = ? AND assigned_staff_id = ? AND status IN ('PENDING', 'IN_PROGRESS')
+                """, issueId, worker.staffId());
         return new IssueProgressResponse(issueId, "RESOLVED");
     }
     private void requireChanged(int changed) {

@@ -140,6 +140,12 @@ export default function FeedbackManagement() {
                       {booking.hotelName} · Trả phòng{' '}
                       {new Date(booking.checkOutDate + 'T00:00:00').toLocaleDateString('vi-VN')}
                     </div>
+                    <div className="text-muted small">
+                      Phòng đã ở:{' '}
+                      {booking.rooms?.length > 0
+                        ? booking.rooms.join(', ')
+                        : 'Chưa có thông tin phòng'}
+                    </div>
                   </div>
                   <Button
                     onClick={() => {
@@ -267,6 +273,12 @@ export default function FeedbackManagement() {
                     <small>
                       {feedback.bookingCode} · {feedback.hotelName} · {date(feedback.createdAt)}
                     </small>
+                    <div className="small text-muted">
+                      Phòng đã ở:{' '}
+                      {feedback.rooms?.length > 0
+                        ? feedback.rooms.join(', ')
+                        : 'Chưa có thông tin phòng'}
+                    </div>
                   </div>
                   <Badge
                     bg={feedback.reply !== null ? 'success' : 'warning'}
