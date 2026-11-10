@@ -466,7 +466,7 @@
 /* ------------------------------------------------------------------ */
 
 .bookings-module.booking-create-page {
-  max-width: 1120px;
+  max-width: none;
 }
 
 /* Hero banner */
@@ -547,7 +547,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  margin: -28px 22px 22px;
+  margin: -28px 0 22px;
   padding: 14px 22px;
   list-style: none;
   border: 1px solid var(--booking-border);
@@ -1280,7 +1280,7 @@
   .bookings-module .booking-create-steps {
     flex-wrap: wrap;
     gap: 10px;
-    margin: -24px 14px 20px;
+    margin: -24px 0 20px;
     padding: 13px 16px;
   }
 
