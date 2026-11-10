@@ -357,7 +357,7 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 chuyển người dùng STAFF sang vai trò mới theo chức danh (có "dọn phòng", "buồng" → Buồng phòng, còn lại → Lễ tân) rồi xóa vai trò STAFF.
 Người đang đăng nhập từ trước cần đăng xuất rồi đăng nhập lại để nhận vai trò mới. DB tạo mới từ `docs/sql/02_seed_demo.sql` đã có sẵn hai vai trò này.
 
-**Quyền ADMIN gọn hơn:** chạy thêm `scripts/migrate-admin-minimal-permissions.sql` (bỏ UC-C1..C4, UC-E2 khỏi ADMIN; thêm UC-C5 cho Lễ tân để xem đặt phòng).
+**Quyền ADMIN gọn hơn:** chạy thêm `scripts/migrate-admin-minimal-permissions.sql` (ADMIN chỉ giữ A2–A6 và B1–B3, việc vận hành trả về Quản lý/nhân viên; thêm UC-C5 cho Lễ tân để xem đặt phòng).
 
 0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
    `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
