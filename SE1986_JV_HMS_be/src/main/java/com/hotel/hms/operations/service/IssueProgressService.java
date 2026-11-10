@@ -32,7 +32,7 @@ public class IssueProgressService {
                   AND EXISTS (
                       SELECT 1 FROM identity_access.user_roles ur
                       JOIN identity_access.roles r ON r.role_id = ur.role_id
-                      WHERE ur.user_id = u.user_id AND r.code = 'STAFF' AND r.is_active = 1
+                      WHERE ur.user_id = u.user_id AND r.code = 'HOUSEKEEPER' AND r.is_active = 1
                   )
                 """, (rs, row) -> new Worker(rs.getLong("staff_id"), rs.getLong("hotel_id"), rs.getString("full_name")), email);
         return workers.isEmpty() ? null : workers.getFirst();
@@ -40,14 +40,14 @@ public class IssueProgressService {
     public IssueWorkContext getContext() {
         var worker = currentWorker();
         return worker == null
-                ? new IssueWorkContext(false, null, null, "Tài khoản hiện tại không có hồ sơ nhân viên STAFF đang hoạt động.")
+                ? new IssueWorkContext(false, null, null, "Tài khoản hiện tại không có hồ sơ nhân viên buồng phòng (HOUSEKEEPER) đang hoạt động.")
                 : new IssueWorkContext(true, worker.staffId(), worker.name(), "Xử lý bằng nhân viên đang đăng nhập.");
     }
     // Revalidate the logged-in staff account and hotel membership in SQL.
     public Worker requireWorker() {
         var worker = currentWorker();
         if (worker == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                "Tài khoản hiện tại cần hồ sơ nhân viên và vai trò STAFF đang hoạt động.");
+                "Tài khoản hiện tại cần hồ sơ nhân viên và vai trò HOUSEKEEPER đang hoạt động.");
         return worker;
     }
     private void assertAssignedIssue(Long issueId, Worker worker, String expectedStatus) {

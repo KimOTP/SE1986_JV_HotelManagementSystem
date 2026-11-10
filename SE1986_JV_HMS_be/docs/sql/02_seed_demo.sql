@@ -8,13 +8,13 @@ IF EXISTS(SELECT 1 FROM identity_access.hotels)
 INSERT identity_access.hotels(name,address,phone,email) VALUES
  (N'SBA Hotel',N'Hà Nội, Việt Nam','0241234567','contact@sba.example');
 INSERT identity_access.roles(code,name) VALUES
- ('ADMIN',N'Quản trị viên'),('MANAGER',N'Quản lý'),('STAFF',N'Nhân viên'),('CUSTOMER',N'Khách hàng');
+ ('ADMIN',N'Quản trị viên'),('MANAGER',N'Quản lý'),('RECEPTIONIST',N'Lễ tân'),('HOUSEKEEPER',N'Buồng phòng'),('CUSTOMER',N'Khách hàng');
 INSERT identity_access.users(full_name,email,phone,password_hash,email_verified) VALUES(N'Admin Demo','admin@sba.example','0901234567','$2b$10$6p9R6eqKBc7rIUW8IU499euSwkOjq99O2lX3D5lHNhy9g4.ImGrqC',1);
 INSERT identity_access.users(full_name,email,phone,password_hash,email_verified) VALUES(N'Manager Demo','manager@sba.example','0901234567','$2b$10$6p9R6eqKBc7rIUW8IU499euSwkOjq99O2lX3D5lHNhy9g4.ImGrqC',1);
 INSERT identity_access.users(full_name,email,phone,password_hash,email_verified) VALUES(N'Reception Demo','reception@sba.example','0901234567','$2b$10$6p9R6eqKBc7rIUW8IU499euSwkOjq99O2lX3D5lHNhy9g4.ImGrqC',1);
 INSERT identity_access.users(full_name,email,phone,password_hash,email_verified) VALUES(N'Housekeeper Demo','housekeeper@sba.example','0901234567','$2b$10$6p9R6eqKBc7rIUW8IU499euSwkOjq99O2lX3D5lHNhy9g4.ImGrqC',1);
 INSERT identity_access.users(full_name,email,phone,password_hash,email_verified) VALUES(N'Customer Demo','customer@sba.example','0901234567','$2b$10$6p9R6eqKBc7rIUW8IU499euSwkOjq99O2lX3D5lHNhy9g4.ImGrqC',1);
-INSERT identity_access.user_roles(user_id,role_id) VALUES(1,1),(2,2),(3,3),(4,3),(5,4);
+INSERT identity_access.user_roles(user_id,role_id) VALUES(1,1),(2,2),(3,3),(4,4),(5,5);
 INSERT identity_access.staff(user_id,hotel_id,employee_code,job_title) VALUES
  (2,1,'M001',N'Quản lý'),(3,1,'R001',N'Lễ tân'),(4,1,'H001',N'Dọn phòng');
 INSERT identity_access.permissions(code,name) VALUES('UC-A1',N'UC-A1');
@@ -47,9 +47,10 @@ INSERT identity_access.permissions(code,name) VALUES('UC-E3',N'UC-E3');
 INSERT identity_access.permissions(code,name) VALUES('UC-E4',N'UC-E4');
 INSERT identity_access.permissions(code,name) VALUES('UC-E5',N'UC-E5');
 INSERT identity_access.permissions(code,name) VALUES('UC-E6',N'UC-E6');
-INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='ADMIN' AND p.code IN ('UC-A1','UC-A2','UC-A3','UC-A4','UC-A5','UC-A6','UC-B1','UC-B2','UC-B3','UC-B4','UC-B5','UC-B6','UC-C1','UC-C2','UC-C3','UC-C4','UC-C5','UC-C6','UC-D1','UC-D2','UC-D3','UC-D4','UC-D5','UC-D6','UC-E1','UC-E2','UC-E3','UC-E4','UC-E5','UC-E6');
+INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='ADMIN' AND p.code IN ('UC-A2','UC-A3','UC-A4','UC-A5','UC-A6','UC-B1','UC-B2','UC-B3');
 INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='MANAGER' AND p.code IN ('UC-A2','UC-A3','UC-A4','UC-B4','UC-B5','UC-B6','UC-C5','UC-C6','UC-D1','UC-D2','UC-D3','UC-D4','UC-D5','UC-E1','UC-E3','UC-E4','UC-E5','UC-E6');
-INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='STAFF' AND p.code IN ('UC-A2','UC-A3','UC-A4','UC-B4','UC-B5','UC-B6','UC-C6','UC-D1','UC-D2','UC-D3','UC-D4','UC-E2','UC-E4','UC-E5');
+INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='RECEPTIONIST' AND p.code IN ('UC-A2','UC-A3','UC-A4','UC-B4','UC-B5','UC-B6','UC-C5','UC-C6','UC-D1','UC-D2','UC-D3','UC-D4','UC-E4');
+INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='HOUSEKEEPER' AND p.code IN ('UC-A2','UC-A3','UC-A4','UC-B6','UC-E2','UC-E4','UC-E5');
 INSERT identity_access.role_permissions(role_id,permission_id) SELECT r.role_id,p.permission_id FROM identity_access.roles r CROSS JOIN identity_access.permissions p WHERE r.code='CUSTOMER' AND p.code IN ('UC-A1','UC-A2','UC-A3','UC-A4','UC-B4','UC-B5','UC-C1','UC-C2','UC-C3','UC-C4','UC-C6','UC-E4','UC-E6');
 INSERT inventory.room_types(hotel_id,name,description,base_price,max_guests,bed_description,area_m2) VALUES
  (1,N'Standard',N'Phòng tiêu chuẩn',500000,2,N'1 giường đôi',22),

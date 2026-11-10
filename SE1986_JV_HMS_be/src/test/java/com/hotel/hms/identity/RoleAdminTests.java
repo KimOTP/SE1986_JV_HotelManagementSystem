@@ -97,18 +97,16 @@ class RoleAdminTests {
     }
 
     @Test
-    void adminAlwaysKeepsAllPermissions() {
+    void adminMustKeepUserAndRoleManagementOnly() {
         Role admin = role("ADMIN");
         when(roles.findByCode("ADMIN")).thenReturn(Optional.of(admin));
-        List<String> allButOne = all.stream().map(Permission::getCode).filter(c -> !c.equals("UC-A6")).toList();
 
         BadRequestException error = assertThrows(BadRequestException.class,
-                () -> service.updatePermissions(actor("ADMIN"), "ADMIN", allButOne));
+                () -> service.updatePermissions(actor("ADMIN"), "ADMIN", List.of("UC-A5", "UC-B1")));
         assertEquals("ADMIN_PERMISSIONS_LOCKED", error.getCode());
 
-        RoleResponse response = service.updatePermissions(actor("ADMIN"), "ADMIN",
-                all.stream().map(Permission::getCode).toList());
-        assertEquals(30, response.permissions().size());
+        RoleResponse response = service.updatePermissions(actor("ADMIN"), "ADMIN", List.of("UC-A5", "UC-A6", "UC-B1"));
+        assertEquals(Set.of("UC-A5", "UC-A6", "UC-B1"), response.permissions());
     }
 
     @Test

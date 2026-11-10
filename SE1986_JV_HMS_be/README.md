@@ -122,7 +122,7 @@ MANAGER phải có bản ghi staff active cùng khách sạn sự cố; ADMIN đ
 | Method | Endpoint | Kết quả |
 | --- | --- | --- |
 | GET | `/api/operations/issue-assignment-context` | Trạng thái bật phân công và tên manager local |
-| GET | `/api/operations/issues/{id}/assignees` | Staff active/user active/role STAFF active cùng khách sạn |
+| GET | `/api/operations/issues/{id}/assignees` | Staff active/user active/role HOUSEKEEPER active cùng khách sạn |
 | PATCH | `/api/operations/issues/{id}/assignment` | Body `{ "staffId": 3 }`; OPEN chưa gán → ASSIGNED |
 
 PATCH lưu assigned_staff_id, assigned_by (user ID manager do backend xác định), updated_at (UTC).
@@ -154,7 +154,7 @@ Kiểm thử unit: `./mvnw.cmd -Dtest=IssueAssignmentServiceTests,IssueReportSer
 Giữ profile `local-demo` và thêm biến môi trường IntelliJ:
 `OPERATIONS_DEMO_STAFF_EMAIL=housekeeper@sba.example` (user seed Housekeeper Demo, staff ID 3).
 Khởi động lại backend. Cấu hình reporter/manager vẫn riêng, không thay thế bằng staff email.
-Danh tính nhân viên local phải là user/staff/hotel active và role STAFF active.
+Danh tính nhân viên local phải là user/staff/hotel active và role HOUSEKEEPER active.
 Không thay đổi đăng nhập, JWT hay module của thành viên khác.
 
 | Method | Endpoint | Nghiệp vụ |
@@ -184,7 +184,7 @@ GET danh sách bổ sung assignedStaffId, resolutionNote và resolvedAt để fr
 7. Thử sự cố giao cho người khác: modal khóa thao tác/backend 403. Thử hai cửa sổ cùng thao tác: cửa sổ cập nhật sau nhận 409.
 8. Nếu đang lọc trạng thái cũ, bản ghi cập nhật có thể biến mất theo bộ lọc; Đặt lại để xem.
 
-Frontend chỉ hiển thị thao tác cho role STAFF + UC-E5; backend dùng danh tính cấu hình local và kiểm tra assignee.
+Frontend chỉ hiển thị thao tác cho role HOUSEKEEPER + UC-E5; backend dùng danh tính cấu hình local và kiểm tra assignee.
 Đây chưa phải xác thực JWT. Mọi hành động trong local-demo chạy dưới staff cấu hình, không phải phiên React.
 Không triển khai chia sẻ chế độ này. Phần JWT để Module A tích hợp sau.
 
@@ -229,7 +229,7 @@ Các thao tác sự cố và task hiện tách riêng; Bảng công việc của
 6. Hoàn thành task đó: COMPLETED, Chi tiết có thời gian hoàn thành; reload vẫn giữ.
 7. Nếu lọc trạng thái cũ, task có thể biến mất theo bộ lọc sau khi cập nhật.
 8. Hai cửa sổ thao tác cùng task: thao tác cập nhật sau phải nhận 409.
-9. Thử tài khoản DB khác có role STAFF hoặc bỏ profile để kiểm tra dữ liệu theo danh tính/khóa thao tác.
+9. Thử tài khoản DB khác có role HOUSEKEEPER hoặc bỏ profile để kiểm tra dữ liệu theo danh tính/khóa thao tác.
 
 Unit tests không ghi database thật:
 `./mvnw.cmd -Dtest=MyTaskServiceTests,IssueProgressServiceTests,IssueAssignmentServiceTests,IssueReportServiceTests test`.
@@ -246,7 +246,7 @@ Không sửa đăng nhập/JWT hoặc module của người khác.
 | --- | --- | --- |
 | GET | `/api/operations/tasks?page=0&size=12&room=&status=&type=` | Bảng task theo phạm vi manager local |
 | GET | `/api/operations/task-rooms` | Phòng active trong khách sạn manager quản lý |
-| GET | `/api/operations/task-assignees?roomId=3` | STAFF active cùng khách sạn với phòng |
+| GET | `/api/operations/task-assignees?roomId=3` | HOUSEKEEPER active cùng khách sạn với phòng |
 | POST | `/api/operations/tasks` | Tạo task và giao nhân viên, trạng thái PENDING |
 
 Payload POST: roomId, staffId, taskType (CLEANING/MAINTENANCE), title (1–200 sau trim),
@@ -257,7 +257,7 @@ Có thể ghi nhận lịch đã qua; không tự động chạy task theo lịc
 
 Backend lấy assigned_by từ manager local, không nhận ID người giao việc từ payload.
 MANAGER chỉ chọn phòng thuộc khách sạn có staff membership active; ADMIN quản lý khách sạn active.
-Phòng/room type/hotel active; staff/user/role STAFF active cùng khách sạn phòng. SQL insert dùng prepared statement,
+Phòng/room type/hotel active; staff/user/role HOUSEKEEPER active cùng khách sạn phòng. SQL insert dùng prepared statement,
 setNString cho tiếng Việt và transaction; DB cấp ID/timestamps/row_version.
 POST trả 201 với id và status PENDING; 400 dữ liệu/phòng/nhân viên sai, 403 khác phạm vi, 503 manager chưa cấu hình hợp lệ.
 Chưa tạo liên kết issue_id trong form mới (để null), chưa sửa/hủy/tái phân công task có sẵn.
@@ -352,6 +352,13 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 
 ### Cài đặt local
 
+**Cập nhật vai trò (tách STAFF thành Lễ tân và Buồng phòng):** DB đã có dữ liệu cần chạy
+`scripts/migrate-split-staff-role.sql` một lần (chạy lại vẫn an toàn). Script tạo vai trò `RECEPTIONIST` và `HOUSEKEEPER`,
+chuyển người dùng STAFF sang vai trò mới theo chức danh (có "dọn phòng", "buồng" → Buồng phòng, còn lại → Lễ tân) rồi xóa vai trò STAFF.
+Người đang đăng nhập từ trước cần đăng xuất rồi đăng nhập lại để nhận vai trò mới. DB tạo mới từ `docs/sql/02_seed_demo.sql` đã có sẵn hai vai trò này.
+
+**Quyền ADMIN gọn hơn:** chạy thêm `scripts/migrate-admin-minimal-permissions.sql` (ADMIN chỉ giữ A2–A6 và B1–B3, việc vận hành trả về Quản lý/nhân viên; thêm UC-C5 cho Lễ tân để xem đặt phòng).
+
 0. Chép `.env.example` thành `.env` và điền mật khẩu DB. Database tạo từ schema cũ cần chạy
    `scripts/migrate-existing-db-module-b.sql` (chỉ thêm phần còn thiếu, không xóa dữ liệu).
 1. Thêm `JWT_SECRET_BASE64` vào `.env` (xem `.env.example`; tạo bằng `openssl rand -base64 64`).
@@ -367,6 +374,8 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | Method | URL | Body | Kết quả |
 | --- | --- | --- | --- |
 | POST | `/api/auth/register` | `{ fullName, email, password }` | 201 kèm `user`; tạo CUSTOMER, đăng nhập được ngay (không xác thực qua email). Trùng email trả 409 |
+| POST | `/api/auth/forgot-password` | `{ email }` | Luôn trả 200 cùng một câu; nếu email có tài khoản thì gửi mã OTP 6 số (UC-A3) |
+| POST | `/api/auth/reset-password` | `{ email, otp, newPassword }` | 204; sai hoặc hết hạn trả 400 `INVALID_OTP`; thu hồi mọi phiên cũ (UC-A3) |
 | POST | `/api/auth/login` | `{ email, password }` | `{ accessToken, refreshToken, tokenType, expiresIn, user }` |
 | POST | `/api/auth/refresh` | `{ refreshToken }` | Cặp token mới; refresh token cũ hết hiệu lực |
 | POST | `/api/auth/logout` | `{ refreshToken }` | 204 |
@@ -374,22 +383,35 @@ Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ ch
 | PUT | `/api/users/me/profile` | `{ fullName, phone }` | `user` sau khi cập nhật; không đổi được email và role (UC-A4) |
 | PUT | `/api/users/me/password` | `{ currentPassword, newPassword }` | Cặp token mới; mọi phiên cũ bị thu hồi (UC-A4) |
 | GET | `/api/admin/users` | — | Danh sách tài khoản (UC-A5) |
-| POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/STAFF kèm dòng `staff` (UC-A5) |
-| PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/STAFF; không tự đổi vai trò của mình (UC-A5) |
-| PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/STAFF; khóa thì thu hồi mọi phiên (UC-A5) |
+| POST | `/api/admin/users` | `{ fullName, email, role, jobTitle, password }` | Tạo MANAGER/RECEPTIONIST/HOUSEKEEPER kèm dòng `staff` (UC-A5) |
+| PUT | `/api/admin/users/{id}` | `{ fullName, email, role, jobTitle }` | Sửa MANAGER/RECEPTIONIST/HOUSEKEEPER; không tự đổi vai trò của mình (UC-A5) |
+| PATCH | `/api/admin/users/{id}/status` | `{ enabled }` | Khóa hoặc mở khóa MANAGER/RECEPTIONIST/HOUSEKEEPER; khóa thì thu hồi mọi phiên (UC-A5) |
 | GET | `/api/admin/roles` | — | Danh sách role kèm mã UC (UC-A6) |
-| PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN luôn giữ đủ 30 quyền (UC-A6) |
+| PUT | `/api/admin/roles/{code}/permissions` | `{ permissions: ["UC-.."] }` | Thay toàn bộ quyền của role, có hiệu lực ngay; ADMIN bắt buộc giữ UC-A5 và UC-A6, các quyền khác chỉnh tự do |
 | POST | `/api/admin/users/{id}/reset-password` | — | `{ temporaryPassword }` chỉ trả một lần; thu hồi mọi phiên của người đó (UC-A5) |
 
 `user` gồm `id, fullName, email, phone, role, roles, permissions (mã UC), jobTitle, hotelId, emailVerified, enabled`.
 Access token sống 15 phút, refresh token 7 ngày. FE (`axiosClient`) tự gắn
 `Authorization: Bearer ...` và tự refresh khi gặp 401.
 
-### Quên mật khẩu
+### Quên mật khẩu (OTP qua email)
 
-Hệ thống không gửi mail. Người dùng liên hệ quản trị viên; quản trị viên bấm "Đặt lại mật khẩu" trong
-màn Quản lý tài khoản để nhận mật khẩu tạm, người dùng đăng nhập rồi đổi trong trang Hồ sơ.
+1. Người dùng nhập email ở trang Quên mật khẩu; backend gửi mã 6 số, hiệu lực 10 phút (`OTP_TTL_MINUTES`).
+2. Người dùng nhập mã cùng mật khẩu mới. Mã chỉ dùng được một lần; nhập sai 5 lần (`OTP_MAX_ATTEMPTS`) thì mã bị hủy.
+3. Xin mã mới phải chờ 60 giây (`OTP_RESEND_COOLDOWN_SECONDS`). Mã cũ bị hủy khi có mã mới.
+4. Đổi xong, mọi phiên đăng nhập cũ bị đăng xuất. DB chỉ lưu bản băm của mã (bảng `auth_tokens`, `purpose = PASSWORD_RESET`).
+
+Đăng ký không cần OTP. Quản trị viên vẫn có nút "Đặt lại mật khẩu" ở màn Quản lý tài khoản (mật khẩu tạm) cho trường hợp người dùng không nhận được mail.
 Access token đã phát trước đó vẫn dùng được tới khi hết hạn (tối đa 15 phút).
+
+### Cấu hình gửi mail
+
+Đặt trong `.env` (xem `.env.example`): `MAIL_HOST`, `MAIL_PORT` (mặc định 587), `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`.
+Với Gmail: bật xác thực 2 bước rồi tạo **mật khẩu ứng dụng** (App password), `MAIL_HOST=smtp.gmail.com`; không dùng mật khẩu đăng nhập Gmail.
+
+- Để trống `MAIL_HOST`: backend **không gửi mail**, chỉ ghi mã OTP vào log để phát triển. Không dùng cách này khi triển khai thật.
+- Gửi mail lỗi (SMTP tắt, sai mật khẩu): API vẫn trả 200 để không lộ email nào đã đăng ký; lỗi được ghi vào log, người dùng xin lại mã sau.
+- Không commit `.env`.
 
 ### Dùng trong module khác
 

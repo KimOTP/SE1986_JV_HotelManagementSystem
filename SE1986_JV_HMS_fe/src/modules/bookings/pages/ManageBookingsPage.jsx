@@ -3,11 +3,14 @@ import { Alert, Button, Form, Pagination, Table } from 'react-bootstrap';
 import { Link } from 'react-router';
 import BookingStatus from '../components/BookingStatus';
 import PageHeading from '../components/PageHeading';
-import { bookingsApi } from '../api/bookingsApi';
+import { bookingsApi, bookingsDataSource } from '../api/bookingsApi';
 import { useAsyncData } from '../hooks/useAsyncData';
 import { BOOKING_STATUS, displayDate, money } from '../utils/bookingUtils';
 
 const PAGE_SIZE = 10;
+const statusOptions = bookingsDataSource === 'api'
+  ? ['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED', 'EXPIRED']
+  : Object.keys(BOOKING_STATUS);
 
 export default function ManageBookingsPage() {
   const [filters, setFilters] = useState({ keyword: '', status: 'ALL' });
@@ -67,9 +70,9 @@ export default function ManageBookingsPage() {
           <Form.Label className="booking-label">Trạng thái</Form.Label>
           <Form.Select name="status" value={filters.status} onChange={update}>
             <option value="ALL">Tất cả</option>
-            {Object.entries(BOOKING_STATUS).map(([value, item]) => (
+            {statusOptions.map((value) => (
               <option key={value} value={value}>
-                {item.label}
+                {BOOKING_STATUS[value].label}
               </option>
             ))}
           </Form.Select>

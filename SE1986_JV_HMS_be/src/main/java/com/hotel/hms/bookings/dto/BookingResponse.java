@@ -1,5 +1,7 @@
 package com.hotel.hms.bookings.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,6 +32,8 @@ public record BookingResponse(
         BigDecimal depositRequired,
         BigDecimal depositPaid,
         String status,
+        // Booking services store the hold deadline as a UTC LocalDateTime.
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "uuuu-MM-dd'T'HH:mm:ss.SSS'Z'")
         LocalDateTime holdExpiresAt,
         LocalDateTime createdAt,
         String customerName,

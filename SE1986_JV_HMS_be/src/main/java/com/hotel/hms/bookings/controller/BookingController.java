@@ -71,6 +71,16 @@ public class BookingController {
         return queryService.listMine(currentUser.getId(), status, page, size);
     }
 
+    @GetMapping("/deposit/pending")
+    @PreAuthorize("hasAuthority('UC-C2')")
+    public List<BookingResponse> listPendingDeposits(
+            @AuthenticationPrincipal AuthUserDetails currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        requireUser(currentUser);
+        return queryService.listMine(currentUser.getId(), "PENDING", page, size);
+    }
+
     /**
      * UC-2.9 / UC-C5 – console quản lý đặt phòng: mọi khách, lọc trạng thái và
      * từ khóa. Tổng số bản ghi nằm ở header {@code X-Total-Count}.

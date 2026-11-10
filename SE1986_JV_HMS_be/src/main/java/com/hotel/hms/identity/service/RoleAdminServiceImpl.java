@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,6 +26,7 @@ public class RoleAdminServiceImpl implements RoleAdminService {
 
     private static final String ADMIN_ROLE = "ADMIN";
     private static final String ROLE_MANAGE_PERMISSION = "UC-A6";
+    private static final Set<String> ADMIN_REQUIRED = Set.of("UC-A5", ROLE_MANAGE_PERMISSION);
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
@@ -32,7 +34,10 @@ public class RoleAdminServiceImpl implements RoleAdminService {
     @Override
     @Transactional(readOnly = true)
     public List<RoleResponse> listRoles() {
-        return roleRepository.findAllByOrderByIdAsc().stream().map(this::toResponse).toList();
+        // Theo thứ tự quyền hạn chứ không theo id, để vai trò thêm sau không nằm lẫn giữa các vai trò cũ.
+        return roleRepository.findAllByOrderByIdAsc().stream()
+                .sorted(Comparator.comparingInt(role -> AuthUserDetails.ROLE_PRIORITY.indexOf(role.getCode())))
+                .map(this::toResponse).toList();
     }
 
     @Override
@@ -46,9 +51,10 @@ public class RoleAdminServiceImpl implements RoleAdminService {
             throw new BadRequestException("UNKNOWN_PERMISSION", "Danh sách chứa quyền không tồn tại.");
         }
 
-        // ADMIN luôn giữ đủ quyền để hệ thống không mất người quản trị.
-        if (ADMIN_ROLE.equals(role.getCode()) && requested.size() != permissionRepository.count()) {
-            throw new BadRequestException("ADMIN_PERMISSIONS_LOCKED", "Không thể bớt quyền của ADMIN.");
+        // ADMIN chỉ cần giữ hai quyền quản trị để hệ thống không mất người quản trị.
+        if (ADMIN_ROLE.equals(role.getCode()) && !requested.containsAll(ADMIN_REQUIRED)) {
+            throw new BadRequestException("ADMIN_PERMISSIONS_LOCKED",
+                    "ADMIN phải giữ quyền quản lý tài khoản (UC-A5) và vai trò (UC-A6).");
         }
         // Người không phải ADMIN được cấp UC-A6 không được tự gỡ quyền này khỏi role của mình.
         boolean actorHoldsRole = actor.getRoles().contains(role.getCode());

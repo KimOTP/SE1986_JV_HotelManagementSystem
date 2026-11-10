@@ -44,11 +44,9 @@ function normalizeUser(user) {
     return null;
   }
 
-  const normalizeRole = (role) =>
-    role === 'RECEPTIONIST' ? ROLES.STAFF : role;
-  const role = normalizeRole(user.role || user.roles?.[0] || ROLES.CUSTOMER);
+  const role = user.role || user.roles?.[0] || ROLES.CUSTOMER;
   const roles = Array.isArray(user.roles)
-    ? [...new Set(user.roles.map(normalizeRole))]
+    ? [...new Set(user.roles)]
     : [role];
   const permissions = Array.isArray(user.permissions)
     ? user.permissions

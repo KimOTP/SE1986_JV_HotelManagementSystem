@@ -143,7 +143,7 @@ export default function CreateTaskModal({ managerName, onClose, onCreated }) {
           )}
           {assignees.error && <Alert variant="danger">{assignees.error}</Alert>}
           {roomId && !assignees.loading && !assignees.error && !assignees.items.length && (
-            <Alert variant="warning">Khách sạn này chưa có nhân viên STAFF hoạt động.</Alert>
+            <Alert variant="warning">Khách sạn này chưa có nhân viên buồng phòng hoạt động.</Alert>
           )}
           {saveError && <Alert variant="danger">{saveError}</Alert>}
           <fieldset disabled={isSubmitting}>
