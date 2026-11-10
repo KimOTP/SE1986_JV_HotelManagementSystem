@@ -23,9 +23,6 @@ public class Amenity {
     @Column(length = 500)
     private String description;
 
-    @Column(length = 100)
-    private String icon;
-
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 }

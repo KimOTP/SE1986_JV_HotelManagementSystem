@@ -4,8 +4,6 @@
 -- Nguoi dung dang la STAFF duoc chuyen sang HOUSEKEEPER neu chuc danh (staff.job_title) co
 -- "don phong", "buong" hoac "housekeep"; con lai chuyen sang RECEPTIONIST.
 -- Sau khi chay, kiem tra lai o man Quan ly tai khoan va sua vai tro neu can.
-USE HotelManagement_SBA;
-GO
 SET QUOTED_IDENTIFIER ON;
 SET XACT_ABORT ON;
 GO
@@ -55,10 +53,3 @@ DELETE FROM identity_access.roles WHERE code = 'STAFF';
 COMMIT TRANSACTION;
 GO
 
--- Ket qua
-SELECT r.code AS role, COUNT(DISTINCT ur.user_id) AS users, COUNT(DISTINCT rp.permission_id) AS permissions
-FROM identity_access.roles r
-LEFT JOIN identity_access.user_roles ur ON ur.role_id = r.role_id
-LEFT JOIN identity_access.role_permissions rp ON rp.role_id = r.role_id
-GROUP BY r.code, r.role_id ORDER BY r.role_id;
-GO

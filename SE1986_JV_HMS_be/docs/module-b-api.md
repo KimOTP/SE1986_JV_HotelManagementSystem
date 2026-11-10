@@ -56,6 +56,13 @@ kiểm tra user/hotel active. Admin không có staff dùng khách sạn cấu h�
 Không nhận hotelId từ request; không tự chọn một khách sạn khi nhiều khách sạn tồn tại.
 Amenities là danh mục toàn hệ thống theo DDL, chỉ người có UC-B3 được quản trị.
 
+Phân quyền sau khi tách STAFF: ADMIN giữ UC-B1/B2/B3; MANAGER, RECEPTIONIST và HOUSEKEEPER
+có UC-B6 để xem sơ đồ phòng. Controller kiểm tra quyền UC từ JWT, không cấp quyền theo tên role.
+RECEPTIONIST/HOUSEKEEPER vẫn cần bản ghi nhân sự active để xác định khách sạn;
+chỉ ADMIN được dùng khách sạn cấu hình khi không có bản ghi nhân sự.
+Database cũ tự được cập nhật bởi Flyway (`db/migration/V4`, `V5`) khi chạy backend; sau đó đăng xuất và đăng nhập lại để lấy JWT theo quyền mới.
+V5 giới hạn quyền ADMIN và bổ sung UC-C5 cho RECEPTIONIST.
+
 `INVENTORY_EXTENSIONS_ENABLED` mặc định false; bật true để dùng ảnh/notes đầy đủ.
 Entity JPA luôn ánh xạ notes và bảng ảnh, vì vậy **schema phải đầy đủ ngay khi khởi động**,
 kể cả khi flag false. Flag chỉ kiểm soát chức năng, không bỏ qua schema validation.
@@ -105,7 +112,8 @@ không dùng ID mock và không ép ID thành JS Number. Số tiền basePrice r
 | GET | `/public/images/{name}` | Guest; đọc ảnh đã upload, MIME đúng và `nosniff` |
 
 Public không yêu cầu JWT. Nội bộ: Guest 401; có JWT nhưng thiếu authority UC trả 403.
-Theo seed Admin có B1–B6; Manager/Staff có B6, Customer không có B6.
+Theo seed mới, ADMIN có B1–B3; MANAGER/RECEPTIONIST/HOUSEKEEPER có B6;
+ADMIN và CUSTOMER không có B6. Quyền thực tế luôn lấy từ authority, không suy ra từ role.
 Role ADMIN riêng lẻ không thay thế UC authority. Không sửa permission seed.
 
 DTO ghi (PUT là thay toàn bộ trường catalog cho phép; PATCH chỉ thay active):
@@ -123,13 +131,13 @@ DTO ghi (PUT là thay toàn bộ trường catalog cho phép; PATCH chỉ thay a
 ```
 
 ```json
-{"name":"Wi-Fi","iconKey":"Wifi","description":"Internet","isActive":true}
+{"name":"Wi-Fi","description":"Internet","isActive":true}
 ```
 
 RoomTypeView: `id,name,description,basePrice,capacity,area,bedType,images,amenityIds,isActive,availableRooms`.
 Ngoài availability/search, availableRooms có thể null. RoomView:
 `id,roomNumber,floor,roomTypeId,notes,isActive,operationalStatus,housekeepingStatus,displayStatus`.
-AmenityView: `id,name,iconKey,description,isActive`.
+AmenityView: `id,name,description,isActive`.
 
 Lỗi dùng `{code,message}` theo convention chung: 400 request/validation; 401 Guest ở route nội bộ;
 403 thiếu UC/phạm vi; 404 ID không tồn tại hoặc ngoài khách sạn; **410** loại phòng public inactive;
@@ -145,7 +153,7 @@ Loại phòng hết chỗ trả 200 + availableRooms=0, khác inactive và khôn
 | Room.id, roomTypeId, roomNumber, floor, isActive | room_id, room_type_id, room_number, floor_number, is_active |
 | Room.notes | inventory.rooms.notes NVARCHAR(2000), migration mới |
 | RoomType.images | inventory.room_type_images, FK room_type_id, sort_order 0–5 unique |
-| Amenity.id, iconKey | amenity_id, icon qua mapper |
+| Amenity.id, name, description, isActive | amenity_id, name, description, is_active |
 | RoomType.amenityIds | inventory.room_type_amenities |
 
 Không dùng inventory.room_images để lưu ảnh loại phòng. Bảng ảnh phòng vật lý giữ nguyên.
@@ -162,7 +170,7 @@ ID dùng GenerationType.IDENTITY, chỉ identifier được đánh dấu generat
 row_version và timestamps insert là read-only, không @Generated hoặc @Version.
 Metadata test xác nhận SQLServerDialect dùng GetGeneratedKeysDelegate, tránh OUTPUT INSERTED trên bảng có trigger.
 Kiểm thử insert/update thực trên SQL Server vẫn cần suite opt-in trên DB riêng.
-@Nationalized ánh xạ NVARCHAR; icon/status giữ VARCHAR. Phòng mới refresh sau saveAndFlush để đọc default DB.
+@Nationalized ánh xạ NVARCHAR; status giữ VARCHAR. Phòng mới refresh sau saveAndFlush để đọc default DB.
 operational_status/housekeeping_status có insertable=false, updatable=false, không bị catalog ghi đè.
 
 Unique loại phòng theo hotel/name, tiện nghi toàn bảng và room number theo trigger DB.
@@ -177,14 +185,17 @@ trả 409 khi đổi loại/ngừng hoạt động. Đây là chính sách catal
 nếu muốn đổi phòng đã được đặt; chưa thêm workflow di chuyển/hủy booking.
 Không khóa hay sửa booking; cạnh tranh với tạo booking phải được Module C giải quyết trong transaction.
 
-Icon DB ↔ FE: wifi↔Wifi, snow↔Snow, tv↔Tv, water↔Droplet, cup-hot↔CupHot,
-shield-lock↔ShieldLock, sun↔Sun. Icon lạ giữ nguyên giá trị; FE fallback CheckCircle và có option giữ icon cũ.
+Tiện nghi chỉ có tên, mô tả và trạng thái; đã bỏ trường biểu tượng trong FE, DTO, entity và persistence.
+Schema/seed cho DB mới đã được cập nhật. DB cũ vẫn chạy được khi còn cột thừa;
+`scripts/migrate-remove-amenity-icon.sql` dùng để xóa cột `inventory.amenities.icon` sau khi cập nhật ứng dụng.
+Script này xóa vĩnh viễn dữ liệu của cột đó, không xóa tiện nghi hay liên kết với loại phòng;
+chỉ chạy sau khi đã xác nhận bỏ dữ liệu. Không cần chạy lại schema/seed trên DB hiện có.
 
 ## Upload ảnh loại phòng từ máy
 
 Form loại phòng trong FE API mode có nút chọn một/nhiều ảnh. JPG/PNG, mỗi file tối đa 5 MB,
-tổng ảnh có sẵn + ảnh chọn + URL đang nhập tối đa 6. Upload xong hiển thị preview;
-**bấm Lưu** để lưu URL vào `inventory.room_type_images`. Không đổi schema và vẫn nhập URL ngoài được.
+tổng ảnh có sẵn + ảnh chọn tối đa 6. Upload xong hiển thị preview;
+**bấm Lưu** để lưu URL vào `inventory.room_type_images`. Form chỉ cho upload, không có ô nhập URL ngoài.
 File nhị phân lưu trên ổ đĩa backend, database chỉ giữ URL. Mặc định:
 `${user.home}/.hotel-management/room-images`, nằm ngoài repository và ngoài target.
 Khởi động lại backend vẫn đọc được file cũ nếu giữ nguyên thư mục.
@@ -258,7 +269,7 @@ cd SE1986_JV_HMS_be
 cd ../SE1986_JV_HMS_fe
 npm run build
 npm run lint
-node --test src/modules/rooms/tests/roomsHttpRepository.test.mjs
+node --test src/modules/rooms/tests/*.test.mjs
 ```
 
 SQL integration có fixture chỉ chạy với DB **riêng**, tên kết thúc `_inventory_test`, đã có schema/procedure/migration.

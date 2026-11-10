@@ -57,6 +57,7 @@ export default function CreateBookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [roomTypeId, setRoomTypeId] = useState(initialRoomTypeId);
   const [availability, setAvailability] = useState({ key: '', counts: null });
+  const [availabilityRefresh, setAvailabilityRefresh] = useState(0);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
   const [form, setForm] = useState({
     customerName: 'Nguyễn An',
@@ -107,12 +108,12 @@ export default function CreateBookingPage() {
         });
       })
       .catch(() => {
-        if (live) setAvailability({ key, counts: {} });
+        if (live) setAvailability({ key, counts: null });
       });
     return () => {
       live = false;
     };
-  }, [form.checkIn, form.checkOut]);
+  }, [form.checkIn, form.checkOut, availabilityRefresh]);
 
   const roomType = roomTypes.find((room) => room.id === roomTypeId);
   const nights = Math.max(nightsBetween(form.checkIn, form.checkOut), 0);
@@ -126,10 +127,10 @@ export default function CreateBookingPage() {
   const hasAvailabilityResult =
     availability.key === availabilityKey && availability.counts !== null;
   const availabilityCounts = hasAvailabilityResult ? availability.counts : {};
-  const checkingAvailability = hasDateRange && !hasAvailabilityResult;
+  const checkingAvailability = hasDateRange && availability.key !== availabilityKey;
   const selectedAvailability =
-    roomTypeId && Object.prototype.hasOwnProperty.call(availabilityCounts, roomTypeId)
-      ? availabilityCounts[roomTypeId]
+    roomTypeId && hasAvailabilityResult
+      ? availabilityCounts[roomTypeId] ?? 0
       : null;
   const maxRooms =
     selectedAvailability === null
@@ -191,8 +192,12 @@ export default function CreateBookingPage() {
       })
       .then(async (availabilityResult) => {
         const availableRooms = Number(availabilityResult?.availableRooms || 0);
-        if (availableRooms < Number(form.rooms))
-          throw new Error(`Chỉ còn ${availableRooms} phòng phù hợp trong khoảng ngày đã chọn.`);
+        if (availableRooms < Number(form.rooms)) {
+          setAvailability({ key: '', counts: null });
+          setAvailabilityRefresh((value) => value + 1);
+          setError(`Chỉ còn ${availableRooms} phòng phù hợp. Vui lòng chọn lại loại phòng, số phòng hoặc ngày lưu trú.`);
+          return;
+        }
         const booking = await bookingsApi.create({
           roomTypeId: Number(roomType.id),
           checkIn: form.checkIn,
@@ -213,7 +218,15 @@ export default function CreateBookingPage() {
         });
         navigate(`/bookings/${booking.bookingCode || booking.id}`);
       })
-      .catch((caught) => setError(caught?.response?.data?.message || caught.message))
+      .catch((caught) => {
+        if (caught?.response?.data?.code === 'BOOKING_ROOM_NOT_AVAILABLE') {
+          setAvailability({ key: '', counts: null });
+          setAvailabilityRefresh((value) => value + 1);
+          setError('Số phòng trống vừa thay đổi. Vui lòng chọn lại loại phòng, số phòng hoặc ngày lưu trú.');
+          return;
+        }
+        setError(caught?.response?.data?.message || caught.message);
+      })
       .finally(() => setSubmitting(false));
   };
 
@@ -376,7 +389,7 @@ export default function CreateBookingPage() {
                   ) : (
                     roomTypes.map((room) => {
                       const selected = room.id === roomTypeId;
-                      const roomsLeft = availabilityCounts[room.id];
+                      const roomsLeft = hasAvailabilityResult ? availabilityCounts[room.id] ?? 0 : undefined;
                       const soldOut = hasDateRange && roomsLeft === 0;
                       return (
                         <button

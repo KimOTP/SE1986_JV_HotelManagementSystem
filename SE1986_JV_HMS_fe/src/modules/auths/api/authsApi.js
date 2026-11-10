@@ -1,8 +1,6 @@
 import { authsHttpRepository } from './authsHttpRepository';
-import { authsMockRepository } from './authsMockRepository';
 
-// Mặc định dùng backend JWT; đặt VITE_AUTH_DATA_SOURCE=mock nếu cần chạy bản demo độc lập.
-export const authsDataSource = (import.meta.env.VITE_AUTH_DATA_SOURCE || 'api').toLowerCase();
-export const authsApi = authsDataSource === 'api' ? authsHttpRepository : authsMockRepository;
+// Module A chỉ dùng backend thật (JWT); không còn dữ liệu giả trên trình duyệt.
+export const authsApi = authsHttpRepository;
 
 export default authsApi;

@@ -1,13 +1,10 @@
 import axiosClient from '../../../shared/api/axiosClient';
 import { AUTH_STORAGE_KEYS } from '../constants/authConstants';
-import { authsMockRepository } from './authsMockRepository';
 
 // Đăng ký (UC-A1), quên mật khẩu bằng OTP (UC-A3), đăng nhập, refresh, đăng xuất và /me (UC-A2) gọi backend thật.
 // Hồ sơ và đổi mật khẩu (UC-A4), quản lý tài khoản (UC-A5), đặt lại mật khẩu (UC-A3)
 // và vai trò, quyền (UC-A6) cũng gọi backend.
 export const authsHttpRepository = {
-  ...authsMockRepository,
-
   async register({ fullName, email, password }) {
     const { data } = await axiosClient.post('/auth/register', { fullName, email, password });
     return data;

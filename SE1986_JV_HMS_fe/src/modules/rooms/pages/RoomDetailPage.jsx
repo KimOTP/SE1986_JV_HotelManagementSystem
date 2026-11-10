@@ -1,12 +1,11 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Badge, Button, Card, Col, Form, Row } from 'react-bootstrap';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { roomsApi } from '../api/roomsApi';
 import { currency, nightsBetween, validateSearch } from '../utils/roomUtils';
 import { ErrorState, LoadingState } from '../components/Common';
 import RoomGallery from '../components/RoomGallery';
-import AmenityIcon from '../components/AmenityIcon';
 export default function RoomDetailPage() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
@@ -15,8 +14,11 @@ export default function RoomDetailPage() {
     [type, setType] = useState(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
+    [availabilityError, setAvailabilityError] = useState(''),
+    [availabilityAttempt, setAvailabilityAttempt] = useState(0),
     [checking, setChecking] = useState(false),
     [available, setAvailable] = useState(null);
+  const availabilitySeq = useRef(0);
   const criteria = {
     checkIn: params.get('checkIn') || '',
     checkOut: params.get('checkOut') || '',
@@ -28,6 +30,7 @@ export default function RoomDetailPage() {
     let live = true;
     (async () => {
       setLoading(true);
+      setError('');
       try {
         const [t, a] = await Promise.all([roomsApi.getRoomType(id), roomsApi.getCatalog()]);
         if (live) {
@@ -46,21 +49,27 @@ export default function RoomDetailPage() {
   }, [id]);
   // Recheck whenever URL booking criteria changes; cleanup prevents stale responses.
   useEffect(() => {
-    let live = true;
+    const requestId = ++availabilitySeq.current;
+    setAvailable(null);
+    setAvailabilityError('');
     if (!hasDates || Object.keys(errors).length) {
-      setAvailable(null);
+      setChecking(false);
       return;
     }
     setChecking(true);
     roomsApi
       .availability(id, criteria)
-      .then((v) => live && setAvailable(v))
-      .catch((e) => live && setError(e?.response?.data?.message || e.message))
-      .finally(() => live && setChecking(false));
+      .then((v) => requestId === availabilitySeq.current && setAvailable(v))
+      .catch(
+        (e) =>
+          requestId === availabilitySeq.current &&
+          setAvailabilityError(e?.response?.data?.message || e.message),
+      )
+      .finally(() => requestId === availabilitySeq.current && setChecking(false));
     return () => {
-      live = false;
+      availabilitySeq.current += 1;
     };
-  }, [id, criteria.checkIn, criteria.checkOut, criteria.guests]);
+  }, [id, criteria.checkIn, criteria.checkOut, criteria.guests, availabilityAttempt]);
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} />;
   if (!type)
@@ -96,25 +105,29 @@ export default function RoomDetailPage() {
     setParams(n);
   };
   const book = async () => {
+    const requestId = ++availabilitySeq.current;
     setChecking(true);
+    setAvailabilityError('');
     try {
       const latest = await roomsApi.availability(id, criteria);
+      if (requestId !== availabilitySeq.current) return;
       if (!latest) {
         setAvailable(null);
         return;
       }
       const roomCount = Math.max(1, Number(params.get('roomCount')) || 1);
       if (latest.availableRooms < roomCount) {
-        setError('Không đủ số phòng yêu cầu. Vui lòng tìm lại.');
+        setAvailabilityError('Không đủ số phòng yêu cầu. Vui lòng tìm lại.');
         return;
       }
       navigate(
         `/rooms/booking-handoff?roomTypeId=${id}&checkIn=${criteria.checkIn}&checkOut=${criteria.checkOut}&guests=${criteria.guests}&roomCount=${roomCount}`,
       );
     } catch (e) {
-      setError(e?.response?.data?.message || e.message);
+      if (requestId === availabilitySeq.current)
+        setAvailabilityError(e?.response?.data?.message || e.message);
     } finally {
-      setChecking(false);
+      if (requestId === availabilitySeq.current) setChecking(false);
     }
   };
   return (
@@ -135,7 +148,7 @@ export default function RoomDetailPage() {
           <div className="d-flex flex-wrap gap-2 mb-3">
             {amenities.map((a) => (
               <Badge bg="light" text="dark" key={a.id}>
-                <AmenityIcon iconKey={a.iconKey} /> {a.name}
+                {a.name}
               </Badge>
             ))}
           </div>
@@ -190,11 +203,23 @@ export default function RoomDetailPage() {
                 </Alert>
               )}
               {checking && <div className="text-muted mt-2">Đang kiểm tra lại…</div>}
-              {hasDates && !checking && !Object.keys(errors).length && !available && (
-                <Alert variant="warning" className="mt-3">
-                  Đã hết phòng trong khoảng ngày này.
-                </Alert>
+              {availabilityError && (
+                <div className="mt-3">
+                  <ErrorState
+                    message={availabilityError}
+                    onRetry={() => setAvailabilityAttempt((value) => value + 1)}
+                  />
+                </div>
               )}
+              {hasDates &&
+                !checking &&
+                !availabilityError &&
+                !Object.keys(errors).length &&
+                !available && (
+                  <Alert variant="warning" className="mt-3">
+                    Đã hết phòng trong khoảng ngày này.
+                  </Alert>
+                )}
               <Button className="w-100 mt-3" disabled={!canBook || checking} onClick={book}>
                 Đặt phòng
               </Button>

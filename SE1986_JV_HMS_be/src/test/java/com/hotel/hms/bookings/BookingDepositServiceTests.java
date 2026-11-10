@@ -9,6 +9,7 @@ import com.hotel.hms.common.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,12 +36,14 @@ class BookingDepositServiceTests {
     private BookingPaymentRepository repository;
     private BookingQueryService queryService;
     private BookingDepositService service;
+    private ApplicationEventPublisher events;
 
     @BeforeEach
     void setUp() {
         repository = mock(BookingPaymentRepository.class);
         queryService = mock(BookingQueryService.class);
-        service = new BookingDepositService(repository, queryService);
+        events = mock(ApplicationEventPublisher.class);
+        service = new BookingDepositService(repository, queryService, events);
     }
 
     @Test
@@ -97,6 +100,21 @@ class BookingDepositServiceTests {
 
         assertEquals("CONFIRMED", response.status());
         verify(repository, never()).insertDepositTransaction(anyLong(), any(), any(), any(), any(), any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    void publishesConfirmationOnlyForNewVerifiedDeposit() {
+        BigDecimal amount = new BigDecimal("480000.00");
+        BookingResponse booking = confirmedResponse();
+        when(repository.lockBooking("BK-TEST"))
+                .thenReturn(Optional.of(target("PENDING", futureHold(), amount)));
+        when(repository.confirmAfterDeposit(eq(99L), any())).thenReturn(1);
+        when(queryService.getByCode(5L, "BK-TEST", false)).thenReturn(booking);
+
+        service.confirmPayosDeposit(5L, "BK-TEST", amount, "PAYOS-test");
+
+        verify(events).publishEvent(new BookingDepositService.BookingDepositConfirmed(booking, amount));
     }
 
     @Test

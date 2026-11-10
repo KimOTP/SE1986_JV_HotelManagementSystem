@@ -8,7 +8,6 @@ import {
   DoorOpen,
   ExclamationTriangle,
   Grid3x3Gap,
-  Headset,
   Kanban,
   Layers,
   People,
@@ -28,7 +27,12 @@ export const sidebarMenu = [
   {
     groupLabel: 'Dịch vụ & phản hồi',
     items: [
-      { label: 'Dịch vụ & phản hồi', to: '/services', icon: Headset },
+      {
+        label: 'Yêu cầu hỗ trợ của tôi',
+        to: '/operations/my-reports',
+        icon: Headset,
+        requiredPermission: 'UC-E4',
+      },
       {
         label: 'Báo cáo sự cố',
         to: '/operations/report-issue',
@@ -36,7 +40,8 @@ export const sidebarMenu = [
         requiredPermission: 'UC-E4',
       },
       {
-        label: 'Đánh giá & phản hồi',
+        label: 'Đánh giá của khách',
+        customerLabel: 'Đánh giá của tôi',
         to: '/operations/feedbacks',
         icon: Star,
         requiredPermission: 'UC-E6',
@@ -94,6 +99,7 @@ export const sidebarMenu = [
         to: '/operations/my-tasks',
         icon: PersonCheck,
         requiredPermission: 'UC-E2',
+        requiredRoles: ['HOUSEKEEPER'],
       },
     ],
   },

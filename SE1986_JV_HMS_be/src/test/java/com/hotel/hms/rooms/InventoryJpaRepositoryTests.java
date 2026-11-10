@@ -93,7 +93,6 @@ class InventoryJpaRepositoryTests {
         var amenity = new Amenity();
         amenity.setId(3L);
         amenity.setName("Wi-Fi");
-        amenity.setIcon("wifi");
         type.getAmenities().add(amenity);
         var image = new RoomTypeImage();
         image.setRoomType(type);
@@ -105,19 +104,20 @@ class InventoryJpaRepositoryTests {
         assertEquals(List.of("3"), result.amenityIds());
         assertEquals(List.of("https://example.com/a.jpg"), result.images());
         assertEquals(new BigDecimal("800000.00"), result.basePrice());
-        assertEquals("Wifi", InventoryMapper.amenity(amenity).iconKey());
+        assertEquals("Wi-Fi", InventoryMapper.amenity(amenity).name());
         verify(types, times(1)).findByHotelIdOrderByBasePriceAscIdAsc(1L);
         verify(images, times(1)).findByRoomTypeHotelIdOrderByRoomTypeIdAscSortOrderAsc(1L);
     }
 
     @Test
-    void legacyAmenityIconSurvivesJpaUpdate() {
+    void amenityUpdatePersistsNameDescriptionAndActiveState() {
         var amenity = new Amenity();
         amenity.setId(3L);
-        amenity.setIcon("legacy-icon");
         when(amenities.findById(3L)).thenReturn(Optional.of(amenity));
         when(amenities.saveAndFlush(amenity)).thenReturn(amenity);
-        repository.persistAmenity(3L, new AmenityWrite("New name", "legacy-icon", "", true));
-        assertEquals("legacy-icon", amenity.getIcon());
+        assertEquals(3L, repository.persistAmenity(3L, new AmenityWrite("New name", "Internet", false)));
+        assertEquals("New name", amenity.getName());
+        assertEquals("Internet", amenity.getDescription());
+        assertFalse(amenity.isActive());
     }
 }

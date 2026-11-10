@@ -70,11 +70,14 @@ public class FeedbackService {
             rs.getLong("booking_id"),rs.getString("booking_code"),rs.getString("hotel_name"),rs.getString("guest_name"),
             rs.getInt("rating"),rs.getString("comment"),rs.getString("reply"),rs.getString("replied_by"),time(rs,"replied_at"),time(rs,"created_at"));
     public List<FeedbackResponse> myFeedback(int page,int size) {
+        return myFeedback(page,size, "");
+    }
+    public List<FeedbackResponse> myFeedback(int page,int size,String bookingCode) {
         var customer=requireCustomer();
         return jdbc.query(SELECT_FEEDBACK+"""
-                WHERE f.customer_id=? ORDER BY f.created_at DESC,f.feedback_id DESC
+                WHERE f.customer_id=? AND (? = '' OR b.booking_code=?) ORDER BY f.created_at DESC,f.feedback_id DESC
                 OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
-                """,MAPPER,customer.id(),(long)page*size,size);
+                """,MAPPER,customer.id(),bookingCode,bookingCode,(long)page*size,size);
     }
     public List<FeedbackResponse> managedFeedback(int page,int size,int rating,String status) {
         var manager=managerContext.requireManager();

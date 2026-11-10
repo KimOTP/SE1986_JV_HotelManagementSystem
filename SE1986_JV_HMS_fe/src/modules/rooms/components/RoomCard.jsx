@@ -2,7 +2,6 @@ import { Badge, Button, Card } from 'react-bootstrap';
 import { Link } from 'react-router';
 import { People, Rulers } from 'react-bootstrap-icons';
 import { currency, imageOrFallback } from '../utils/roomUtils';
-import AmenityIcon from './AmenityIcon';
 export default function RoomCard({ roomType, amenities, query }) {
   const am = roomType.amenityIds.map((id) => amenities.find((a) => a.id === id)).filter(Boolean);
   return (
@@ -25,7 +24,7 @@ export default function RoomCard({ roomType, amenities, query }) {
         <div className="d-flex flex-wrap gap-1 mb-3">
           {am.slice(0, 4).map((a) => (
             <Badge bg="light" text="dark" key={a.id}>
-              <AmenityIcon iconKey={a.iconKey} /> {a.name}
+              {a.name}
             </Badge>
           ))}
         </div>

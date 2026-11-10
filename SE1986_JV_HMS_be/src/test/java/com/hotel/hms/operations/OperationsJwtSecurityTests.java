@@ -33,6 +33,8 @@ class OperationsJwtSecurityTests {
         @Bean JwtService jwt(JwtProperties properties) { return new JwtService(properties); }
         @Bean TaskManagementService tasks() { return mock(TaskManagementService.class); }
         @Bean TaskManagementController taskController(TaskManagementService tasks) { return new TaskManagementController(tasks); }
+        @Bean com.hotel.hms.operations.service.OperationsFollowUpService followUp() { return mock(com.hotel.hms.operations.service.OperationsFollowUpService.class); }
+        @Bean com.hotel.hms.operations.controller.OperationsFollowUpController followUpController(com.hotel.hms.operations.service.OperationsFollowUpService service) { return new com.hotel.hms.operations.controller.OperationsFollowUpController(service); }
         @Bean IdentityController identityController(OperationsIdentity identity) { return new IdentityController(identity); }
         @Bean CorsConfigurationSource corsConfigurationSource() { return new UrlBasedCorsConfigurationSource(); }
     }
@@ -93,6 +95,23 @@ class OperationsJwtSecurityTests {
     @Test void tokenUserIdMustMatchDatabaseUser() throws Exception {
         var staff=user(4L,"housekeeper@sba.example","STAFF","UC-E2");var token=jwt.generateAccessToken(staff);when(staff.getId()).thenReturn(99L);
         mvc.perform(get("/api/operations/test-identity").header("Authorization","Bearer "+token)).andExpect(status().isUnauthorized());
+    }
+    @Test void customerCannotManageWorkEvenWithValidJwt() throws Exception {
+        var customer=user(5L,"customer@sba.example","CUSTOMER","UC-E4");
+        mvc.perform(get("/api/operations/tasks/1/management").header("Authorization","Bearer "+jwt.generateAccessToken(customer))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/operations/issues/1/management").header("Authorization","Bearer "+jwt.generateAccessToken(customer))).andExpect(status().isForbidden());
+    }
+    @Test void reporterCanReadOwnReportEndpoint() throws Exception {
+        var customer=user(5L,"customer@sba.example","CUSTOMER","UC-E4");
+        mvc.perform(get("/api/operations/my-issue-reports").header("Authorization","Bearer "+jwt.generateAccessToken(customer))).andExpect(status().isOk());
+    }
+    @Test void anonymousCannotReadReportsOrWorkOptions() throws Exception {
+        for(var route:List.of("my-issue-reports","tasks/1/management","issues/1/management")) mvc.perform(get("/api/operations/"+route)).andExpect(status().isUnauthorized());
+    }
+    @Test void managerWithPermissionCanOpenWorkOptions() throws Exception {
+        var manager=user(2L,"manager@sba.example","MANAGER","UC-E1","UC-E5");
+        mvc.perform(get("/api/operations/tasks/1/management").header("Authorization","Bearer "+jwt.generateAccessToken(manager))).andExpect(status().isOk());
+        mvc.perform(get("/api/operations/issues/1/management").header("Authorization","Bearer "+jwt.generateAccessToken(manager))).andExpect(status().isOk());
     }
     @Test void expiredTokenIsRejected() throws Exception {
         var staff=user(4L,"housekeeper@sba.example","STAFF","UC-E2");

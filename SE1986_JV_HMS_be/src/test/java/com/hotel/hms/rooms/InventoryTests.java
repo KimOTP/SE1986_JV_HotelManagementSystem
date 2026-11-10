@@ -21,16 +21,6 @@ import static org.mockito.Mockito.*;
 
 class InventoryTests {
     @Test
-    void databaseIconRoundTripsIncludingUnknownLegacyValue() {
-        var icons = Map.of("wifi", "Wifi", "snow", "Snow", "tv", "Tv", "water", "Droplet", "cup-hot",
-                "CupHot", "shield-lock", "ShieldLock", "sun", "Sun", "legacy-icon", "legacy-icon");
-        icons.forEach((db, ui) -> {
-            assertEquals(ui, InventoryMapper.iconToUi(db));
-            assertEquals(db, InventoryMapper.iconToDb(ui));
-        });
-    }
-
-    @Test
     void mapPrioritizesMaintenanceAndOccupiedAndTreatsCleaningAsDirty() {
         assertEquals("MAINTENANCE", InventoryMapper.displayStatus("MAINTENANCE", "CLEANING"));
         assertEquals("OCCUPIED", InventoryMapper.displayStatus("OCCUPIED", "CLEAN"));
@@ -64,7 +54,7 @@ class InventoryTests {
             assertTrue(validator.validate(invalid).size() >= 7);
             assertFalse(validator.validate(new RoomWrite("x".repeat(21), 0, 1L, "", true)).isEmpty());
             assertTrue(validator.validate(new RoomWrite(" 101 ", -1, 1L, "", true)).isEmpty());
-            assertFalse(validator.validate(new AmenityWrite(" ", "é", "x".repeat(501), true)).isEmpty());
+            assertFalse(validator.validate(new AmenityWrite(" ", "x".repeat(501), true)).isEmpty());
         }
     }
 
@@ -111,11 +101,15 @@ class InventoryTests {
             when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(9L))).thenReturn(1);
             when(jdbc.queryForList(anyString(), eq(Long.class), eq(2L))).thenReturn(List.of());
             assertEquals(9L, new InventoryScope(jdbc, 9L).managementHotel());
-            when(principal.getRoles()).thenReturn(Set.of("STAFF"));
-            assertThrows(ResponseStatusException.class, () -> new InventoryScope(jdbc, 9L).managementHotel());
-            when(jdbc.queryForList(anyString(), eq(Long.class), eq(2L))).thenReturn(List.of(7L));
-            when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(7L))).thenReturn(1);
-            assertEquals(7L, new InventoryScope(jdbc, 9L).managementHotel());
+            for (String role : List.of("MANAGER", "RECEPTIONIST", "HOUSEKEEPER")) {
+                when(principal.getRoles()).thenReturn(Set.of(role));
+                when(jdbc.queryForList(anyString(), eq(Long.class), eq(2L))).thenReturn(List.of());
+                assertThrows(ResponseStatusException.class,
+                        () -> new InventoryScope(jdbc, 9L).managementHotel());
+                when(jdbc.queryForList(anyString(), eq(Long.class), eq(2L))).thenReturn(List.of(7L));
+                when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(7L))).thenReturn(1);
+                assertEquals(7L, new InventoryScope(jdbc, 9L).managementHotel());
+            }
         } finally {
             org.springframework.security.core.context.SecurityContextHolder.clearContext();
         }

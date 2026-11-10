@@ -42,8 +42,8 @@ export const ROLE_LABELS = {
   [ROLES.CUSTOMER]: 'Khách hàng',
 };
 
-// Khớp bảng identity_access.role_permissions trong database seed, để chế độ mock
-// hiển thị giống khi đăng nhập bằng backend (VITE_AUTH_DATA_SOURCE=api).
+// Khớp bảng identity_access.role_permissions trong database seed; chỉ dùng làm
+// giá trị dự phòng khi người dùng lưu cũ chưa có danh sách quyền.
 export const ROLE_PERMISSION_DEFAULTS = {
   [ROLES.ADMIN]: [
     'UC-A2', 'UC-A3', 'UC-A4', 'UC-A5', 'UC-A6',

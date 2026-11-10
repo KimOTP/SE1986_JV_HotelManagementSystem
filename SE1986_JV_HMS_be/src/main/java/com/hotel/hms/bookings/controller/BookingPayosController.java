@@ -31,4 +31,11 @@ public class BookingPayosController {
                                                     @PathVariable String bookingCode) {
         return payments.verify(user.getId(), bookingCode);
     }
+
+    @PostMapping("/cancel")
+    @PreAuthorize("hasAuthority('UC-C2') and hasAuthority('UC-C4')")
+    public void cancel(@AuthenticationPrincipal AuthUserDetails user,
+                       @PathVariable String bookingCode) {
+        payments.cancelCheckout(user.getId(), bookingCode);
+    }
 }
