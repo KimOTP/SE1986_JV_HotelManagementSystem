@@ -31,8 +31,10 @@ public class OperationsFollowUpService {
    return rows.getFirst();
  }
  private void mutable(Work work,boolean issue) {
-   if(!(issue?List.of("ASSIGNED","IN_PROGRESS"):List.of("PENDING","IN_PROGRESS")).contains(work.status()))
-     throw new ResponseStatusException(CONFLICT,"Chỉ thay đổi công việc chưa hoàn thành hoặc sự cố đã được phân công.");
+   if("IN_PROGRESS".equals(work.status()))
+     throw new ResponseStatusException(CONFLICT,issue?"Sự cố đã được bắt đầu xử lý nên không thể giao lại. Hãy đóng và tải lại danh sách.":"Công việc đã bắt đầu nên không thể giao lại hoặc hủy. Hãy đóng và tải lại danh sách.");
+   if(!(issue?List.of("ASSIGNED"):List.of("PENDING")).contains(work.status()))
+     throw new ResponseStatusException(CONFLICT,"Chỉ được giao lại hoặc hủy khi công việc chưa bắt đầu. Sự cố phải ở trạng thái Đã phân công.");
  }
  public Map<String,Object> options(boolean issue,Long id) {
    var manager=managers.requireManager(); var work=work(issue,id,false); managers.assertScope(manager,work.hotelId());
@@ -44,7 +46,7 @@ public class OperationsFollowUpService {
        WHERE ur.user_id=u.user_id AND r.code='HOUSEKEEPER' AND r.is_active=1)
      ORDER BY u.full_name,s.staff_id
      """,work.hotelId());
-   return Map.of("work",work,"staff",staff,"canChange",(issue?List.of("ASSIGNED","IN_PROGRESS"):List.of("PENDING","IN_PROGRESS")).contains(work.status()),"history",jdbc.queryForList("""
+   return Map.of("work",work,"staff",staff,"canCancel",!issue && "PENDING".equals(work.status()) && !LinkedWorkGuard.hasIssue(jdbc,id),"canChange",(issue?List.of("ASSIGNED"):List.of("PENDING")).contains(work.status()),"history",jdbc.queryForList("""
      SELECT h.action,h.reason,h.previous_status AS previousStatus,h.new_status AS newStatus,
        oldUser.full_name AS previousStaff,newUser.full_name AS newStaff,u.full_name AS actor,
        CONVERT(varchar(30),h.created_at,126)+'Z' AS createdAt
@@ -58,10 +60,13 @@ public class OperationsFollowUpService {
  }
  @Transactional
  public void change(boolean issue,Long id,Change request) {
-   var manager=managers.requireManager(); var work=work(issue,id,true); managers.assertScope(manager,work.hotelId()); mutable(work,issue);
+   var manager=managers.requireManager();
+   var pair=issue?LinkedWorkGuard.forIssue(jdbc,id):LinkedWorkGuard.forTask(jdbc,id);
+   var work=work(issue,id,true); managers.assertScope(manager,work.hotelId()); mutable(work,issue);
    if(!work.version().equalsIgnoreCase(request.version())) throw new ResponseStatusException(CONFLICT,"Dữ liệu đã thay đổi. Hãy đóng và mở lại thao tác.");
    boolean cancel="CANCEL".equals(request.action());
    if(issue && cancel) throw new ResponseStatusException(BAD_REQUEST,"Không hủy sự cố bằng thao tác này.");
+   if(cancel && pair!=null) throw new ResponseStatusException(CONFLICT,"Không hủy riêng task gắn với sự cố. Hãy giao lại hoặc hoàn tất xử lý sự cố.");
    Long nextStaff=cancel?work.staffId():request.staffId();
    if(!cancel) {
      if(nextStaff==null || Objects.equals(nextStaff,work.staffId())) throw new ResponseStatusException(BAD_REQUEST,"Hãy chọn nhân viên khác.");
@@ -77,8 +82,17 @@ public class OperationsFollowUpService {
    int changed=jdbc.update("UPDATE "+table(issue)+" SET assigned_staff_id=?, "+(cancel?"":"assigned_by=?, ")+"status=?, updated_at=SYSUTCDATETIME() WHERE "+key(issue)+"=? AND row_version=CONVERT(varbinary(8),?,1)",
       cancel?new Object[]{nextStaff,nextStatus,id,request.version()}:new Object[]{nextStaff,manager.id(),nextStatus,id,request.version()});
    if(changed!=1) throw new ResponseStatusException(CONFLICT,"Dữ liệu đã thay đổi.");
+   if(pair!=null) {
+     var related=issue?pair.task():pair.issue(); boolean relatedIssue=!issue;
+     int relatedChanged=jdbc.update("UPDATE "+table(relatedIssue)+" SET assigned_staff_id=?,assigned_by=?,updated_at=SYSUTCDATETIME() WHERE "+key(relatedIssue)+"=? AND assigned_staff_id=? AND status=?",nextStaff,manager.id(),related.id(),related.staffId(),related.status());
+     if(relatedChanged!=1) throw new ResponseStatusException(CONFLICT,"Dữ liệu liên kết đã thay đổi. Vui lòng tải lại.");
+     history(relatedIssue,related.id(),request,manager.id(),related.staffId(),nextStaff,related.status(),related.status());
+   }
+   history(issue,id,request,manager.id(),work.staffId(),nextStaff,work.status(),nextStatus);
+ }
+ private void history(boolean issue,Long id,Change request,Long actor,Long previousStaff,Long nextStaff,String previousStatus,String nextStatus) {
    jdbc.update("INSERT operations.work_history(work_type,work_id,action,actor_id,previous_staff_id,new_staff_id,previous_status,new_status,reason) VALUES(?,?,?,?,?,?,?,?,?)",
-     issue?"ISSUE":"TASK",id,request.action(),manager.id(),work.staffId(),nextStaff,work.status(),nextStatus,request.reason());
+     issue?"ISSUE":"TASK",id,request.action(),actor,previousStaff,nextStaff,previousStatus,nextStatus,request.reason());
  }
  public List<Map<String,Object>> myReports(int page,int size) {
    var user=identity.requireUser();
