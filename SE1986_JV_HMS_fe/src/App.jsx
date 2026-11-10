@@ -56,8 +56,8 @@ function NotFound() {
   );
 }
 
-function PermissionRoute({ permission, children }) {
-  return <ProtectedRoute requiredPermission={permission}>{children}</ProtectedRoute>;
+function PermissionRoute({ permission, roles, children }) {
+  return <ProtectedRoute requiredPermission={permission} roles={roles}>{children}</ProtectedRoute>;
 }
 
 function PublicPermission({ permission, children }) {
@@ -118,7 +118,7 @@ export default function App() {
           <Route
             path="operations/my-tasks"
             element={
-              <PermissionRoute permission="UC-E2">
+              <PermissionRoute permission="UC-E2" roles={['STAFF']}>
                 <MyTasks />
               </PermissionRoute>
             }

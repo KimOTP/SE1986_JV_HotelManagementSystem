@@ -94,6 +94,7 @@ export const sidebarMenu = [
         to: '/operations/my-tasks',
         icon: PersonCheck,
         requiredPermission: 'UC-E2',
+        requiredRoles: ['STAFF'],
       },
     ],
   },

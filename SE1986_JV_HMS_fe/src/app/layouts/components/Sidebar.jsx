@@ -11,6 +11,10 @@ export default function Sidebar({ onNavigate }) {
   const { pathname } = useLocation();
 
   const canSee = (item) => {
+    if (item.requiredRoles && !item.requiredRoles.some(auth.hasRole)) {
+      return false;
+    }
+
     if (item.requiredPermission) {
       return auth.hasPermission(item.requiredPermission);
     }
