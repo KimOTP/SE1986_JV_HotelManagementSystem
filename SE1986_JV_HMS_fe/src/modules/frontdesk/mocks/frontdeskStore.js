@@ -1,13 +1,18 @@
 // Module D - Front Desk, Invoice & Payment
 // In-memory mock store (UI only). Replace each function with an API call later;
 // the pages only depend on these function signatures.
-import { seedRoomTypes } from '../../rooms/mocks/seedData';
 
 export const TODAY = '2026-10-17';
 
-// Single source of truth for room prices: Module B room type catalog
+// Module D demo prices, kept independent of Module B's database-backed catalog.
+const mockRoomPrices = new Map([
+  ['Standard', 650000],
+  ['Deluxe', 950000],
+  ['Executive Suite', 2200000],
+]);
+
 const priceOf = (roomTypeName) =>
-  seedRoomTypes.find((t) => t.name === roomTypeName)?.basePrice ?? 0;
+  mockRoomPrices.get(roomTypeName) ?? 0;
 
 let reservations = [
   { id: 'BK-1001', guestName: 'Nguyễn Văn Khách', phone: '0901234567', idNumber: '079201001234', roomNumber: '104', roomType: 'Deluxe', checkIn: '2026-10-17', checkOut: '2026-10-19', guests: 2, deposit: 500000, pricePerNight: priceOf('Deluxe'), status: 'CONFIRMED', services: [] },
