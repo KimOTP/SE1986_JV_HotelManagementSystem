@@ -60,9 +60,8 @@ Phân quyền sau khi tách STAFF: ADMIN giữ UC-B1/B2/B3; MANAGER, RECEPTIONIS
 có UC-B6 để xem sơ đồ phòng. Controller kiểm tra quyền UC từ JWT, không cấp quyền theo tên role.
 RECEPTIONIST/HOUSEKEEPER vẫn cần bản ghi nhân sự active để xác định khách sạn;
 chỉ ADMIN được dùng khách sạn cấu hình khi không có bản ghi nhân sự.
-Database local cũ chạy `scripts/migrate-split-staff-role.sql` rồi
-`scripts/migrate-admin-minimal-permissions.sql`; sau đó đăng xuất và đăng nhập lại để lấy JWT theo quyền mới.
-Script thứ hai giới hạn quyền ADMIN và bổ sung UC-C5 cho RECEPTIONIST.
+Database cũ tự được cập nhật bởi Flyway (`db/migration/V4`, `V5`) khi chạy backend; sau đó đăng xuất và đăng nhập lại để lấy JWT theo quyền mới.
+V5 giới hạn quyền ADMIN và bổ sung UC-C5 cho RECEPTIONIST.
 
 `INVENTORY_EXTENSIONS_ENABLED` mặc định false; bật true để dùng ảnh/notes đầy đủ.
 Entity JPA luôn ánh xạ notes và bảng ảnh, vì vậy **schema phải đầy đủ ngay khi khởi động**,
