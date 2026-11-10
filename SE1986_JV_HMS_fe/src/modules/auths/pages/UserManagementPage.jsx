@@ -8,7 +8,7 @@ import UserList from '../components/UserManagement/UserList';
 import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 
 export default function UserManagementPage() {
-  const { user, role, permissions } = useAuth();
+  const { user, role } = useAuth();
 
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -140,8 +140,6 @@ export default function UserManagementPage() {
     try {
       if (selectedUser) {
         await authsApi.updateInternalUser({
-          actorId: user.id,
-          actorPermissions: permissions,
           userId: selectedUser.id,
           fullName: formData.fullName,
           email: formData.email,
@@ -152,7 +150,6 @@ export default function UserManagementPage() {
         setPageSuccess('Cập nhật tài khoản thành công.');
       } else {
         await authsApi.createInternalUser({
-          actorPermissions: permissions,
           fullName: formData.fullName,
           email: formData.email,
           role: formData.role,
@@ -194,8 +191,6 @@ export default function UserManagementPage() {
 
     try {
       await authsApi.setInternalUserStatus({
-        actorId: user.id,
-        actorPermissions: permissions,
         userId: targetUser.id,
         enabled: nextEnabled,
       });

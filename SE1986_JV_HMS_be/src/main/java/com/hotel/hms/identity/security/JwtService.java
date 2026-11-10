@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
-/** Tạo và kiểm tra access token (HS256). */
+/** Tạo và kiểm tra access token (HMAC; khóa 64 byte nên jjwt ký bằng HS512). */
 @Slf4j
 @Component
 public class JwtService {

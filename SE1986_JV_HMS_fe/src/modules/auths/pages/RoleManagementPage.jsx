@@ -7,7 +7,7 @@ import { useAuth } from '../../../app/provider/AuthsContext.jsx';
 const permissionName = (code) => PERMISSION_INFO[code]?.name || code;
 
 export default function RoleManagementPage() {
-  const { permissions: actorPermissions, refreshAuthorization } = useAuth();
+  const { refreshAuthorization } = useAuth();
   const [roles, setRoles] = useState([]);
   const [selectedRoleCode, setSelectedRoleCode] = useState(ROLES.ADMIN);
   const [permissionDrafts, setPermissionDrafts] = useState({});
@@ -90,7 +90,6 @@ export default function RoleManagementPage() {
 
     try {
       const updatedRole = await authsApi.updateRolePermissions({
-        actorPermissions,
         role: selectedRoleCode,
         permissions: selectedPermissions,
       });

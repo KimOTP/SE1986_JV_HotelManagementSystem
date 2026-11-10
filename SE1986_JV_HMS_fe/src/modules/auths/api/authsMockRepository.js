@@ -1,5 +1,6 @@
 
 import {
+  AUTH_STORAGE_KEYS,
   DATABASE_PERMISSION_CODES,
   PERMISSIONS,
   ROLE_LABELS,
@@ -198,6 +199,16 @@ const getEffectivePermissions = (roles = []) => {
   ];
 };
 
+// Người đang thao tác lấy từ phiên đăng nhập, giống backend lấy từ JWT.
+const currentActor = () => {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEYS.USER));
+    return { id: stored?.id, permissions: stored?.permissions || [] };
+  } catch {
+    return { id: undefined, permissions: [] };
+  }
+};
+
 export const authsMockRepository = {
   async getUsers() {
     return getStoredUsers().map(toPublicUser);
@@ -231,8 +242,8 @@ export const authsMockRepository = {
     return getEffectivePermissions(roles);
   },
 
-  async updateRolePermissions({ actorPermissions, role, permissions }) {
-    if (!actorPermissions?.includes(PERMISSIONS.ROLE_MANAGE)) {
+  async updateRolePermissions({ role, permissions }) {
+    if (!currentActor().permissions.includes(PERMISSIONS.ROLE_MANAGE)) {
       throw new Error('Bạn không có UC-A6 để quản lý vai trò và quyền.');
     }
     if (!ROLE_LABELS[role]) {
@@ -400,14 +411,13 @@ export const authsMockRepository = {
     return { temporaryPassword };
   },
   async createInternalUser({
-  actorPermissions,
   fullName,
   email,
   role,
   jobTitle,
   password,
 }) {
-  if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
+  if (!currentActor().permissions.includes(PERMISSIONS.USER_MANAGE)) {
     throw new Error('Bạn không có UC-A5 để tạo tài khoản nội bộ.');
   }
   if (![ROLES.MANAGER, ROLES.STAFF].includes(role)) {
@@ -441,15 +451,13 @@ export const authsMockRepository = {
   return toPublicUser(newUser);
   },
   async updateInternalUser({
-  actorId,
-  actorPermissions,
   userId,
   fullName,
   email,
   role,
   jobTitle,
 }) {
-  if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
+  if (!currentActor().permissions.includes(PERMISSIONS.USER_MANAGE)) {
     throw new Error('Bạn không có UC-A5 để cập nhật tài khoản nội bộ.');
   }
 
@@ -473,7 +481,7 @@ export const authsMockRepository = {
   }
 
   if (
-    String(actorId) === String(userId) &&
+    String(currentActor().id) === String(userId) &&
     role !== target.role
   ) {
     throw new Error('Bạn không thể tự thay đổi vai trò của mình.');
@@ -504,16 +512,14 @@ export const authsMockRepository = {
   return toPublicUser(users[userIndex]);
   },
   async setInternalUserStatus({
-  actorId,
-  actorPermissions,
   userId,
   enabled,
 }) {
-  if (!actorPermissions?.includes(PERMISSIONS.USER_MANAGE)) {
+  if (!currentActor().permissions.includes(PERMISSIONS.USER_MANAGE)) {
     throw new Error('Bạn không có UC-A5 để thay đổi trạng thái tài khoản.');
   }
 
-  if (String(actorId) === String(userId)) {
+  if (String(currentActor().id) === String(userId)) {
     throw new Error('Bạn không thể tự vô hiệu hóa tài khoản của mình.');
   }
 
