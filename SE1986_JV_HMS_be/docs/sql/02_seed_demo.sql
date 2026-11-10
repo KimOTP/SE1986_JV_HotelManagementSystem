@@ -1,6 +1,7 @@
-﻿-- Demo only. Run once after 01_schema.sql in SSMS.
+﻿-- Demo only. Run once after docs/sql/01_schema_complete_module_b.sql on a fresh database.
 USE HotelManagement_SBA;
 GO
+SET QUOTED_IDENTIFIER ON;
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 IF EXISTS(SELECT 1 FROM identity_access.hotels)
@@ -56,7 +57,7 @@ INSERT inventory.room_types(hotel_id,name,description,base_price,max_guests,bed_
  (1,N'Standard',N'Phòng tiêu chuẩn',500000,2,N'1 giường đôi',22),
  (1,N'Deluxe',N'Phòng cao cấp',800000,3,N'1 giường đôi và 1 giường đơn',30),
  (1,N'Suite',N'Phòng suite',1500000,4,N'2 giường đôi',45);
-INSERT inventory.amenities(name,icon) VALUES (N'Wi-Fi','wifi'),(N'Điều hòa','snow'),(N'Tivi','tv'),(N'Bồn tắm','water');
+INSERT inventory.amenities(name) VALUES (N'Wi-Fi'),(N'Điều hòa'),(N'Tivi'),(N'Bồn tắm');
 INSERT inventory.room_type_amenities VALUES(1,1),(1,2),(1,3),(2,1),(2,2),(2,3),(3,1),(3,2),(3,3),(3,4);
 INSERT inventory.rooms(room_type_id,room_number,floor_number,operational_status,housekeeping_status) VALUES
  (1,'101',1,'AVAILABLE','CLEAN'),(1,'102',1,'AVAILABLE','CLEAN'),

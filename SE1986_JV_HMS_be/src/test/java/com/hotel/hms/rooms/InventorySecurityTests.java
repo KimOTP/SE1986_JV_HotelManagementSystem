@@ -5,6 +5,8 @@ import com.hotel.hms.rooms.controller.InventoryExceptionHandler;
 import com.hotel.hms.rooms.controller.RoomImageController;
 import com.hotel.hms.rooms.service.RoomImageStorageService;
 import com.hotel.hms.rooms.dto.UploadedRoomImage;
+import com.hotel.hms.rooms.dto.InventoryDtos.AmenityWrite;
+import com.hotel.hms.rooms.dto.InventoryDtos.AmenityView;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import com.hotel.hms.rooms.security.InventoryWebConfiguration;
@@ -102,11 +104,28 @@ class InventorySecurityTests {
     }
 
     @Test
+    void amenityCanBeCreatedWithNameDescriptionAndActiveState() throws Exception {
+        var input = new AmenityWrite("Wi-Fi", "Internet", true);
+        when(service.saveAmenity(null, input)).thenReturn(new AmenityView("3", "Wi-Fi", "Internet", true));
+        mvc.perform(post("/api/inventory/admin/amenities")
+                .with(user("admin").authorities(new SimpleGrantedAuthority("UC-B3")))
+                .contentType("application/json")
+                .content("{\"name\":\"Wi-Fi\",\"description\":\"Internet\",\"isActive\":true}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("3"))
+                .andExpect(jsonPath("$.name").value("Wi-Fi"))
+                .andExpect(jsonPath("$.description").value("Internet"))
+                .andExpect(jsonPath("$.isActive").value(true))
+                .andExpect(jsonPath("$.*", org.hamcrest.Matchers.hasSize(4)));
+        verify(service).saveAmenity(null, input);
+    }
+
+    @Test
     void onlyUcB1CanUploadWhileStoredImagesArePublic() throws Exception {
         String upload = "/api/inventory/admin/images";
         mvc.perform(post(upload).contentType("image/png").content(new byte[] { 1 }))
                 .andExpect(status().isUnauthorized());
-        for (String role : List.of("MANAGER", "STAFF", "CUSTOMER")) {
+        for (String role : List.of("MANAGER", "RECEPTIONIST", "HOUSEKEEPER", "CUSTOMER")) {
             mvc.perform(post(upload).with(user(role).roles(role)).contentType("image/png")
                     .content(new byte[] { 1 })).andExpect(status().isForbidden());
         }
@@ -136,20 +155,21 @@ class InventorySecurityTests {
 
     @Test
     void seedRoleMatrixProtectsEachReadEndpoint() throws Exception {
-        for (String role : List.of("ADMIN", "MANAGER", "STAFF", "CUSTOMER")) {
+        for (String role : List.of("ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPER", "CUSTOMER")) {
             var authorities = new ArrayList<SimpleGrantedAuthority>();
             authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
             if (role.equals("ADMIN"))
                 for (String uc : List.of("UC-B1", "UC-B2", "UC-B3"))
                     authorities.add(new SimpleGrantedAuthority(uc));
-            if (!role.equals("CUSTOMER"))
+            boolean canViewMap = Set.of("MANAGER", "RECEPTIONIST", "HOUSEKEEPER").contains(role);
+            if (canViewMap)
                 authorities.add(new SimpleGrantedAuthority("UC-B6"));
             var principal = user(role).authorities(authorities.toArray(SimpleGrantedAuthority[]::new));
             for (String resource : List.of("room-types", "rooms", "amenities"))
                 mvc.perform(get("/api/inventory/admin/" + resource).with(principal))
                         .andExpect(status().is(role.equals("ADMIN") ? 200 : 403));
             mvc.perform(get("/api/inventory/room-map").with(principal))
-                    .andExpect(status().is(role.equals("CUSTOMER") ? 403 : 200));
+                    .andExpect(status().is(canViewMap ? 200 : 403));
         }
     }
 
@@ -191,7 +211,7 @@ class InventorySecurityTests {
     @Test
     void eachWriteVerbRequiresItsResourcePermissionForAllSeedRoles() throws Exception {
         String body = "{\"isActive\":false}";
-        for (String role : List.of("MANAGER", "STAFF", "CUSTOMER")) {
+        for (String role : List.of("MANAGER", "RECEPTIONIST", "HOUSEKEEPER", "CUSTOMER")) {
             var principal = user(role).roles(role);
             for (String resource : List.of("room-types", "rooms", "amenities")) {
                 mvc.perform(delete("/api/inventory/admin/" + resource + "/1").with(principal))

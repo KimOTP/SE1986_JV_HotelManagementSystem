@@ -1,5 +1,5 @@
 ﻿-- COMPLETE SCHEMA: original schema plus Module B notes and room-type images.
--- NEW DATABASE ONLY. For an existing database use 03_module_b_extensions.sql instead.
+-- NEW DATABASE ONLY. For an existing database use scripts/migrate-existing-db-module-b.sql instead.
 -- Original seed 02_seed_demo.sql remains compatible; run only on a fresh empty database.
 -- SQL Server database for SBA_Project (2).docx, modules A-E.
 -- Run in SSMS as a complete script. Fresh database only; no DROP statements.
@@ -111,7 +111,6 @@ CREATE TABLE inventory.amenities (
     amenity_id BIGINT IDENTITY(1,1) PRIMARY KEY,
     name NVARCHAR(100) NOT NULL UNIQUE,
     description NVARCHAR(500) NULL,
-    icon VARCHAR(100) NULL,
     is_active BIT NOT NULL DEFAULT 1
 );
 CREATE TABLE inventory.room_type_amenities (

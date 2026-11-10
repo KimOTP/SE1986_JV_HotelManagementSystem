@@ -181,7 +181,7 @@ public class InventoryService {
         }
         case "amenities" -> {
             var a = amenity(id);
-            yield saveAmenity(id, new AmenityWrite(a.name(), a.iconKey(), a.description(), active));
+            yield saveAmenity(id, new AmenityWrite(a.name(), a.description(), active));
         }
         default -> throw new ResponseStatusException(NOT_FOUND);
         };

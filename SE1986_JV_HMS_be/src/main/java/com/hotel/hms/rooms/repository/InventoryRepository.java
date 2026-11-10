@@ -144,7 +144,6 @@ public class InventoryRepository {
                         () -> new ResponseStatusException(NOT_FOUND, "Không tìm thấy tiện nghi."));
         amenity.setName(input.name());
         amenity.setDescription(input.description());
-        amenity.setIcon(InventoryMapper.iconToDb(input.iconKey()));
         amenity.setActive(input.isActive());
         return amenities.saveAndFlush(amenity).getId();
     }
