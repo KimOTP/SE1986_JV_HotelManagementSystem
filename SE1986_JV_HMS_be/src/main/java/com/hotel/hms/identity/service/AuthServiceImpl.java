@@ -103,10 +103,6 @@ public class AuthServiceImpl implements AuthService {
             throw invalidCredentials();
         }
 
-        if (!user.isEmailVerified()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED",
-                    "Email chưa được xác thực. Vui lòng kiểm tra hộp thư.");
-        }
         return issueTokens(user);
     }
 

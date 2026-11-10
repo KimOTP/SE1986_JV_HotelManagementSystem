@@ -20,7 +20,6 @@ const dataset = (data) => ({
   roomTypes: (data.roomTypes || []).map(normalize),
   rooms: (data.rooms || []).map(normalize),
   amenities: (data.amenities || []).map(normalize),
-  reservations: [],
 });
 const fields = {
   roomTypes: [

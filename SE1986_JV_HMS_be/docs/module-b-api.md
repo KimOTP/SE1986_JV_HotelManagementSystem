@@ -64,7 +64,6 @@ Giữ `ddl-auto=validate`, `sql.init.mode=never`; Hibernate kiểm tra mapping m
 Frontend `.env.local` (cấu hình thủ công, không chứa secret):
 
 ```dotenv
-VITE_ROOMS_DATA_SOURCE=api
 VITE_AUTH_DATA_SOURCE=api
 VITE_API_BASE_URL=http://localhost:8080/api
 ```
@@ -77,6 +76,7 @@ npm run dev
 
 Nếu dùng `/api` thay URL tuyệt đối, cấu hình proxy hiện có phải trỏ backend.
 JWT/refresh dùng axiosClient/AuthProvider sẵn có. Không thêm `/api` lần nữa vào adapter.
+Module B luôn dùng API, không còn đọc `VITE_ROOMS_DATA_SOURCE` hoặc lưu dữ liệu mock trên trình duyệt.
 
 ## API contract
 
@@ -232,8 +232,8 @@ Module C có thể gọi public search/detail/availability như bảng trên.
 Handoff giữ `roomTypeId,checkIn,checkOut,guests,roomCount` qua `/rooms/booking-handoff` hiện có.
 Search không giữ chỗ, không tạo booking và không đảm bảo chống overbooking.
 Module C phải kiểm tra lại availability trong transaction tạo/giữ phòng.
-Code booking FE hiện vẫn có store mock/localStorage; việc handoff dùng chi tiết B thật
-không có nghĩa toàn bộ tạo booking đã dùng SQL Server. Không sửa Module C trong thay đổi này.
+Module C có adapter mock/API riêng, chọn bằng `VITE_BOOKING_DATA_SOURCE`; handoff từ B không tự bật API C.
+Không sửa Module C trong thay đổi này.
 
 Ví dụ PowerShell/curl (ID/ngày là ví dụ, thay bằng dữ liệu thực tế):
 

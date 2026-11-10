@@ -41,26 +41,6 @@ export const ROLE_LABELS = {
   [ROLES.CUSTOMER]: 'Khách hàng',
 };
 
-// Defaults based on the project brief. Role permission edits are exact UC
-// grants; broad legacy permissions are intentionally excluded from defaults.
-// Screen and action to UC mapping. In this iteration, related view/edit
-// capabilities on one screen are granted through its primary UC.
-export const PERMISSION_CATALOG = [
-  { code: PERMISSIONS.ROOM_VIEW, label: 'Xem danh mục phòng (legacy)' },
-  { code: PERMISSIONS.ROOM_MANAGE, label: 'Quản lý phòng (legacy)' },
-  { code: PERMISSIONS.ROOM_MAP_VIEW, label: 'Xem sơ đồ phòng (legacy)' },
-  { code: PERMISSIONS.INVOICE_VIEW, label: 'Xem hóa đơn (legacy)' },
-  { code: PERMISSIONS.INVOICE_MANAGE, label: 'Quản lý hóa đơn (legacy)' },
-  { code: PERMISSIONS.USER_VIEW, label: 'Xem người dùng (legacy)' },
-  { code: PERMISSIONS.USER_MANAGE, label: 'UC-A5 · Quản lý nhân viên/quản lý' },
-  { code: PERMISSIONS.ROLE_VIEW, label: 'Xem vai trò và quyền (legacy)' },
-  { code: PERMISSIONS.ROLE_MANAGE, label: 'UC-A6 · Quản lý vai trò và quyền' },
-  { code: PERMISSIONS.HOUSEKEEPING_VIEW, label: 'Xem nghiệp vụ buồng phòng (legacy)' },
-  { code: PERMISSIONS.HOUSEKEEPING_MANAGE, label: 'Quản lý buồng phòng (legacy)' },
-  { code: PERMISSIONS.BOOKING_VIEW, label: 'Xem đặt phòng (legacy)' },
-  { code: PERMISSIONS.BOOKING_MANAGE, label: 'Quản lý đặt phòng (legacy)' },
-];
-
 // Khớp bảng identity_access.role_permissions trong database seed, để chế độ mock
 // hiển thị giống khi đăng nhập bằng backend (VITE_AUTH_DATA_SOURCE=api).
 export const ROLE_PERMISSION_DEFAULTS = {
@@ -90,34 +70,3 @@ export const ROLE_PERMISSION_DEFAULTS = {
 };
 
 export const INTERNAL_ROLES = [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF];
-export const PUBLIC_ROLES = [ROLES.CUSTOMER];
-
-export const UC_SCREEN_PERMISSIONS = {
-  '/users': 'UC-A5',
-  '/admin/roles': 'UC-A6',
-  '/admin/room-types': 'UC-B1',
-  '/admin/rooms': 'UC-B2',
-  '/admin/amenities': 'UC-B3',
-  '/admin/room-map': 'UC-B6',
-  '/rooms': 'UC-B4',
-  '/rooms/:id': 'UC-B5',
-  '/bookings/new': 'UC-C1',
-  '/bookings/deposit': 'UC-C2',
-  '/bookings': 'UC-C3',
-  '/bookings/:id/cancel': 'UC-C4',
-  '/admin/bookings': 'UC-C5',
-  '/bookings/:id': 'UC-C6',
-  '/frontdesk/check-in': 'UC-D1',
-  '/frontdesk/check-out': 'UC-D2',
-  '/frontdesk/invoices/new': 'UC-D3',
-  '/frontdesk/invoices/:id': 'UC-D4',
-  '/frontdesk/invoices/:id/edit': 'UC-D5',
-  // Danh sách hóa đơn cần quyền xem (khớp API GET /api/frontdesk/invoices); xóa vẫn cần UC-D6.
-  '/frontdesk/invoices': 'UC-D4',
-  '/operations/tasks': 'UC-E1',
-  '/operations/my-tasks': 'UC-E2',
-  '/operations/dashboard': 'UC-E3',
-  '/operations/report-issue': 'UC-E4',
-  '/operations/issues': 'UC-E5',
-  '/operations/feedbacks': 'UC-E6',
-};

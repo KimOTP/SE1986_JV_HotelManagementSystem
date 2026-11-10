@@ -40,9 +40,11 @@ import {
   ManageBookingsPage,
 } from './modules/bookings/pages';
 
-function RoleHomeRedirect() {
-  const { permissions } = useAuth();
-  return <Navigate to={getHomePath(permissions)} replace />;
+// Đường dẫn gốc "/": người đã đăng nhập vào trang chính theo quyền của mình,
+// khách chưa đăng nhập xem danh sách phòng thay vì bị chuyển sang trang đăng nhập.
+function RootRedirect() {
+  const { isAuthenticated, permissions } = useAuth();
+  return <Navigate to={isAuthenticated ? getHomePath(permissions) : '/rooms'} replace />;
 }
 
 function NotFound() {
@@ -70,6 +72,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -87,7 +90,6 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<RoleHomeRedirect />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="services" element={<ServicesPage />} />
           <Route path="contact" element={<ContactPage />} />

@@ -44,7 +44,7 @@ export default function CatalogManagementPage({ kind }) {
       setLoading(false);
     }
   }, [kind]);
-  // Load/reload is intentionally imperative because the repository may be mock or HTTP.
+  // Reload persisted API data after catalog mutations.
   useEffect(() => {
     load();
   }, [load]);
