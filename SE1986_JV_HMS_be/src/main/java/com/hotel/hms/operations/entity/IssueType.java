@@ -17,8 +17,7 @@ public class IssueType {
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
-    protected IssueType() {
-    }
+    protected IssueType() {}
 
     public Long getId() {
         return id;

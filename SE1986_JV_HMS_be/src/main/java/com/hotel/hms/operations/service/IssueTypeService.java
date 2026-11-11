@@ -2,6 +2,7 @@ package com.hotel.hms.operations.service;
 
 import com.hotel.hms.operations.dto.IssueTypeResponse;
 import com.hotel.hms.operations.repository.IssueTypeRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +19,8 @@ public class IssueTypeService {
     }
 
     public List<IssueTypeResponse> getActiveIssueTypes() {
-        return repository.findByActiveTrueOrderByIdAsc()
-                .stream()
-                .map(type -> new IssueTypeResponse(
-                        type.getId(),
-                        type.getName()
-                ))
+        return repository.findByActiveTrueOrderByIdAsc().stream()
+                .map(type -> new IssueTypeResponse(type.getId(), type.getName()))
                 .toList();
     }
 }
