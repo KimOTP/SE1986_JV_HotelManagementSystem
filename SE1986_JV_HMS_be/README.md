@@ -348,6 +348,32 @@ Các bộ lọc mặc định chuỗi rỗng (không lọc); room tìm chứa ch
 Status không hợp lệ trả HTTP 400. Bộ lọc chạy trước phân trang trong SQL.
 Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
 
+## Deploy demo
+
+Chạy trên server chỉ cần đặt biến môi trường, không phải sửa code.
+
+**Backend** (`SE1986_JV_HMS_be`, chạy bằng `./mvnw spring-boot:run` hoặc `java -jar` sau `./mvnw package`):
+
+| Biến | Giá trị trên server |
+|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | SQL Server của server; chỉ cần tạo database rỗng, Flyway tự dựng bảng và dữ liệu demo |
+| `SERVER_ADDRESS` | `0.0.0.0` (mặc định chỉ nghe localhost) |
+| `CORS_ALLOWED_ORIGINS` | địa chỉ website, ví dụ `https://demo.example.com` |
+| `JWT_SECRET_BASE64` | chuỗi `openssl rand -base64 64`; để trống thì mỗi lần restart phải đăng nhập lại |
+| `INVENTORY_DEFAULT_HOTEL_ID` | `1` (khớp khách sạn trong seed) |
+| `INVENTORY_IMAGE_BASE_URL` | `https://<địa chỉ backend>/api/inventory/public/images` |
+| `BOOKING_PAYOS_*` | như `.env.example`; `BOOKING_PAYOS_FRONTEND_URL` là địa chỉ website, `ORDER_OFFSET` khác với mọi máy khác dùng chung kênh payOS |
+| `ADMIN_BOOTSTRAP_PASSWORD` | tùy chọn, từ 8 ký tự: đặt mật khẩu cho `admin@sba.example` khi khởi động (bỏ biến sau lần đầu) |
+
+Kiểm tra backend sống: `GET /api/health` trả `{"status":"UP"}`.
+
+**Frontend** (`SE1986_JV_HMS_fe`): đặt `VITE_API_BASE_URL=https://<địa chỉ backend>/api`
+(hoặc để `/api` và cho web server chuyển tiếp `/api` sang backend), `VITE_BOOKING_PAYOS_ENABLED=true`, rồi `npm run build`
+và phục vụ thư mục `dist` (cần trả `index.html` cho mọi đường dẫn không phải file).
+
+Mọi đường dẫn `/api` đều cần đăng nhập, trừ `/api/health`, `/api/inventory/public/**` và các endpoint đăng nhập/đăng ký/quên mật khẩu.
+Tài khoản demo `@sba.example` vẫn có sẵn trong seed, dùng `scripts/dev-reset-passwords.sql` nếu muốn mật khẩu chung `123456`.
+
 ## Đăng nhập JWT (Module A)
 
 ### Cài đặt local

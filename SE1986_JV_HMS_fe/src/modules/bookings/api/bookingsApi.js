@@ -1,9 +1,9 @@
 import { bookingsHttpRepository } from './bookingsHttpRepository';
 
-// mock (mặc định, dữ liệu localStorage) hoặc api (Spring Boot).
+// api (mặc định, Spring Boot) hoặc mock (dữ liệu localStorage).
 // Đặt VITE_BOOKING_DATA_SOURCE=api để dùng backend thật.
 export const bookingsDataSource = (
-  import.meta.env.VITE_BOOKING_DATA_SOURCE || 'mock'
+  import.meta.env.VITE_BOOKING_DATA_SOURCE || 'api'
 ).toLowerCase();
 
 let mock;
