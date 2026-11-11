@@ -45,4 +45,13 @@ Không chuyển JDBC sang JPA, thay đổi API, cấu trúc database, quyền tr
 
 Đây là kiểm tra hồi quy sau chỉnh cách trình bày Module E, không phải xác nhận mọi tình huống của toàn HMS. Không thực hiện giao dịch payOS thật. Tạo/phản hồi feedback được kiểm tra bằng API và SQL Server tích hợp; lần kiểm tra trình duyệt này không gửi feedback mới vì tài khoản demo không còn booking đủ điều kiện.
 
-Code chưa được commit hoặc push trong lần chỉnh này.
+## Kiểm tra lại sau khi đồng bộ main
+
+- Phần chỉnh dễ đọc đã được commit tại `6f58bc6` và đẩy lên DucHM.
+- Đã hợp nhất main `50e456b` vào DucHM bằng commit `498e2f7`, không có xung đột. Main hoàn tác cấu hình triển khai; không thay nghiệp vụ Module E.
+- Biên dịch và kiểm tra lại từ đầu: tổng 293 kiểm tra backend, 292 đạt, 1 bỏ qua, không failure/error. Toàn bộ 127 kiểm tra Module E và 18 kiểm tra SQL Server của module phòng đều đạt.
+- Kiểm tra chưa bật là `InventoryJpaSchemaTests`, cần lựa chọn xác minh schema local riêng.
+- Frontend build, ESLint và 16 kiểm tra Node đều đạt.
+- Trình duyệt: Manager đăng nhập, dashboard và sự cố/lịch sử tải đúng; Manager và Customer mở đúng màn hình đánh giá sau merge.
+- Script kiểm tra API thực bằng Manager, Housekeeper Test B và Customer: đạt; tổng trạng thái dashboard khớp. Lần này không tạo thêm dữ liệu demo.
+- Phần ghi giao việc, bắt đầu, hoàn thành, giao lại và feedback được chạy lại bằng bộ kiểm tra tích hợp trên database riêng, có rollback. Không thực hiện giao dịch payOS thật.
