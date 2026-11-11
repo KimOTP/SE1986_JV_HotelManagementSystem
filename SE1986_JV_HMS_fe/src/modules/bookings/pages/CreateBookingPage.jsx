@@ -132,6 +132,8 @@ export default function CreateBookingPage() {
     roomTypeId && hasAvailabilityResult
       ? availabilityCounts[roomTypeId] ?? 0
       : null;
+  const insufficientRooms = hasDateRange && selectedAvailability !== null &&
+    selectedAvailability < roomCount;
   const maxRooms =
     selectedAvailability === null
       ? MAX_ROOMS
@@ -158,11 +160,17 @@ export default function CreateBookingPage() {
   };
 
   const selectRoomType = (nextRoomType) => {
+    setError('');
     setRoomTypeId(nextRoomType.id);
     setForm((current) => ({
       ...current,
       guests: Math.min(Number(current.guests) || 1, nextRoomType.capacity * Number(current.rooms)),
     }));
+  };
+
+  const refreshAvailability = () => {
+    setAvailability({ key: '', counts: null });
+    setAvailabilityRefresh((value) => value + 1);
   };
 
   const submit = (event) => {
@@ -193,8 +201,7 @@ export default function CreateBookingPage() {
       .then(async (availabilityResult) => {
         const availableRooms = Number(availabilityResult?.availableRooms || 0);
         if (availableRooms < Number(form.rooms)) {
-          setAvailability({ key: '', counts: null });
-          setAvailabilityRefresh((value) => value + 1);
+          refreshAvailability();
           setError(`Chỉ còn ${availableRooms} phòng phù hợp. Vui lòng chọn lại loại phòng, số phòng hoặc ngày lưu trú.`);
           return;
         }
@@ -220,8 +227,7 @@ export default function CreateBookingPage() {
       })
       .catch((caught) => {
         if (caught?.response?.data?.code === 'BOOKING_ROOM_NOT_AVAILABLE') {
-          setAvailability({ key: '', counts: null });
-          setAvailabilityRefresh((value) => value + 1);
+          refreshAvailability();
           setError('Số phòng trống vừa thay đổi. Vui lòng chọn lại loại phòng, số phòng hoặc ngày lưu trú.');
           return;
         }
@@ -498,15 +504,23 @@ export default function CreateBookingPage() {
                     <p className="booking-stock-note">Đang kiểm tra phòng trống…</p>
                   ) : selectedAvailability === null ? (
                     <p className="booking-stock-note">Chưa thể kiểm tra tình trạng phòng.</p>
-                  ) : selectedAvailability > 0 ? (
+                  ) : insufficientRooms ? (
+                    <p className="booking-stock-note is-unavailable" role="status">
+                      <XCircleFill aria-hidden="true" /> {selectedAvailability === 0
+                        ? 'Hết phòng trong khoảng ngày này.'
+                        : `Chỉ còn ${selectedAvailability} phòng. Vui lòng giảm số phòng hoặc chọn loại khác.`}
+                    </p>
+                  ) : (
                     <p className="booking-stock-note is-available">
                       <CheckCircleFill aria-hidden="true" /> Còn {selectedAvailability} phòng khả
                       dụng.
                     </p>
-                  ) : (
-                    <p className="booking-stock-note is-unavailable">
-                      <XCircleFill aria-hidden="true" /> Hết phòng trong khoảng ngày này.
-                    </p>
+                  )}
+                  {insufficientRooms && (
+                    <Button type="button" size="sm" variant="outline-primary"
+                      onClick={refreshAvailability}>
+                      Kiểm tra lại phòng trống
+                    </Button>
                   )}
                 </div>
               </div>
@@ -648,7 +662,8 @@ export default function CreateBookingPage() {
                       loadingTypes ||
                       submitting ||
                       !roomType ||
-                      (hasDateRange && selectedAvailability === 0)
+                      checkingAvailability ||
+                      insufficientRooms
                     }
                   >
                     <ClipboardCheck aria-hidden="true" />
