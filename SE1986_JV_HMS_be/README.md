@@ -348,31 +348,43 @@ Các bộ lọc mặc định chuỗi rỗng (không lọc); room tìm chứa ch
 Status không hợp lệ trả HTTP 400. Bộ lọc chạy trước phân trang trong SQL.
 Frontend hiện đã dùng endpoint này cho bảng sự cố ở chế độ chỉ đọc; form tạo vẫn lưu demo.
 
-## Deploy demo
+## Deploy demo (Vercel + Render + VPS)
 
-Chạy trên server chỉ cần đặt biến môi trường, không phải sửa code.
+Mô hình: **frontend** trên Vercel, **backend** trên Render (Docker), **SQL Server** trên VPS, **mail** qua Brevo.
+Chỉ cần đặt biến môi trường, không phải sửa code. Làm theo thứ tự:
 
-**Backend** (`SE1986_JV_HMS_be`, chạy bằng `./mvnw spring-boot:run` hoặc `java -jar` sau `./mvnw package`):
+**1. SQL Server trên VPS**
+- Cài SQL Server, mở cổng `1433` ra ngoài. Đặt mật khẩu `sa` mạnh (hoặc tạo user riêng), vì cổng này công khai.
+- Tạo database rỗng: `CREATE DATABASE HotelManagement_SBA;`. Flyway tự dựng bảng và dữ liệu demo ở lần chạy đầu của backend.
 
-| Biến | Giá trị trên server |
+**2. Backend trên Render** (New > Blueprint, chọn repo, file `SE1986_JV_HMS_be/render.yaml`; hoặc New > Web Service > Docker, Root Directory `SE1986_JV_HMS_be`, Health Check `/api/health`)
+
+| Biến | Giá trị |
 |---|---|
-| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | SQL Server của server; chỉ cần tạo database rỗng, Flyway tự dựng bảng và dữ liệu demo |
-| `SERVER_ADDRESS` | `0.0.0.0` (mặc định chỉ nghe localhost) |
-| `CORS_ALLOWED_ORIGINS` | địa chỉ website, ví dụ `https://demo.example.com` |
-| `JWT_SECRET_BASE64` | chuỗi `openssl rand -base64 64`; để trống thì mỗi lần restart phải đăng nhập lại |
-| `INVENTORY_DEFAULT_HOTEL_ID` | `1` (khớp khách sạn trong seed) |
-| `INVENTORY_IMAGE_BASE_URL` | `https://<địa chỉ backend>/api/inventory/public/images` |
-| `BOOKING_PAYOS_*` | như `.env.example`; `BOOKING_PAYOS_FRONTEND_URL` là địa chỉ website, `ORDER_OFFSET` khác với mọi máy khác dùng chung kênh payOS |
-| `ADMIN_BOOTSTRAP_PASSWORD` | tùy chọn, từ 8 ký tự: đặt mật khẩu cho `admin@sba.example` khi khởi động (bỏ biến sau lần đầu) |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` | SQL Server trên VPS |
+| `JWT_SECRET_BASE64` | chuỗi `openssl rand -base64 64` (bắt buộc đặt, vì Render ngủ rồi dậy sẽ mất khóa tạm) |
+| `CORS_ALLOWED_ORIGINS` | địa chỉ Vercel, ví dụ `https://hms-demo.vercel.app` (không có dấu `/` ở cuối) |
+| `INVENTORY_DEFAULT_HOTEL_ID` | `1` |
+| `INVENTORY_IMAGE_BASE_URL` | `https://<tên>.onrender.com/api/inventory/public/images` |
+| `BOOKING_PAYOS_*` | như `.env.example`; `BOOKING_PAYOS_FRONTEND_URL` là địa chỉ Vercel; `ORDER_OFFSET` khác với mọi máy khác dùng chung kênh payOS |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_STARTTLS` | `smtp-relay.brevo.com` / `2525` / `true` (cổng 2525 vì Render Free có thể chặn 587) |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | email đăng nhập Brevo / **SMTP key** của Brevo (SMTP & API > SMTP) |
+| `MAIL_FROM` | địa chỉ đã được xác minh trong Brevo (Senders & IP), nếu không Brevo từ chối gửi |
+| `ADMIN_BOOTSTRAP_PASSWORD` | tùy chọn, từ 8 ký tự: đặt mật khẩu cho `admin@sba.example` khi khởi động |
 
-Kiểm tra backend sống: `GET /api/health` trả `{"status":"UP"}`.
+Render tự đặt `PORT` và Dockerfile đã đặt `SERVER_ADDRESS=0.0.0.0`. Kiểm tra: `GET https://<tên>.onrender.com/api/health` trả `{"status":"UP"}`.
 
-**Frontend** (`SE1986_JV_HMS_fe`): đặt `VITE_API_BASE_URL=https://<địa chỉ backend>/api`
-(hoặc để `/api` và cho web server chuyển tiếp `/api` sang backend), `VITE_BOOKING_PAYOS_ENABLED=true`, rồi `npm run build`
-và phục vụ thư mục `dist` (cần trả `index.html` cho mọi đường dẫn không phải file).
+**3. Frontend trên Vercel** (Add New > Project, chọn repo, **Root Directory = `SE1986_JV_HMS_fe`**, preset Vite)
+- `VITE_API_BASE_URL` = `https://<tên>.onrender.com/api`
+- `VITE_BOOKING_PAYOS_ENABLED` = `true`
+- `vercel.json` đã có sẵn để tải lại trang ở đường dẫn con (`/bookings`...) không bị 404.
+- Sau khi có địa chỉ Vercel, quay lại Render điền `CORS_ALLOWED_ORIGINS` và `BOOKING_PAYOS_FRONTEND_URL`.
 
-Mọi đường dẫn `/api` đều cần đăng nhập, trừ `/api/health`, `/api/inventory/public/**` và các endpoint đăng nhập/đăng ký/quên mật khẩu.
-Tài khoản demo `@sba.example` vẫn có sẵn trong seed, dùng `scripts/dev-reset-passwords.sql` nếu muốn mật khẩu chung `123456`.
+**Lưu ý khi chạy**
+- Render Free ngủ sau khoảng 15 phút không dùng, request đầu tiên có thể mất cả phút (FE đã nới timeout lên 60 giây). Trước buổi demo hãy mở `/api/health` để đánh thức.
+- Ảnh phòng tải lên được lưu trên đĩa của container Render và sẽ **mất khi server ngủ hoặc deploy lại**. Với demo, hãy dùng ảnh có sẵn trong seed hoặc tải ảnh lên ngay trước khi demo.
+- Mọi đường `/api` đều cần đăng nhập, trừ `/api/health`, `/api/inventory/public/**` và các endpoint đăng nhập/đăng ký/quên mật khẩu.
+- Tài khoản demo `@sba.example` có sẵn trong seed; dùng `scripts/dev-reset-passwords.sql` hoặc `ADMIN_BOOTSTRAP_PASSWORD` để đặt mật khẩu.
 
 ## Đăng nhập JWT (Module A)
 
