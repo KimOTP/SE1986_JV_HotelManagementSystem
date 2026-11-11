@@ -1,4 +1,5 @@
 package com.hotel.hms.operations;
+import com.hotel.hms.operations.repository.*;
 
 import com.hotel.hms.operations.controller.MyTaskController;
 import com.hotel.hms.operations.dto.*;
@@ -20,12 +21,12 @@ class MyTaskServiceTests {
     @BeforeEach void setup() {
         jdbc = mock(JdbcTemplate.class);
         identity = mock(IssueProgressService.class);
-        when(identity.requireWorker()).thenReturn(new IssueProgressService.Worker(3L, 1L, "Housekeeper Demo"));
-        service = new MyTaskService(jdbc, identity);
+        when(identity.requireWorker()).thenReturn(new IssueProgressRepository.Worker(3L, 1L, "Housekeeper Demo"));
+        service = new MyTaskService(new MyTaskRepository(jdbc), identity, new LinkedWorkRepository(jdbc));
     }
     private void task(Long hotelId, Long assignedStaffId, String status) {
-        when(jdbc.query(contains("SELECT t.task_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<MyTaskService.TaskState>>any(), eq(1L)))
-                .thenReturn(List.of(new MyTaskService.TaskState(1L, hotelId, assignedStaffId, status)));
+        when(jdbc.query(contains("SELECT t.task_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<MyTaskRepository.TaskState>>any(), eq(1L)))
+                .thenReturn(List.of(new MyTaskRepository.TaskState(1L, hotelId, assignedStaffId, status)));
     }
     private void noWrite() { verify(jdbc, never()).update(anyString(), eq(1L), eq(3L)); }
     @Test void noIdentityMeansNoReadOrWrite() {
@@ -45,12 +46,12 @@ class MyTaskServiceTests {
                 eq(3L), eq(1L), eq("103"), eq("103"), eq("PENDING"), eq("PENDING"), eq("CLEANING"), eq("CLEANING"), eq(10L), eq(5));
     }
     @Test void missingOrInactiveTaskReturns404() {
-        when(jdbc.query(contains("SELECT t.task_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<MyTaskService.TaskState>>any(), eq(1L))).thenReturn(List.of());
+        when(jdbc.query(contains("SELECT t.task_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<MyTaskRepository.TaskState>>any(), eq(1L))).thenReturn(List.of());
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
         noWrite();
     }
     @Test void otherStaffOrHotelCannotChangeTask() {
-        for (var state : List.of(new MyTaskService.TaskState(1L, 2L, 3L, "PENDING"), new MyTaskService.TaskState(1L, 1L, 2L, "PENDING"))) {
+        for (var state : List.of(new MyTaskRepository.TaskState(1L, 2L, 3L, "PENDING"), new MyTaskRepository.TaskState(1L, 1L, 2L, "PENDING"))) {
             task(state.hotelId(), state.assignedStaffId(), state.status());
             assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
             assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.complete(1L)).getStatusCode().value());

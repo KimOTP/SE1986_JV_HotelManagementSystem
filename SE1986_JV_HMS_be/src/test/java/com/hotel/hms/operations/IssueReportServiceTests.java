@@ -1,4 +1,5 @@
 package com.hotel.hms.operations;
+import com.hotel.hms.operations.repository.*;
 
 import com.hotel.hms.operations.dto.*;
 import com.hotel.hms.operations.service.IssueReportService;
@@ -26,7 +27,7 @@ class IssueReportServiceTests {
         jdbc = mock(JdbcTemplate.class);
         environment = new OperationsIdentity();
         SecurityContextHolder.clearContext();
-        service = new IssueReportService(jdbc, environment);
+        service = new IssueReportService(new IssueReportRepository(jdbc), environment);
     }
 
     private CreateIssueRequest request() {
@@ -35,8 +36,8 @@ class IssueReportServiceTests {
 
     private void enableReporter() {
         JwtTestUser.signIn("reception@sba.example");
-        when(jdbc.query(contains("WHERE email"), org.mockito.ArgumentMatchers.<RowMapper<IssueReportService.Reporter>>any(), eq("reception@sba.example")))
-                .thenReturn(List.of(new IssueReportService.Reporter(3L, "Reception Demo")));
+        when(jdbc.query(contains("WHERE email"), org.mockito.ArgumentMatchers.<RowMapper<IssueReportRepository.Reporter>>any(), eq("reception@sba.example")))
+                .thenReturn(List.of(new IssueReportRepository.Reporter(3L, "Reception Demo")));
     }
 
     private void activeRoom() {
@@ -59,7 +60,7 @@ class IssueReportServiceTests {
     @Test
     void inactiveOrMissingReporterDisablesWrites() {
         enableReporter();
-        when(jdbc.query(contains("WHERE email"), org.mockito.ArgumentMatchers.<RowMapper<IssueReportService.Reporter>>any(), eq("reception@sba.example")))
+        when(jdbc.query(contains("WHERE email"), org.mockito.ArgumentMatchers.<RowMapper<IssueReportRepository.Reporter>>any(), eq("reception@sba.example")))
                 .thenReturn(List.of());
         assertFalse(service.getContext().enabled());
         assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.create(request())).getStatusCode().value());

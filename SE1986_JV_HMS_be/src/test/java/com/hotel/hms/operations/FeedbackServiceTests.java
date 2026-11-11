@@ -1,4 +1,5 @@
 package com.hotel.hms.operations;
+import com.hotel.hms.operations.repository.*;
 import com.hotel.hms.operations.dto.*;
 import com.hotel.hms.operations.service.*;
 import jakarta.validation.Validation;
@@ -18,16 +19,16 @@ import static org.mockito.ArgumentMatchers.*;
 class FeedbackServiceTests {
  JdbcTemplate jdbc; OperationsIdentity env; IssueAssignmentService managers; FeedbackService service;
  @AfterEach void clearAuthentication(){SecurityContextHolder.clearContext();}
- @BeforeEach void setup(){jdbc=mock(JdbcTemplate.class);env=new OperationsIdentity();SecurityContextHolder.clearContext();managers=mock(IssueAssignmentService.class);service=new FeedbackService(jdbc,env,managers);when(managers.requireManager()).thenReturn(new IssueAssignmentService.Manager(2L,"Manager Demo",false));}
- void customer(){JwtTestUser.signIn("customer@sba.example");when(jdbc.query(contains("WHERE u.email"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackService.Customer>>any(),eq("customer@sba.example"))).thenReturn(List.of(new FeedbackService.Customer(5L,"Customer Demo")));}
- void booking(Long customerId,String status){when(jdbc.query(contains("SELECT booking_id,customer_id"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackService.BookingState>>any(),eq(2L))).thenReturn(List.of(new FeedbackService.BookingState(2L,customerId,1L,status)));}
- void feedback(String reply){when(jdbc.query(contains("SELECT f.feedback_id,b.hotel_id"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackService.FeedbackState>>any(),eq(1L))).thenReturn(List.of(new FeedbackService.FeedbackState(1L,1L,reply)));}
+ @BeforeEach void setup(){jdbc=mock(JdbcTemplate.class);env=new OperationsIdentity();SecurityContextHolder.clearContext();managers=mock(IssueAssignmentService.class);service=new FeedbackService(new FeedbackRepository(jdbc),env,managers);when(managers.requireManager()).thenReturn(new IssueAssignmentRepository.Manager(2L,"Manager Demo",false));}
+ void customer(){JwtTestUser.signIn("customer@sba.example");when(jdbc.query(contains("WHERE u.email"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackRepository.Customer>>any(),eq("customer@sba.example"))).thenReturn(List.of(new FeedbackRepository.Customer(5L,"Customer Demo")));}
+ void booking(Long customerId,String status){when(jdbc.query(contains("SELECT booking_id,customer_id"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackRepository.BookingState>>any(),eq(2L))).thenReturn(List.of(new FeedbackRepository.BookingState(2L,customerId,1L,status)));}
+ void feedback(String reply){when(jdbc.query(contains("SELECT f.feedback_id,b.hotel_id"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackRepository.FeedbackState>>any(),eq(1L))).thenReturn(List.of(new FeedbackRepository.FeedbackState(1L,1L,reply)));}
  CreateFeedbackRequest request(){return new CreateFeedbackRequest(2L,5,"  Phòng rất sạch sẽ  ");}
  @Test void disabledWithoutProfileEvenIfCustomerEmailIsAuthenticated(){
         assertEquals(401, assertThrows(ResponseStatusException.class, () -> service.getContext()).getStatusCode().value());
         verifyNoInteractions(jdbc);
     }
- @Test void inactiveOrMissingCustomerDisablesReadingAndCreating(){customer();when(jdbc.query(contains("WHERE u.email"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackService.Customer>>any(),eq("customer@sba.example"))).thenReturn(List.of());assertFalse(service.getContext().enabled());assertThrows(ResponseStatusException.class,()->service.myFeedback(0,5));assertThrows(ResponseStatusException.class,()->service.create(request()));}
+ @Test void inactiveOrMissingCustomerDisablesReadingAndCreating(){customer();when(jdbc.query(contains("WHERE u.email"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackRepository.Customer>>any(),eq("customer@sba.example"))).thenReturn(List.of());assertFalse(service.getContext().enabled());assertThrows(ResponseStatusException.class,()->service.myFeedback(0,5));assertThrows(ResponseStatusException.class,()->service.create(request()));}
  @Test void eligibleBookingsAreOwnCheckedOutBookingsWithoutFeedback(){customer();service.eligibleBookings();verify(jdbc).query(contains("b.status='CHECKED_OUT'"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackBookingResponse>>any(),eq(5L));verify(jdbc).query(contains("NOT EXISTS (SELECT 1 FROM operations.feedback"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackBookingResponse>>any(),eq(5L));}
  @Test void myFeedbackCannotSelectOtherCustomerIdentity(){customer();service.myFeedback(2,5);verify(jdbc).query(contains("WHERE f.customer_id=?"),org.mockito.ArgumentMatchers.<RowMapper<FeedbackResponse>>any(),eq(5L),eq(""),eq(""),eq(10L),eq(5));}
  @Test void otherCustomerBookingIsForbidden(){customer();booking(6L,"CHECKED_OUT");assertEquals(403,assertThrows(ResponseStatusException.class,()->service.create(request())).getStatusCode().value());verify(jdbc,never()).update(any(PreparedStatementCreator.class),any(KeyHolder.class));}

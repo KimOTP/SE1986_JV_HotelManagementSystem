@@ -1,4 +1,5 @@
 package com.hotel.hms.operations;
+import com.hotel.hms.operations.repository.*;
 import com.hotel.hms.operations.service.*;
 import com.hotel.hms.operations.security.OperationsIdentity;
 import com.hotel.hms.identity.security.AuthUserDetails;
@@ -13,8 +14,8 @@ import static org.springframework.http.HttpStatus.*;
 class OperationsFollowUpServiceTests {
  JdbcTemplate jdbc; OperationsIdentity identity; IssueAssignmentService managers; OperationsFollowUpService service;
  final String version="0x0000000000000001";
- @BeforeEach void setup(){jdbc=mock(JdbcTemplate.class);identity=mock(OperationsIdentity.class);managers=mock(IssueAssignmentService.class);service=new OperationsFollowUpService(jdbc,identity,managers);when(managers.requireManager()).thenReturn(new IssueAssignmentService.Manager(2L,"Manager",false));}
- void work(String status){when(jdbc.query(anyString(),org.mockito.ArgumentMatchers.<RowMapper<OperationsFollowUpService.Work>>any(),eq(9L))).thenReturn(List.of(new OperationsFollowUpService.Work(9L,1L,3L,status,version)));}
+ @BeforeEach void setup(){jdbc=mock(JdbcTemplate.class);identity=mock(OperationsIdentity.class);managers=mock(IssueAssignmentService.class);service=new OperationsFollowUpService(new OperationsFollowUpRepository(jdbc),identity,managers, new LinkedWorkRepository(jdbc));when(managers.requireManager()).thenReturn(new IssueAssignmentRepository.Manager(2L,"Manager",false));}
+ void work(String status){when(jdbc.query(anyString(),org.mockito.ArgumentMatchers.<RowMapper<OperationsFollowUpRepository.Work>>any(),eq(9L))).thenReturn(List.of(new OperationsFollowUpRepository.Work(9L,1L,3L,status,version)));}
  OperationsFollowUpService.Change change(String action,Long staff){return new OperationsFollowUpService.Change(version,action,staff,"Nhân viên nghỉ ca");}
  @Test void wrongHotelCannotChangeWork(){work("PENDING");doThrow(new ResponseStatusException(FORBIDDEN)).when(managers).assertScope(any(),eq(1L));assertEquals(403,assertThrows(ResponseStatusException.class,()->service.change(false,9L,change("CANCEL",null))).getStatusCode().value());verify(jdbc,never()).update(anyString(),any(Object[].class));}
  @Test void staleVersionCannotOverwriteWork(){work("PENDING");assertEquals(409,assertThrows(ResponseStatusException.class,()->service.change(false,9L,new OperationsFollowUpService.Change("0x0000000000000002","CANCEL",null,"Đổi ca trực"))).getStatusCode().value());verify(jdbc,never()).update(anyString(),any(Object[].class));}

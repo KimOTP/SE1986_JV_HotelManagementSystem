@@ -1,4 +1,5 @@
 package com.hotel.hms.operations;
+import com.hotel.hms.operations.repository.*;
 
 import com.hotel.hms.operations.dto.*;
 import com.hotel.hms.operations.service.IssueProgressService;
@@ -23,16 +24,16 @@ class IssueProgressServiceTests {
         jdbc = mock(JdbcTemplate.class);
         environment = new OperationsIdentity();
         SecurityContextHolder.clearContext();
-        service = new IssueProgressService(jdbc, environment);
+        service = new IssueProgressService(new IssueProgressRepository(jdbc), environment, new LinkedWorkRepository(jdbc));
     }
     private void worker() {
         JwtTestUser.signIn("housekeeper@sba.example");
-        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressService.Worker>>any(), eq("housekeeper@sba.example")))
-                .thenReturn(List.of(new IssueProgressService.Worker(3L, 1L, "Housekeeper Demo")));
+        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressRepository.Worker>>any(), eq("housekeeper@sba.example")))
+                .thenReturn(List.of(new IssueProgressRepository.Worker(3L, 1L, "Housekeeper Demo")));
     }
     private void issue(Long hotelId, Long staffId, String status) {
-        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressService.IssueState>>any(), eq(1L)))
-                .thenReturn(List.of(new IssueProgressService.IssueState(1L, hotelId, staffId, status)));
+        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressRepository.IssueState>>any(), eq(1L)))
+                .thenReturn(List.of(new IssueProgressRepository.IssueState(1L, hotelId, staffId, status)));
     }
     private void noWrite() {
         verify(jdbc, never()).update(any(PreparedStatementCreator.class));
@@ -48,7 +49,7 @@ class IssueProgressServiceTests {
     }
     @Test void inactiveOrMissingStaffCannotStartOrResolve() {
         worker();
-        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressService.Worker>>any(), eq("housekeeper@sba.example"))).thenReturn(List.of());
+        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressRepository.Worker>>any(), eq("housekeeper@sba.example"))).thenReturn(List.of());
         assertFalse(service.getContext().enabled());
         assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
         assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.resolve(1L, new ResolveIssueRequest("Đã sửa vòi nước"))).getStatusCode().value());
@@ -63,15 +64,15 @@ class IssueProgressServiceTests {
     }
     @Test void missingOrInactiveIssueReturns404() {
         worker();
-        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressService.IssueState>>any(), eq(1L))).thenReturn(List.of());
+        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueProgressRepository.IssueState>>any(), eq(1L))).thenReturn(List.of());
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
         noWrite();
     }
     @Test void rejectsOtherAssigneeUnassignedIssueOrOtherHotel() {
         worker();
-        for (var state : List.of(new IssueProgressService.IssueState(1L, 1L, 2L, "ASSIGNED"),
-                new IssueProgressService.IssueState(1L, 2L, 3L, "ASSIGNED"),
-                new IssueProgressService.IssueState(1L, 1L, null, "OPEN"))) {
+        for (var state : List.of(new IssueProgressRepository.IssueState(1L, 1L, 2L, "ASSIGNED"),
+                new IssueProgressRepository.IssueState(1L, 2L, 3L, "ASSIGNED"),
+                new IssueProgressRepository.IssueState(1L, 1L, null, "OPEN"))) {
             issue(state.hotelId(), state.assignedStaffId(), state.status());
             assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.start(1L)).getStatusCode().value());
             assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.resolve(1L, new ResolveIssueRequest("Đã sửa xong"))).getStatusCode().value());
