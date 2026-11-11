@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Đổi URL này sau khi có backend chính thức
-const api = axios.create({ baseURL: 'http://localhost:8080/api' });
+const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api' });
 
 // UC-E1, E2, E3
 export const getTasks = () => api.get('/housekeeping/tasks');

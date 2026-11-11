@@ -54,11 +54,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout",
                                 "/api/auth/forgot-password", "/api/auth/reset-password")
                         .permitAll()
-                        .requestMatchers("/api/auth/**", "/api/operations/**", "/api/admin/users/**", "/api/admin/roles/**", "/api/users/**").authenticated()
-                        // Giai đoạn chuyển tiếp: các module chưa nối đăng nhập thật nên chưa khóa mặc định.
-                        // Module nào cần bảo vệ thì dùng @PreAuthorize trên controller/method.
-                        // TODO: chuyển thành .anyRequest().authenticated() khi FE các module dùng JWT.
-                        .anyRequest().permitAll())
+                        // Chỉ các đường này không cần đăng nhập: xem phòng/ảnh công khai, kiểm tra sức khỏe, preflight CORS.
+                        .requestMatchers(HttpMethod.GET, "/api/inventory/public/**", "/api/health").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        // Mọi đường còn lại bắt buộc đăng nhập; quyền chi tiết do @PreAuthorize / actors.require quyết định.
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) ->
