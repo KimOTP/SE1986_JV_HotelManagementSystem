@@ -58,6 +58,10 @@ export default function BookingDetailPage() {
   }
   const holdExpired = booking.status === 'PENDING' && remaining !== null && remaining <= 0;
   const displayStatus = holdExpired ? 'EXPIRED' : booking.status;
+  const roomNumbers = (booking.assignedRooms ?? [])
+    .map((room) => room.roomNumber)
+    .filter(Boolean)
+    .join(', ');
   const ownsBooking = bookingsDataSource !== 'api' || booking.customerId === user?.id;
   const canCancelBooking = ownsBooking && hasPermission('UC-C4');
   const canPayDeposit = ownsBooking && hasPermission('UC-C2');
@@ -146,6 +150,8 @@ export default function BookingDetailPage() {
                 <dd>
                   {booking.roomTypeName} × {booking.rooms}
                 </dd>
+                <dt>Số phòng</dt>
+                <dd>{roomNumbers || 'Chưa có số phòng'}</dd>
                 <dt>Ngày nhận phòng</dt>
                 <dd>{displayDate(booking.checkIn)}</dd>
                 <dt>Ngày trả phòng</dt>
