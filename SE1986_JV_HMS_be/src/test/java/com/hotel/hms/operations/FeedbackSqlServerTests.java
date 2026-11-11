@@ -1,5 +1,4 @@
 package com.hotel.hms.operations;
-import com.hotel.hms.operations.repository.*;
 
 import com.hotel.hms.common.exception.GlobalExceptionHandler;
 import com.hotel.hms.config.SecurityConfig;
@@ -45,7 +44,6 @@ class FeedbackSqlServerTests {
     @Configuration @EnableWebMvc @EnableTransactionManagement(proxyTargetClass=true)
     @Import({SecurityConfig.class,JwtAuthenticationFilter.class,OperationsIdentity.class,
             IssueAssignmentService.class,FeedbackService.class,FeedbackController.class,GlobalExceptionHandler.class})
-    @ComponentScan("com.hotel.hms.operations.repository")
     static class Config {
         @Bean DataSource dataSource() {
             var source=new DriverManagerDataSource(System.getenv("OPERATIONS_TEST_JDBC_URL"),

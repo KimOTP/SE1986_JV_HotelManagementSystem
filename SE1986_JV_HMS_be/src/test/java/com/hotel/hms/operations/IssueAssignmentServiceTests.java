@@ -1,5 +1,4 @@
 package com.hotel.hms.operations;
-import com.hotel.hms.operations.repository.*;
 
 import com.hotel.hms.operations.dto.*;
 import com.hotel.hms.operations.service.IssueAssignmentService;
@@ -24,16 +23,16 @@ class IssueAssignmentServiceTests {
         jdbc = mock(JdbcTemplate.class);
         environment = new OperationsIdentity();
         SecurityContextHolder.clearContext();
-        service = new IssueAssignmentService(new IssueAssignmentRepository(jdbc), environment);
+        service = new IssueAssignmentService(jdbc, environment);
     }
     private void manager(boolean admin) {
         JwtTestUser.signIn("manager@sba.example");
-        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentRepository.Manager>>any(), eq("manager@sba.example")))
-                .thenReturn(List.of(new IssueAssignmentRepository.Manager(2L, "Manager Demo", admin)));
+        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentService.Manager>>any(), eq("manager@sba.example")))
+                .thenReturn(List.of(new IssueAssignmentService.Manager(2L, "Manager Demo", admin)));
     }
     private void issue(String status, Long assignedStaffId) {
-        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentRepository.IssueState>>any(), eq(1L)))
-                .thenReturn(List.of(new IssueAssignmentRepository.IssueState(1L, 1L, status, assignedStaffId)));
+        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentService.IssueState>>any(), eq(1L)))
+                .thenReturn(List.of(new IssueAssignmentService.IssueState(1L, 1L, status, assignedStaffId)));
     }
     private void scope(int count) {
         when(jdbc.queryForObject(contains("FROM identity_access.staff"), eq(Integer.class), eq(2L), eq(1L)))
@@ -51,14 +50,14 @@ class IssueAssignmentServiceTests {
     }
     @Test void disabledForMissingInactiveOrUnqualifiedManager() {
         manager(false);
-        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentRepository.Manager>>any(), eq("manager@sba.example"))).thenReturn(List.of());
+        when(jdbc.query(contains("WHERE u.email"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentService.Manager>>any(), eq("manager@sba.example"))).thenReturn(List.of());
         assertFalse(service.getContext().enabled());
         assertEquals(403, assertThrows(ResponseStatusException.class, () -> service.assign(1L, new AssignIssueRequest(3L))).getStatusCode().value());
         noUpdate();
     }
     @Test void missingIssueReturns404() {
         manager(false);
-        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentRepository.IssueState>>any(), eq(1L))).thenReturn(List.of());
+        when(jdbc.query(contains("FROM operations.issues i"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssignmentService.IssueState>>any(), eq(1L))).thenReturn(List.of());
         assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.getAssignees(1L)).getStatusCode().value());
         noUpdate();
     }

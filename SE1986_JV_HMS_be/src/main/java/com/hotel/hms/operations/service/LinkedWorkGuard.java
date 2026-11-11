@@ -2,8 +2,7 @@ package com.hotel.hms.operations.service;
 
 import static org.springframework.http.HttpStatus.*;
 
-import com.hotel.hms.operations.repository.LinkedWorkRepository;
-
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
@@ -24,33 +23,42 @@ final class LinkedWorkGuard {
 
     private LinkedWorkGuard() {}
 
-    private static List<Long> issueIds(LinkedWorkRepository repository, Long id) {
-        return repository.findIssueIdsByTask(id);
+    private static List<Long> issueIds(JdbcTemplate jdbc, Long id) {
+        return jdbc.queryForList(
+                "SELECT issue_id FROM operations.tasks WHERE task_id=? AND issue_id IS NOT NULL",
+                Long.class,
+                id);
     }
 
-    static boolean hasIssue(LinkedWorkRepository repository, Long id) {
-        return !issueIds(repository, id).isEmpty();
+    static boolean hasIssue(JdbcTemplate jdbc, Long id) {
+        return !issueIds(jdbc, id).isEmpty();
     }
 
-    static Pair forTask(LinkedWorkRepository repository, Long id) {
-        var linkedIssueIds = issueIds(repository, id);
+    static Pair forTask(JdbcTemplate jdbc, Long id) {
+        var linkedIssueIds = issueIds(jdbc, id);
         if (linkedIssueIds.isEmpty()) {
             return null;
         }
-        var pair = forIssue(repository, linkedIssueIds.getFirst());
+        var pair = forIssue(jdbc, linkedIssueIds.getFirst());
         if (pair == null || !pair.task().id().equals(id)) {
             throw conflict();
         }
         return pair;
     }
 
-    static Pair forIssue(LinkedWorkRepository repository, Long id) {
+    static Pair forIssue(JdbcTemplate jdbc, Long id) {
         // The common lock order prevents task and issue APIs from locking in opposite orders.
-        var issues = repository.lockIssue(id);
+        var issues =
+                jdbc.queryForList(
+                        "SELECT issue_id AS id,assigned_staff_id AS staffId,status,room_id AS roomId FROM operations.issues WITH (UPDLOCK,HOLDLOCK) WHERE issue_id=?",
+                        id);
         if (issues.isEmpty()) {
             return null;
         }
-        var tasks = repository.lockTasksForIssue(id);
+        var tasks =
+                jdbc.queryForList(
+                        "SELECT task_id AS id,assigned_staff_id AS staffId,status,room_id AS roomId FROM operations.tasks WITH (UPDLOCK,HOLDLOCK) WHERE issue_id=? ORDER BY task_id",
+                        id);
         if (tasks.isEmpty()) {
             return null;
         }

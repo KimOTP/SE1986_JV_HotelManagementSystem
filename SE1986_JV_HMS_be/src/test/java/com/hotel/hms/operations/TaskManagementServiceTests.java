@@ -1,5 +1,4 @@
 package com.hotel.hms.operations;
-import com.hotel.hms.operations.repository.*;
 
 import com.hotel.hms.operations.controller.TaskManagementController;
 import com.hotel.hms.operations.dto.*;
@@ -25,15 +24,15 @@ class TaskManagementServiceTests {
     @BeforeEach void setup() {
         jdbc = mock(JdbcTemplate.class);
         identity = mock(IssueAssignmentService.class);
-        when(identity.requireManager()).thenReturn(new IssueAssignmentRepository.Manager(2L, "Manager Demo", false));
-        service = new TaskManagementService(new TaskManagementRepository(jdbc), identity);
+        when(identity.requireManager()).thenReturn(new IssueAssignmentService.Manager(2L, "Manager Demo", false));
+        service = new TaskManagementService(jdbc, identity);
     }
     private CreateTaskRequest request() {
         return new CreateTaskRequest(3L, 3L, "CLEANING", "  Dọn phòng 103  ", "  Lau cửa sổ  ", "HIGH", schedule);
     }
     private void room() {
-        when(jdbc.query(contains("SELECT r.room_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<TaskManagementRepository.RoomState>>any(), eq(3L)))
-                .thenReturn(List.of(new TaskManagementRepository.RoomState(3L, 1L)));
+        when(jdbc.query(contains("SELECT r.room_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<TaskManagementService.RoomState>>any(), eq(3L)))
+                .thenReturn(List.of(new TaskManagementService.RoomState(3L, 1L)));
     }
     private void staff(List<IssueAssigneeResponse> items) {
         when(jdbc.query(contains("SELECT s.staff_id"), org.mockito.ArgumentMatchers.<RowMapper<IssueAssigneeResponse>>any(), eq(1L))).thenReturn(items);
@@ -51,12 +50,12 @@ class TaskManagementServiceTests {
         var expected = List.of(new TaskRoomResponse(3L, "103", "SBA Hotel"));
         when(jdbc.query(contains("h.name AS hotel_name"), org.mockito.ArgumentMatchers.<RowMapper<TaskRoomResponse>>any(), eq(0), eq(2L))).thenReturn(expected);
         assertEquals(expected, service.getRooms());
-        when(identity.requireManager()).thenReturn(new IssueAssignmentRepository.Manager(1L, "Admin", true));
+        when(identity.requireManager()).thenReturn(new IssueAssignmentService.Manager(1L, "Admin", true));
         service.getRooms();
         verify(jdbc).query(contains("ms.hotel_id = rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<TaskRoomResponse>>any(), eq(1), eq(1L));
     }
     @Test void missingOrInactiveRoomPreventsCreation() {
-        when(jdbc.query(contains("SELECT r.room_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<TaskManagementRepository.RoomState>>any(), eq(3L))).thenReturn(List.of());
+        when(jdbc.query(contains("SELECT r.room_id, rt.hotel_id"), org.mockito.ArgumentMatchers.<RowMapper<TaskManagementService.RoomState>>any(), eq(3L))).thenReturn(List.of());
         assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.create(request())).getStatusCode().value());
         noInsert();
     }
