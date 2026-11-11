@@ -3,7 +3,8 @@ import { AUTH_STORAGE_KEYS } from '../../modules/auths/constants/authConstants';
 
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  timeout: 15000,
+  // Render Free ngủ sau ~15 phút, request đầu tiên có thể mất cả phút để đánh thức server.
+  timeout: 60000,
   headers: { Accept: 'application/json' },
 });
 
@@ -26,7 +27,7 @@ function refreshAccessToken() {
   if (!refreshPromise) {
     // Gọi bằng axios gốc để không đi lại vào interceptor này.
     refreshPromise = axios
-      .post(`${axiosClient.defaults.baseURL}/auth/refresh`, { refreshToken }, { timeout: 15000 })
+      .post(`${axiosClient.defaults.baseURL}/auth/refresh`, { refreshToken }, { timeout: 60000 })
       .then(({ data }) => {
         localStorage.setItem(AUTH_STORAGE_KEYS.TOKEN, data.accessToken);
         localStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
